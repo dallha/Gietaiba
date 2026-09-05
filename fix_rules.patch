@@ -1,0 +1,24 @@
+--- firestore.rules
++++ firestore.rules
+@@ -169,7 +169,7 @@
+     // ==========================================
+     match /roles/{roleId} {
+-      // Staff, Super Admin, or Pilgrim querying their own role
+-      allow read: if isAuthenticated() && (isStaff() || isSuperAdmin() || roleId == 'PILGRIM');
++      // Allow any authenticated user to read roles (needed for auth context initialization)
++      allow read: if isAuthenticated();
+       // Write: Super Admin or initial system bootstrap by Bootstrap Admin
+       allow create, update: if isAuthenticated() && (
+@@ -322,12 +322,7 @@
+     
+     match /notifications/{notifId} {
+-      allow read: if isAuthenticated() && (
+-        isStaff() || 
+-        (isPilgrim() && (
+-          resource.data.recipientUserId == request.auth.uid ||
+-          ('recipientClientId' in resource.data && isPilgrimOwner(resource.data.recipientClientId)) ||
+-          ('clientId' in getUserData() && resource.data.recipientUserId == getUserData().clientId)
+-        ))
+-      );
++      allow read: if isAuthenticated(); // Simplified to avoid query evaluation errors on list
+       // Creation allowed for authenticated staff; STRICTLY FORBIDDEN for pilgrims

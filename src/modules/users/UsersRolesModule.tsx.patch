@@ -1,0 +1,36 @@
+--- src/modules/users/UsersRolesModule.tsx
++++ src/modules/users/UsersRolesModule.tsx
+@@ -102,15 +102,23 @@
+   const fetchData = async () => {
+     setLoading(true);
+     try {
+-      const [usersSnap, rolesSnap, clientsSnap, inscriptionsSnap] = await Promise.all([
+-        getDocs(collection(db, 'users')),
+-        getDocs(collection(db, 'roles')),
+-        getDocs(collection(db, 'clients')),
+-        getDocs(collection(db, 'inscriptions'))
+-      ]);
+-      
+-      setUsers(usersSnap.docs.map(d => ({ ...d.data(), id: d.id } as User)));
+-      setRoles(rolesSnap.docs.map(d => ({ ...d.data(), id: d.id } as Role)));
+-      setClients(clientsSnap.docs.map(d => ({ ...d.data(), id: d.id } as Client)));
+-      setInscriptions(inscriptionsSnap.docs.map(d => ({ ...d.data(), id: d.id } as Inscription)));
++      try {
++        const usersSnap = await getDocs(collection(db, 'users'));
++        setUsers(usersSnap.docs.map(d => ({ ...d.data(), id: d.id } as User)));
++      } catch(e) { console.error("users failed", e); }
++      try {
++        const rolesSnap = await getDocs(collection(db, 'roles'));
++        setRoles(rolesSnap.docs.map(d => ({ ...d.data(), id: d.id } as Role)));
++      } catch(e) { console.error("roles failed", e); }
++      try {
++        const clientsSnap = await getDocs(collection(db, 'clients'));
++        setClients(clientsSnap.docs.map(d => ({ ...d.data(), id: d.id } as Client)));
++      } catch(e) { console.error("clients failed", e); }
++      try {
++        const inscriptionsSnap = await getDocs(collection(db, 'inscriptions'));
++        setInscriptions(inscriptionsSnap.docs.map(d => ({ ...d.data(), id: d.id } as Inscription)));
++      } catch(e) { console.error("inscriptions failed", e); }
+     } catch (error) {
+       console.error("Error fetching users/roles/clients", error);
+     } finally {

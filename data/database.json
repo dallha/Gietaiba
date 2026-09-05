@@ -1,0 +1,983 @@
+{
+  "settings": {
+    "id": "setting-1",
+    "agencyName": "GIE TAIBA VOYAGES",
+    "subtitle": "Agence Agréée Hajj & Oumrah — Sénégal / Arabie Saoudite",
+    "logoUrl": "/logo.png",
+    "currency": "FCFA",
+    "defaultCurrency": "FCFA",
+    "phone": "+221 33 824 55 00 / +221 77 638 90 90",
+    "email": "contact@taiba-voyages.sn",
+    "address": "Avenue Cheikh Anta Diop, Immeuble Taiba, Dakar, Sénégal",
+    "city": "Dakar",
+    "country": "Sénégal",
+    "rcNumber": "SN.DKR.2014.B.1820",
+    "licenseNumber": "LIC-HAJJ-SN-2027-048",
+    "taxId": "NINEA-002849182",
+    "ninea": "005421882 2V3",
+    "receiptFooterTerms": "Tout versement effectué fait l’objet d’un reçu officiel infalsifiable. Ce reçu tient lieu de pièce justificative pour la confirmation de l’inscription au pèlerinage.",
+    "bankDetails": {
+      "bankName": "Banque Islamique du Sénégal (BIS)",
+      "iban": "SN08 SN01 2010 0123 4567 8901 2345",
+      "bic": "BISDSNDX"
+    },
+    "mobileMoneyNumbers": {
+      "wave": "+221 77 500 20 20",
+      "orangeMoney": "+221 78 400 30 30"
+    },
+    "recoveryUrgentThresholdDays": 15,
+    "recoveryHighBalanceAmount": 2000000,
+    "defaultRequiredDocumentTypes": [
+      "Passeport",
+      "Visa",
+      "Certificat Vaccination",
+      "Billet Avion",
+      "Photo Identité"
+    ],
+    "paymentMethods": [
+      "Espèces",
+      "Wave",
+      "Orange Money",
+      "Virement Bancaire",
+      "Chèque",
+      "Carte Bancaire"
+    ],
+    "expenseCategories": [
+      "Billets Avion",
+      "Hôtels Makkah",
+      "Hôtels Médine",
+      "Transports Bus",
+      "Frais Visas Nusuk",
+      "Restauration",
+      "Assurance",
+      "Logistique & Guides",
+      "Communication & Marketing",
+      "Administration"
+    ],
+    "cities": [
+      "Makkah",
+      "Médine",
+      "Djeddah",
+      "Dakar"
+    ]
+  },
+  "users": [
+    {
+      "id": "usr-admin",
+      "email": "admin@taiba-voyages.sn",
+      "displayName": "El Hadj Amadou Niang (Super Admin)",
+      "role": "SUPER_ADMIN",
+      "phone": "+221 77 600 00 01",
+      "passwordHash": "admin123"
+    },
+    {
+      "id": "usr-direction",
+      "email": "direction@taiba-voyages.sn",
+      "displayName": "Mme Khady Diop (Directrice Générale)",
+      "role": "DIRECTION",
+      "phone": "+221 77 600 00 02",
+      "passwordHash": "dir123"
+    },
+    {
+      "id": "usr-caisse",
+      "email": "caisse@taiba-voyages.sn",
+      "displayName": "Cheikh Tidiane Wade (Responsable Caisse)",
+      "role": "CAISSE",
+      "phone": "+221 77 600 00 03",
+      "passwordHash": "caisse123"
+    },
+    {
+      "id": "usr-agent",
+      "email": "agent@taiba-voyages.sn",
+      "displayName": "Mariama Ba (Conseillère Pèlerinage)",
+      "role": "AGENT",
+      "phone": "+221 77 600 00 04",
+      "passwordHash": "agent123"
+    },
+    {
+      "id": "usr-logistique",
+      "email": "logistique@taiba-voyages.sn",
+      "displayName": "Ousmane Ndiaye (Chef Logistique & Vols)",
+      "role": "LOGISTIQUE",
+      "phone": "+221 77 600 00 05",
+      "passwordHash": "log123"
+    },
+    {
+      "id": "usr-pelerin-saidou",
+      "email": "saidou.sow@email.sn",
+      "displayName": "SAIDOU SOW",
+      "role": "PELERIN",
+      "clientId": "cli-001",
+      "phone": "+221 77 520 11 22",
+      "passwordHash": "pelerin123"
+    }
+  ],
+  "clients": [
+    {
+      "id": "cli-001",
+      "code": "GIE-T0001",
+      "firstName": "SAIDOU",
+      "lastName": "SOW",
+      "gender": "M",
+      "birthDate": "1972-04-12",
+      "nationality": "Sénégalaise",
+      "phone": "+221 77 520 11 22",
+      "whatsapp": "+221 77 520 11 22",
+      "email": "saidou.sow@email.sn",
+      "address": "Sacré-Cœur 3, Villa 124, Dakar",
+      "profession": "Ingénieur Télécoms",
+      "contactPerson": "Mme Mariama Sow",
+      "contactPhone": "+221 77 520 11 99",
+      "internalNotes": "Dossier prioritaire. A demandé une chambre proche des ascenseurs.",
+      "status": "ACTIF",
+      "createdAt": "2026-09-04T13:09:26.068Z",
+      "updatedAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "cli-002",
+      "code": "GIE-T0002",
+      "firstName": "AISSATOU",
+      "lastName": "FALL",
+      "gender": "F",
+      "birthDate": "1980-08-25",
+      "nationality": "Sénégalaise",
+      "phone": "+221 77 644 33 22",
+      "whatsapp": "+221 77 644 33 22",
+      "email": "aissatou.fall@orange.sn",
+      "address": "Mermoz Pyrotechnie, Dakar",
+      "profession": "Pharmacienne",
+      "contactPerson": "Ibrahima Fall",
+      "contactPhone": "+221 70 888 22 11",
+      "internalNotes": "Voyage en famille, souhaite être dans le même vol que Fatoumata Sow.",
+      "status": "ACTIF",
+      "createdAt": "2026-09-04T13:09:26.068Z",
+      "updatedAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "cli-003",
+      "code": "GIE-T0003",
+      "firstName": "FATOUMATA",
+      "lastName": "SOW",
+      "gender": "F",
+      "birthDate": "1968-11-03",
+      "nationality": "Sénégalaise",
+      "phone": "+221 77 312 90 01",
+      "whatsapp": "+221 77 312 90 01",
+      "email": "fatoumata.sow@pro.sn",
+      "address": "Fann Résidence, Rue des Ecrivains, Dakar",
+      "profession": "Commerçante / Import-Export",
+      "contactPerson": "Abdoulaye Sow",
+      "contactPhone": "+221 77 200 44 55",
+      "internalNotes": "Acompte majeur de 4 000 000 FCFA déjà déposé.",
+      "status": "ACTIF",
+      "createdAt": "2026-09-04T13:09:26.068Z",
+      "updatedAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "cli-004",
+      "code": "GIE-T0004",
+      "firstName": "NDEYE BINTA",
+      "lastName": "GADIAGA",
+      "gender": "F",
+      "birthDate": "1985-02-14",
+      "nationality": "Sénégalaise",
+      "phone": "+221 78 120 45 67",
+      "whatsapp": "+221 78 120 45 67",
+      "email": "binta.gadiaga@gmail.com",
+      "address": "Almadies, Zone 4, Dakar",
+      "profession": "Cadre Bancaire",
+      "contactPerson": "Mamadou Gadiaga",
+      "contactPhone": "+221 77 650 99 88",
+      "internalNotes": "Préinscription confirmée. En attente de déblocage du prêt pèlerinage.",
+      "status": "ACTIF",
+      "createdAt": "2026-09-04T13:09:26.068Z",
+      "updatedAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "cli-005",
+      "code": "GIE-T0005",
+      "firstName": "SOKHNA",
+      "lastName": "DIENG",
+      "gender": "F",
+      "birthDate": "1976-06-19",
+      "nationality": "Sénégalaise",
+      "phone": "+221 76 540 88 12",
+      "whatsapp": "+221 76 540 88 12",
+      "email": "sokhna.dieng@yahoo.fr",
+      "address": "Point E, Boulevard de l’Est, Dakar",
+      "profession": "Enseignante-Chercheuse",
+      "contactPerson": "Alioune Dieng",
+      "contactPhone": "+221 77 400 33 22",
+      "internalNotes": "Inscription effectuée par son fils. À relancer fin du mois.",
+      "status": "ACTIF",
+      "createdAt": "2026-09-04T13:09:26.068Z",
+      "updatedAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "cli-006",
+      "code": "GIE-T0006",
+      "firstName": "NDEYE NGONE",
+      "lastName": "BA",
+      "gender": "F",
+      "birthDate": "1990-10-08",
+      "nationality": "Sénégalaise",
+      "phone": "+221 77 980 12 34",
+      "whatsapp": "+221 77 980 12 34",
+      "email": "ngone.ba@gmail.com",
+      "address": "Nord Foire, Cité Damel, Dakar",
+      "profession": "Architecte d’Intérieur",
+      "contactPerson": "Papa Ba",
+      "contactPhone": "+221 77 555 44 33",
+      "internalNotes": "Dossier complet en attente de versement.",
+      "status": "ACTIF",
+      "createdAt": "2026-09-04T13:09:26.068Z",
+      "updatedAt": "2026-09-04T13:09:26.068Z"
+    }
+  ],
+  "voyages": [
+    {
+      "id": "voy-haj2027-01",
+      "code": "HAJ2027-01",
+      "title": "Hajj 2027 — Vol Direct Dakar / Médine",
+      "type": "HAJJ",
+      "year": 2027,
+      "departureDate": "2027-05-18",
+      "returnDate": "2027-06-15",
+      "capacity": 120,
+      "status": "OUVERT",
+      "description": "Campagne officielle Hajj 2027 encadrée par GIE TAIBA VOYAGES avec hôtels à proximité des Lieux Saints.",
+      "logisticsNotes": "Vols affrétés Saudia / Air Sénégal au départ de l’AIBD.",
+      "createdAt": "2026-09-04T13:09:26.068Z",
+      "responsable": "El Hadj Amadou Niang (Chef de Mission)",
+      "responsablePhone": "+221 77 600 00 01",
+      "volsSummary": "Air Sénégal / Saudia (Vols Directs AIBD - JED/MED)",
+      "hotelsSummary": "Al Kiswah Towers (Makkah) & Emaar Elite (Médine)"
+    }
+  ],
+  "packages": [
+    {
+      "id": "pkg-std-2027",
+      "voyageId": "voy-haj2027-01",
+      "name": "Standard",
+      "description": "Chambres quadruples, hôtels 4/5 étoiles avec navette et encadrement spirituel complet.",
+      "price": 5100000,
+      "currency": "FCFA",
+      "status": "PROVISOIRE",
+      "validFrom": "2026-09-01",
+      "activeVersionNumber": 1,
+      "versions": [
+        {
+          "id": "ver-std-1",
+          "packageId": "pkg-std-2027",
+          "versionNumber": 1,
+          "price": 5100000,
+          "status": "PROVISOIRE",
+          "effectiveFrom": "2026-09-01",
+          "note": "Tarif indicatif provisoire fixé au lancement des préinscriptions",
+          "createdAt": "2026-09-04T13:09:26.068Z"
+        }
+      ],
+      "createdAt": "2026-09-04T13:09:26.068Z",
+      "code": "PKG-HAJ27-STD",
+      "category": "STANDARD",
+      "capacity": 80,
+      "roomType": "QUADRUPLE",
+      "hotelMakkah": "Al Kiswah Towers (Navettes 24h/24)",
+      "hotelMedina": "Emaar Elite (250m Haram)",
+      "initialPrice": 5100000,
+      "currentPrice": 5100000,
+      "conditions": "Acompte minimum 1 000 000 FCFA à la souscription. Solde impératif 30 jours avant le vol.",
+      "servicesIncluded": [
+        "Vol direct aller-retour Dakar - Médine / Djeddah - Dakar",
+        "Visa officiel Hajj Nusuk & assurance médicale saoudienne",
+        "Hébergement Makkah (Al Kiswah Towers)",
+        "Hébergement Médine (Emaar Elite à 250m de la Mosquée)",
+        "Restauration demi-pension (petit-déjeuner + dîner)",
+        "Tentes climatisées à Mina et Arafat (zone sénégalaise)",
+        "Transferts en bus VIP climatisés entre les Lieux Saints",
+        "Visites pieuses guidées (Ziaras Médine & Makkah)",
+        "Encadrement religieux continu et médecin dédié GIE TAIBA",
+        "Kit complet du pèlerin (sacoche, guide rituel, étiquettes bagages)"
+      ]
+    },
+    {
+      "id": "pkg-vip-2027",
+      "voyageId": "voy-haj2027-01",
+      "name": "VIP",
+      "description": "Hôtels 5 étoiles première ligne Haram, chambres doubles/suites, pension complète et transport VIP.",
+      "price": 6200000,
+      "currency": "FCFA",
+      "status": "PROVISOIRE",
+      "validFrom": "2026-09-01",
+      "activeVersionNumber": 1,
+      "versions": [
+        {
+          "id": "ver-vip-1",
+          "packageId": "pkg-vip-2027",
+          "versionNumber": 1,
+          "price": 6200000,
+          "status": "PROVISOIRE",
+          "effectiveFrom": "2026-09-01",
+          "note": "Tarif VIP indicatif",
+          "createdAt": "2026-09-04T13:09:26.068Z"
+        }
+      ],
+      "createdAt": "2026-09-04T13:09:26.068Z",
+      "code": "PKG-HAJ27-VIP",
+      "category": "VIP",
+      "initialPrice": 6200000,
+      "currentPrice": 6200000,
+      "capacity": 10,
+      "roomType": "DOUBLE",
+      "hotelMakkah": "Raffles Makkah Palace (Vue Kaaba)",
+      "hotelMedina": "The Oberoi Madina",
+      "conditions": "Acompte 2 500 000 FCFA. Solde 30 jours avant le vol. Conciergerie VIP 24h/24.",
+      "servicesIncluded": [
+        "Vol en classe affaires Saudia Airlines",
+        "Visa VIP Nusuk express",
+        "Suites et chambres doubles de grand luxe face aux Harams",
+        "Pension complète gastronomique",
+        "Tente VIP privatisée à Mina (Zone Majliss)",
+        "Voiture privée avec chauffeur pour transferts",
+        "Service conciergerie personnalisé 24h/24"
+      ]
+    },
+    {
+      "id": "pkg-conf-2027",
+      "voyageId": "voy-haj2027-01",
+      "code": "PKG-HAJ27-CONF",
+      "name": "Confort",
+      "category": "CONFORT",
+      "description": "Hôtels 5 étoiles proches des Harams, chambres triples, pension complète et TGV Haramain.",
+      "price": 5500000,
+      "initialPrice": 5500000,
+      "currentPrice": 5500000,
+      "currency": "FCFA",
+      "capacity": 30,
+      "roomType": "TRIPLE",
+      "hotelMakkah": "Swissôtel Al Maqam (Abraj Al Bait)",
+      "hotelMedina": "Pullman Al Aqeeq",
+      "conditions": "Acompte 1 500 000 FCFA. Solde 30 jours avant le vol.",
+      "servicesIncluded": [
+        "Vol direct régulier AIBD - Médine",
+        "Visa Hajj officiel et assurance multirisque étendue",
+        "Hôtels 5 étoiles face aux esplanades des Harams",
+        "Pension complète (3 repas buffet par jour)",
+        "Chambres triples premium",
+        "TGV Haramain High Speed Rail Makkah - Médine",
+        "Accompagnateur dédié pour chaque sous-groupe de 25 pèlerins"
+      ],
+      "status": "PROVISOIRE",
+      "validFrom": "2026-09-01",
+      "activeVersionNumber": 1,
+      "versions": [
+        {
+          "id": "ver-conf-1",
+          "packageId": "pkg-conf-2027",
+          "versionNumber": 1,
+          "price": 5500000,
+          "status": "PROVISOIRE",
+          "effectiveFrom": "2026-09-01",
+          "note": "Tarif indicatif formule Confort",
+          "createdAt": "2026-09-04T13:17:27.163Z"
+        }
+      ],
+      "createdAt": "2026-09-04T13:17:27.163Z"
+    }
+  ],
+  "package_versions": [
+    {
+      "id": "ver-std-1",
+      "packageId": "pkg-std-2027",
+      "versionNumber": 1,
+      "price": 5100000,
+      "status": "PROVISOIRE",
+      "effectiveFrom": "2026-09-01",
+      "note": "Tarif indicatif provisoire fixé au lancement des préinscriptions",
+      "createdAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "ver-vip-1",
+      "packageId": "pkg-vip-2027",
+      "versionNumber": 1,
+      "price": 5900000,
+      "status": "PROVISOIRE",
+      "effectiveFrom": "2026-09-01",
+      "note": "Tarif VIP indicatif",
+      "createdAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "ver-conf-1",
+      "packageId": "pkg-conf-2027",
+      "versionNumber": 1,
+      "price": 5500000,
+      "status": "PROVISOIRE",
+      "effectiveFrom": "2026-09-01",
+      "note": "Tarif indicatif formule Confort",
+      "createdAt": "2026-09-04T13:17:27.163Z"
+    },
+    {
+      "id": "ver-oum-1",
+      "packageId": "pkg-oum-ram-2027",
+      "versionNumber": 1,
+      "price": 2850000,
+      "status": "DEFINITIF",
+      "effectiveFrom": "2026-09-01",
+      "note": "Tarif définitif confirmé",
+      "createdAt": "2026-09-04T13:17:27.163Z"
+    }
+  ],
+  "inscriptions": [
+    {
+      "id": "ins-001",
+      "code": "INS-2027-001",
+      "clientId": "cli-001",
+      "voyageId": "voy-haj2027-01",
+      "packageId": "pkg-std-2027",
+      "packageVersionId": "ver-std-1",
+      "appliedPrice": 5100000,
+      "status": "CONFIRMEE",
+      "agentId": "usr-agent",
+      "agentName": "Mariama Ba",
+      "createdAt": "2026-09-01T10:00:00Z",
+      "updatedAt": "2026-09-01T10:00:00Z"
+    },
+    {
+      "id": "ins-002",
+      "code": "INS-2027-002",
+      "clientId": "cli-002",
+      "voyageId": "voy-haj2027-01",
+      "packageId": "pkg-std-2027",
+      "packageVersionId": "ver-std-1",
+      "appliedPrice": 5100000,
+      "status": "CONFIRMEE",
+      "agentId": "usr-agent",
+      "agentName": "Mariama Ba",
+      "createdAt": "2026-09-01T11:15:00Z",
+      "updatedAt": "2026-09-01T11:15:00Z"
+    },
+    {
+      "id": "ins-003",
+      "code": "INS-2027-003",
+      "clientId": "cli-003",
+      "voyageId": "voy-haj2027-01",
+      "packageId": "pkg-std-2027",
+      "packageVersionId": "ver-std-1",
+      "appliedPrice": 5100000,
+      "status": "CONFIRMEE",
+      "agentId": "usr-agent",
+      "agentName": "Mariama Ba",
+      "createdAt": "2026-09-01T14:30:00Z",
+      "updatedAt": "2026-09-01T14:30:00Z"
+    },
+    {
+      "id": "ins-004",
+      "code": "INS-2027-004",
+      "clientId": "cli-004",
+      "voyageId": "voy-haj2027-01",
+      "packageId": "pkg-std-2027",
+      "packageVersionId": "ver-std-1",
+      "appliedPrice": 5100000,
+      "status": "CONFIRMEE",
+      "agentId": "usr-agent",
+      "agentName": "Mariama Ba",
+      "createdAt": "2026-09-02T09:00:00Z",
+      "updatedAt": "2026-09-02T09:00:00Z"
+    },
+    {
+      "id": "ins-005",
+      "code": "INS-2027-005",
+      "clientId": "cli-005",
+      "voyageId": "voy-haj2027-01",
+      "packageId": "pkg-std-2027",
+      "packageVersionId": "ver-std-1",
+      "appliedPrice": 5100000,
+      "status": "CONFIRMEE",
+      "agentId": "usr-agent",
+      "agentName": "Mariama Ba",
+      "createdAt": "2026-09-02T10:30:00Z",
+      "updatedAt": "2026-09-02T10:30:00Z"
+    },
+    {
+      "id": "ins-006",
+      "code": "INS-2027-006",
+      "clientId": "cli-006",
+      "voyageId": "voy-haj2027-01",
+      "packageId": "pkg-std-2027",
+      "packageVersionId": "ver-std-1",
+      "appliedPrice": 5100000,
+      "status": "CONFIRMEE",
+      "agentId": "usr-agent",
+      "agentName": "Mariama Ba",
+      "createdAt": "2026-09-02T12:00:00Z",
+      "updatedAt": "2026-09-02T12:00:00Z"
+    }
+  ],
+  "payments": [
+    {
+      "id": "pay-1788542397098",
+      "receiptNumber": "PAY-2027-0004",
+      "clientId": "cli-001",
+      "inscriptionId": "ins-001",
+      "voyageId": "voy-haj2027-01",
+      "amount": 250000,
+      "currency": "FCFA",
+      "paymentMethod": "ORANGE_MONEY",
+      "reference": "OM-7890123",
+      "comment": "Acompte reçu agence",
+      "status": "VALIDE",
+      "agentId": "usr-admin",
+      "agentName": "El Hadj Amadou Niang (Super Admin)",
+      "paymentDate": "2026-09-04T17:19:57.098Z",
+      "createdAt": "2026-09-04T17:19:57.098Z",
+      "clientName": "SAIDOU SOW",
+      "voyageCode": "HAJ2027-01"
+    },
+    {
+      "id": "pay-001",
+      "receiptNumber": "PAY-2027-0001",
+      "clientId": "cli-001",
+      "inscriptionId": "ins-001",
+      "voyageId": "voy-haj2027-01",
+      "amount": 250000,
+      "currency": "FCFA",
+      "paymentMethod": "Espèces",
+      "reference": "REÇU-MANUEL-001",
+      "comment": "Avance initiale de réservation Hajj 2027",
+      "status": "VALIDE",
+      "agentId": "usr-caisse",
+      "agentName": "Cheikh Tidiane Wade",
+      "paymentDate": "2026-09-01T10:30:00Z",
+      "createdAt": "2026-09-01T10:30:00Z",
+      "clientName": "SAIDOU SOW",
+      "voyageCode": "HAJ2027-01"
+    },
+    {
+      "id": "pay-002",
+      "receiptNumber": "PAY-2027-0002",
+      "clientId": "cli-002",
+      "inscriptionId": "ins-002",
+      "voyageId": "voy-haj2027-01",
+      "amount": 250000,
+      "currency": "FCFA",
+      "paymentMethod": "Wave",
+      "reference": "WAVE-TX-8839210",
+      "comment": "Avance réservation Hajj 2027 via Wave",
+      "status": "VALIDE",
+      "agentId": "usr-caisse",
+      "agentName": "Cheikh Tidiane Wade",
+      "paymentDate": "2026-09-01T11:45:00Z",
+      "createdAt": "2026-09-01T11:45:00Z",
+      "clientName": "AISSATOU FALL",
+      "voyageCode": "HAJ2027-01"
+    },
+    {
+      "id": "pay-003",
+      "receiptNumber": "PAY-2027-0003",
+      "clientId": "cli-003",
+      "inscriptionId": "ins-003",
+      "voyageId": "voy-haj2027-01",
+      "amount": 4000000,
+      "currency": "FCFA",
+      "paymentMethod": "Virement Bancaire",
+      "reference": "VIR-CBAO-991204",
+      "comment": "Acompte principal pour Fatoumata Sow",
+      "status": "VALIDE",
+      "agentId": "usr-caisse",
+      "agentName": "Cheikh Tidiane Wade",
+      "paymentDate": "2026-09-01T15:00:00Z",
+      "createdAt": "2026-09-01T15:00:00Z",
+      "clientName": "FATOUMATA SOW",
+      "voyageCode": "HAJ2027-01"
+    }
+  ],
+  "documents": [
+    {
+      "id": "doc-001",
+      "type": "Passeport",
+      "clientId": "cli-001",
+      "inscriptionId": "ins-001",
+      "fileName": "passeport_saidou_sow.pdf",
+      "fileUrl": "/docs/passeport_sample.pdf",
+      "receivedDate": "2026-09-01",
+      "expiryDate": "2029-08-14",
+      "status": "VALIDE",
+      "validatedBy": "Mariama Ba",
+      "validatedAt": "2026-09-01T12:00:00Z",
+      "isClientVisible": true,
+      "createdAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "doc-002",
+      "type": "Certificat Vaccination",
+      "clientId": "cli-001",
+      "inscriptionId": "ins-001",
+      "fileName": "vaccin_meningite_sow.pdf",
+      "fileUrl": "/docs/vaccin_sample.pdf",
+      "receivedDate": "2026-09-01",
+      "expiryDate": "2028-05-10",
+      "status": "VALIDE",
+      "validatedBy": "El Hadj Amadou Niang (Super Admin)",
+      "validatedAt": "2026-09-04T17:19:53.001Z",
+      "isClientVisible": true,
+      "createdAt": "2026-09-04T13:09:26.068Z",
+      "comment": "Certificat vérifié conforme aux normes OMS"
+    },
+    {
+      "id": "doc-003",
+      "type": "Photo Identité",
+      "clientId": "cli-001",
+      "inscriptionId": "ins-001",
+      "fileName": "photo_fond_blanc_sow.jpg",
+      "receivedDate": "2026-09-01",
+      "status": "VALIDE",
+      "validatedBy": "Mariama Ba",
+      "validatedAt": "2026-09-01T12:00:00Z",
+      "isClientVisible": true,
+      "createdAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "doc-004",
+      "type": "Passeport",
+      "clientId": "cli-002",
+      "inscriptionId": "ins-002",
+      "fileName": "passeport_aissatou_fall.pdf",
+      "receivedDate": "2026-09-01",
+      "expiryDate": "2028-11-20",
+      "status": "VALIDE",
+      "validatedBy": "Mariama Ba",
+      "validatedAt": "2026-09-01T12:10:00Z",
+      "isClientVisible": true,
+      "createdAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "doc-005",
+      "type": "Passeport",
+      "clientId": "cli-003",
+      "inscriptionId": "ins-003",
+      "fileName": "passeport_fatoumata_sow.pdf",
+      "receivedDate": "2026-09-01",
+      "expiryDate": "2030-01-10",
+      "status": "VALIDE",
+      "validatedBy": "Mariama Ba",
+      "validatedAt": "2026-09-01T15:20:00Z",
+      "isClientVisible": true,
+      "createdAt": "2026-09-04T13:09:26.068Z"
+    }
+  ],
+  "visas": [
+    {
+      "id": "visa-001",
+      "clientId": "cli-001",
+      "inscriptionId": "ins-001",
+      "status": "DOSSIER_EN_PREPARATION",
+      "notes": "Données biométriques prêtes pour téléversement plateforme Nusuk.",
+      "updatedAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "visa-002",
+      "clientId": "cli-002",
+      "inscriptionId": "ins-002",
+      "status": "NON_DEMANDE",
+      "notes": "En attente du certificat de vaccination.",
+      "updatedAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "visa-003",
+      "clientId": "cli-003",
+      "inscriptionId": "ins-003",
+      "status": "DEMANDE",
+      "applicationDate": "2026-09-02",
+      "notes": "Demande soumise aux autorités saoudiennes.",
+      "updatedAt": "2026-09-04T13:09:26.068Z"
+    }
+  ],
+  "flights": [
+    {
+      "id": "flt-001",
+      "voyageId": "voy-haj2027-01",
+      "airline": "Saudia Airlines",
+      "flightNumber": "SV-3420",
+      "departureCity": "Dakar (DSS)",
+      "arrivalCity": "Médine (MED)",
+      "departureDate": "2027-05-18",
+      "departureTime": "22:30",
+      "arrivalTime": "07:15 (+1)",
+      "terminal": "Terminal 1 AIBD",
+      "status": "PROGRAMME"
+    },
+    {
+      "id": "flt-002",
+      "voyageId": "voy-haj2027-01",
+      "airline": "Saudia Airlines",
+      "flightNumber": "SV-3421",
+      "departureCity": "Djeddah (JED)",
+      "arrivalCity": "Dakar (DSS)",
+      "departureDate": "2027-06-15",
+      "departureTime": "14:00",
+      "arrivalTime": "20:45",
+      "terminal": "Terminal Hajj JED",
+      "status": "PROGRAMME"
+    }
+  ],
+  "tickets": [
+    {
+      "id": "tkt-001",
+      "flightId": "flt-001",
+      "clientId": "cli-001",
+      "inscriptionId": "ins-001",
+      "ticketNumber": "065-9920194821",
+      "pnr": "TAIBA7",
+      "issueDate": "2026-09-02",
+      "status": "EMIS"
+    }
+  ],
+  "hotels": [
+    {
+      "id": "htl-001",
+      "voyageId": "voy-haj2027-01",
+      "name": "Pullman Zamzam Makkah",
+      "city": "Makkah",
+      "address": "Abraj Al Bait Complex, Haram, Makkah",
+      "category": 5,
+      "contactPhone": "+966 12 571 5555",
+      "checkInDate": "2027-05-26",
+      "checkOutDate": "2027-06-14"
+    },
+    {
+      "id": "htl-002",
+      "voyageId": "voy-haj2027-01",
+      "name": "Anwar Al Madinah Mövenpick",
+      "city": "Médine",
+      "address": "Central Northern Area, Haram, Médine",
+      "category": 5,
+      "contactPhone": "+966 14 818 1000",
+      "checkInDate": "2027-05-19",
+      "checkOutDate": "2027-05-26"
+    }
+  ],
+  "rooms": [
+    {
+      "id": "room-mak-401",
+      "hotelId": "htl-001",
+      "voyageId": "voy-haj2027-01",
+      "building": "Tour A",
+      "floor": "4ème",
+      "roomNumber": "401",
+      "roomType": "QUADRUPLE",
+      "capacity": 4,
+      "currentOccupancy": 1,
+      "notes": "Vue partielle sur la place"
+    },
+    {
+      "id": "room-mak-402",
+      "hotelId": "htl-001",
+      "voyageId": "voy-haj2027-01",
+      "building": "Tour A",
+      "floor": "4ème",
+      "roomNumber": "402",
+      "roomType": "DOUBLE",
+      "capacity": 2,
+      "currentOccupancy": 0,
+      "notes": "Chambre VIP"
+    },
+    {
+      "id": "room-med-301",
+      "hotelId": "htl-002",
+      "voyageId": "voy-haj2027-01",
+      "building": "Aile Nord",
+      "floor": "3ème",
+      "roomNumber": "301",
+      "roomType": "QUADRUPLE",
+      "capacity": 4,
+      "currentOccupancy": 1,
+      "notes": "À 50 mètres de la porte des Femmes"
+    }
+  ],
+  "room_assignments": [
+    {
+      "id": "ra-001",
+      "roomId": "room-mak-401",
+      "hotelId": "htl-001",
+      "clientId": "cli-001",
+      "inscriptionId": "ins-001",
+      "assignedAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "ra-002",
+      "roomId": "room-med-301",
+      "hotelId": "htl-002",
+      "clientId": "cli-001",
+      "inscriptionId": "ins-001",
+      "assignedAt": "2026-09-04T13:09:26.068Z"
+    }
+  ],
+  "groups": [
+    {
+      "id": "grp-001",
+      "voyageId": "voy-haj2027-01",
+      "name": "Groupe A — Cheikh Al Islam",
+      "guideId": "acc-001",
+      "guideName": "Oustaz Oumar Ba",
+      "busNumber": "Bus VIP N° 12",
+      "hotelId": "htl-001",
+      "notes": "Groupe affecté au vol Saudia SV-3420"
+    },
+    {
+      "id": "grp-002",
+      "voyageId": "voy-haj2027-01",
+      "name": "Groupe B — Al Falah",
+      "guideId": "acc-002",
+      "guideName": "Imam Moustapha Kane",
+      "busNumber": "Bus VIP N° 14",
+      "hotelId": "htl-001",
+      "notes": "Rassemblement à 14h00"
+    }
+  ],
+  "group_members": [
+    {
+      "id": "gm-001",
+      "groupId": "grp-001",
+      "clientId": "cli-001",
+      "inscriptionId": "ins-001"
+    },
+    {
+      "id": "gm-002",
+      "groupId": "grp-001",
+      "clientId": "cli-002",
+      "inscriptionId": "ins-002"
+    }
+  ],
+  "accompagnateurs": [
+    {
+      "id": "acc-001",
+      "name": "Oustaz Oumar Ba",
+      "phone": "+221 77 430 22 11",
+      "role": "Guide Religieux Principal & Formateur Rite",
+      "voyageId": "voy-haj2027-01",
+      "availability": true,
+      "notes": "15 années d’expérience sur les rites du Hajj et Oumrah."
+    },
+    {
+      "id": "acc-002",
+      "name": "Dr. Aïda Niasse",
+      "phone": "+221 77 622 99 88",
+      "role": "Médecin Référent de la Mission Taiba",
+      "voyageId": "voy-haj2027-01",
+      "availability": true,
+      "notes": "Spécialiste gériatrie et médecine d’urgence."
+    }
+  ],
+  "expenses": [
+    {
+      "id": "exp-001",
+      "voyageId": "voy-haj2027-01",
+      "category": "Billets Avion",
+      "amount": 15000000,
+      "currency": "FCFA",
+      "date": "2026-08-28",
+      "supplier": "Saudia Airlines Dakar",
+      "receiptNumber": "FA-SV-2026-091",
+      "comment": "Acompte réservation contingent de 50 sièges vol spécial Hajj",
+      "createdBy": "Mme Khady Diop",
+      "createdAt": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "exp-002",
+      "voyageId": "voy-haj2027-01",
+      "category": "Hôtels Makkah",
+      "amount": 8500000,
+      "currency": "FCFA",
+      "date": "2026-08-30",
+      "supplier": "Pullman Zamzam Makkah",
+      "receiptNumber": "BK-PUL-88912",
+      "comment": "Réservation bloc de 20 chambres vue partielle Haram",
+      "createdBy": "Mme Khady Diop",
+      "createdAt": "2026-09-04T13:09:26.068Z"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "notif-001",
+      "clientId": "cli-001",
+      "title": "Bienvenue au pèlerinage Hajj 2027",
+      "message": "Votre inscription sous le package Standard a bien été confirmée.",
+      "channel": "INTERNAL",
+      "status": "ENVOYE",
+      "createdAt": "2026-09-04T13:09:26.068Z"
+    }
+  ],
+  "audit_logs": [
+    {
+      "id": "log-1788546356056-270",
+      "userId": "usr-admin",
+      "userName": "El Hadj Amadou Niang (Super Admin)",
+      "action": "SUPPRESSION_VOYAGE",
+      "entity": "VOYAGE",
+      "entityId": "voy-oum2027-ram",
+      "oldValue": "{\"id\":\"voy-oum2027-ram\",\"code\":\"OUM2027-RAM\",\"title\":\"Oumrah Ramadan 2027 — Les 10 Derniers Jours\",\"type\":\"OUMRAH\",\"year\":2027,\"departureDate\":\"2027-03-25\",\"returnDate\":\"2027-04-09\",\"capacity\":60,\"status\":\"OUVERT\",\"description\":\"Séjour spirituel exceptionnel pour les nuits impaires de Ramadan.\",\"logisticsNotes\":\"Pullman Zamzam Makkah & Anwar Al Madinah.\",\"createdAt\":\"2026-09-04T13:09:26.068Z\",\"responsable\":\"Cheikh Tidiane Wade (Guide Spirituel)\",\"responsablePhone\":\"+221 77 600 00 03\",\"volsSummary\":\"Ethiopian Airlines (Dakar - Addis - Djeddah)\",\"hotelsSummary\":\"Pullman Zamzam 5★ (Makkah) & Anwar Al Madinah 5★\"}",
+      "timestamp": "2026-09-04T18:25:56.056Z"
+    },
+    {
+      "id": "log-1788542397099-450",
+      "userId": "usr-admin",
+      "userName": "El Hadj Amadou Niang (Super Admin)",
+      "action": "ENREGISTREMENT_PAIEMENT",
+      "entity": "PAYMENT",
+      "entityId": "pay-1788542397098",
+      "newValue": "{\"receiptNumber\":\"PAY-2027-0004\",\"amount\":250000,\"client\":\"SAIDOU SOW\"}",
+      "timestamp": "2026-09-04T17:19:57.099Z"
+    },
+    {
+      "id": "log-1788542393002-214",
+      "userId": "usr-admin",
+      "userName": "El Hadj Amadou Niang (Super Admin)",
+      "action": "VALIDATION_DOCUMENT",
+      "entity": "DOCUMENT",
+      "entityId": "doc-002",
+      "oldValue": "{\"id\":\"doc-002\",\"type\":\"Certificat Vaccination\",\"clientId\":\"cli-001\",\"inscriptionId\":\"ins-001\",\"fileName\":\"vaccin_meningite_sow.pdf\",\"fileUrl\":\"/docs/vaccin_sample.pdf\",\"receivedDate\":\"2026-09-01\",\"expiryDate\":\"2028-05-10\",\"status\":\"VALIDE\",\"validatedBy\":\"Mariama Ba\",\"validatedAt\":\"2026-09-01T12:00:00Z\",\"isClientVisible\":true,\"createdAt\":\"2026-09-04T13:09:26.068Z\"}",
+      "newValue": "{\"id\":\"doc-002\",\"type\":\"Certificat Vaccination\",\"clientId\":\"cli-001\",\"inscriptionId\":\"ins-001\",\"fileName\":\"vaccin_meningite_sow.pdf\",\"fileUrl\":\"/docs/vaccin_sample.pdf\",\"receivedDate\":\"2026-09-01\",\"expiryDate\":\"2028-05-10\",\"status\":\"VALIDE\",\"validatedBy\":\"El Hadj Amadou Niang (Super Admin)\",\"validatedAt\":\"2026-09-04T17:19:53.001Z\",\"isClientVisible\":true,\"createdAt\":\"2026-09-04T13:09:26.068Z\",\"comment\":\"Certificat vérifié conforme aux normes OMS\"}",
+      "timestamp": "2026-09-04T17:19:53.002Z"
+    },
+    {
+      "id": "log-001",
+      "userId": "usr-admin",
+      "userName": "El Hadj Amadou Niang",
+      "action": "INITIALISATION_SYSTEME",
+      "entity": "DATABASE",
+      "entityId": "SYSTEM",
+      "newValue": "Initialisation de GIE VOYAGE ERP V4 avec les 6 pèlerins Hajj 2027",
+      "timestamp": "2026-09-04T13:09:26.068Z"
+    },
+    {
+      "id": "log-002",
+      "userId": "usr-caisse",
+      "userName": "Cheikh Tidiane Wade",
+      "action": "ENREGISTREMENT_PAIEMENT",
+      "entity": "PAYMENT",
+      "entityId": "pay-001",
+      "newValue": "250 000 FCFA pour SAIDOU SOW (PAY-2027-0001)",
+      "timestamp": "2026-09-01T10:30:00Z"
+    },
+    {
+      "id": "log-003",
+      "userId": "usr-caisse",
+      "userName": "Cheikh Tidiane Wade",
+      "action": "ENREGISTREMENT_PAIEMENT",
+      "entity": "PAYMENT",
+      "entityId": "pay-002",
+      "newValue": "250 000 FCFA pour AISSATOU FALL (PAY-2027-0002)",
+      "timestamp": "2026-09-01T11:45:00Z"
+    },
+    {
+      "id": "log-004",
+      "userId": "usr-caisse",
+      "userName": "Cheikh Tidiane Wade",
+      "action": "ENREGISTREMENT_PAIEMENT",
+      "entity": "PAYMENT",
+      "entityId": "pay-003",
+      "newValue": "4 000 000 FCFA pour FATOUMATA SOW (PAY-2027-0003)",
+      "timestamp": "2026-09-01T15:00:00Z"
+    }
+  ]
+}

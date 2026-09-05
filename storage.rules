@@ -1,0 +1,56 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isExistingUser() {
+      return isAuthenticated() && 
+        firestore.exists(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+
+    function getUserData() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isActive() {
+      return isExistingUser() && 
+        getUserData().active == true && 
+        getUserData().status == 'ACTIF';
+    }
+
+    function isStaff() {
+      return isActive() && getUserData().roleId != 'PILGRIM';
+    }
+
+    function isPilgrim() {
+      return isActive() && getUserData().roleId == 'PILGRIM';
+    }
+
+    // Default Deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Agency Public Assets (e.g. agency logo)
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Pilgrim Documents Storage
+    // Structure: /documents/{clientId}/{documentId}/{fileName}
+    match /documents/{clientId}/{documentId}/{fileName} {
+      // Staff can read and upload documents
+      allow write: if isStaff();
+      allow read: if isStaff() || (
+        isPilgrim() && 
+        getUserData().clientId == clientId &&
+        firestore.exists(/databases/(default)/documents/documents/$(documentId)) &&
+        firestore.get(/databases/(default)/documents/documents/$(documentId)).data.isClientVisible == true
+      );
+    }
+  }
+}
