@@ -1,6 +1,6 @@
 import { adminDb } from './firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
-import { db } from './db.js';
+import { userRepository } from './repositories/user.repository.js';
 
 export interface AdminNotificationData {
   recipientUserId?: string;
@@ -37,9 +37,9 @@ export const sendNotification = async (data: AdminNotificationData): Promise<str
         console.warn('Could not query users collection in Firestore:', err);
       }
 
-      // If still not resolved from Firestore, check memory/database users
+      // If still not resolved from Firestore, check Neon PostgreSQL users repository
       if (!recipientUserId) {
-        const localUser = db.getUsers().find((u) => u.clientId === data.recipientClientId);
+        const localUser = await userRepository.getUserByClientId(data.recipientClientId);
         if (localUser) {
           recipientUserId = localUser.id;
         } else {

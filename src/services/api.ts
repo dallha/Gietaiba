@@ -22,6 +22,11 @@ import { createNotification } from './notification.service.js';
 
 class ApiService {
   private currentUserId: string = 'usr-admin';
+  private token: string | null = null;
+
+  public setToken(token: string) {
+    this.token = token;
+  }
 
   public setUserId(userId: string) {
     this.currentUserId = userId;
@@ -35,10 +40,12 @@ class ApiService {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'x-user-id': this.currentUserId,
+      ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : { 'x-user-id': this.currentUserId }),
       ...(options?.headers as Record<string, string> || {}),
     };
-    console.log(`[ApiService] Requesting ${endpoint} with x-user-id: ${this.currentUserId}`);
+    if (!this.token) {
+      console.log(`[ApiService] Requesting ${endpoint} with dev user context`);
+    }
 
     let res: Response | null = null;
     let attempts = 0;
@@ -96,18 +103,28 @@ class ApiService {
   }
 
   // Auth
-  async login(emailOrPhone: string, password: string): Promise<{ user: UserSession }> {
-    return this.request('/api/auth/login', {
+  async login(emailOrPhone: string, password: string): Promise<{ user: UserSession; token?: string }> {
+    const res = await this.request<{ user: UserSession; token?: string }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email: emailOrPhone, password }),
     });
+    if (res.token) {
+      this.token = res.token;
+    }
+    this.currentUserId = res.user.id;
+    return res;
   }
 
-  async pilgrimLogin(identifier: string): Promise<{ user: UserSession; client: Client }> {
-    return this.request('/api/auth/pilgrim-login', {
+  async pilgrimLogin(identifier: string): Promise<{ user: UserSession; client: Client; token?: string }> {
+    const res = await this.request<{ user: UserSession; client: Client; token?: string }>('/api/auth/pilgrim-login', {
       method: 'POST',
       body: JSON.stringify({ identifier }),
     });
+    if (res.token) {
+      this.token = res.token;
+    }
+    this.currentUserId = res.user.id;
+    return res;
   }
 
   async getUsers(): Promise<UserSession[]> {

@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * @deprecated LEGACY JSON DATABASE MANAGER — PHASE 3 ARCHIVAL STATUS
+ * ============================================================================
+ * THIS MODULE IS COMPLETELY DEPRECATED AND DISCONNECTED FROM RUNTIME OPERATION.
+ * 
+ * UNIQUE SOURCE OF TRUTH: Neon PostgreSQL via server/repositories/ & server/services/
+ * 
+ * DO NOT IMPORT OR USE DatabaseManager IN ANY ROUTES, SERVICES, OR REPOSITORIES.
+ * KEPT STRICTLY AS HISTORICAL CODE REFERENCE. PRESERVED IN NON-OPERATIONAL STATE.
+ * ============================================================================
+ */
+
 import fs from 'fs';
 import path from 'path';
 import {
