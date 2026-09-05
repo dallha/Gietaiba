@@ -5,7 +5,7 @@ export interface CreateNotificationParams {
   recipientClientId?: string;
   inscriptionId?: string;
   type: string;
-  category?: 'SYSTEM' | 'PAYMENT' | 'DOCUMENT' | 'LOGISTICS' | 'GENERAL';
+  category?: 'SYSTEM' | 'PAYMENT' | 'DOCUMENT' | 'LOGISTICS' | 'GENERAL' | 'INSCRIPTION';
   title: string;
   message: string;
   entityType?: 'payment' | 'document' | 'visa' | 'flight' | 'hotel' | 'inscription' | 'client';
@@ -38,12 +38,13 @@ export class NotificationRepository {
     return res.rows.map(this.mapRowToNotification);
   }
 
-  public async createNotification(data: CreateNotificationParams): Promise<string> {
+  public async createNotification(data: CreateNotificationParams, client?: import('pg').PoolClient): Promise<string> {
+    const runner = client || pool;
     const rawKey = data.idempotencyKey ||
       `${data.recipientUserId || data.recipientClientId || 'global'}_${data.type}_${data.entityType || 'ent'}_${data.entityId || 'none'}`;
     const idempotencyKey = rawKey.replace(/[\/\s]/g, '_').substring(0, 150);
 
-    const checkRes = await pool.query(
+    const checkRes = await runner.query(
       `SELECT id, is_read FROM notifications WHERE idempotency_key = $1`,
       [idempotencyKey]
     );
@@ -54,7 +55,7 @@ export class NotificationRepository {
 
     const id = `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    await pool.query(
+    await runner.query(
       `INSERT INTO notifications (
         id, idempotency_key, recipient_user_id, recipient_client_id, inscription_id,
         type, category, title, message, entity_type, entity_id, priority, action_url,

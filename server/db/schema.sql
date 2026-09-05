@@ -541,3 +541,35 @@ CREATE TABLE IF NOT EXISTS flight_segments (
 );
 CREATE INDEX IF NOT EXISTS idx_flight_segments_flight ON flight_segments(flight_id);
 
+-- =====================================================================
+-- 21. PHASE 4.2 : WORKFLOWS TRANSACTIONNELS, ALLOCATIONS & IDEMPOTENCE
+-- =====================================================================
+
+-- Table d'allocation comptable traçable des paiements sur les échéances
+CREATE TABLE IF NOT EXISTS payment_schedule_allocations (
+  id TEXT PRIMARY KEY,
+  payment_id TEXT NOT NULL REFERENCES payments(id) ON DELETE RESTRICT,
+  payment_schedule_id TEXT NOT NULL REFERENCES payment_schedules(id) ON DELETE RESTRICT,
+  amount_allocated NUMERIC(15, 2) NOT NULL CHECK (amount_allocated > 0),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_psa_payment ON payment_schedule_allocations(payment_id);
+CREATE INDEX IF NOT EXISTS idx_psa_schedule ON payment_schedule_allocations(payment_schedule_id);
+
+-- Table de clés d'idempotence multi-acteurs avec détection d'empreinte de requête
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+  key TEXT NOT NULL,
+  actor_user_id TEXT NOT NULL,
+  resource_type TEXT NOT NULL,
+  resource_id TEXT,
+  request_fingerprint TEXT NOT NULL,
+  response_payload JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '24 hours',
+  PRIMARY KEY (key, actor_user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_idempotency_expires ON idempotency_keys(expires_at);
+
+-- Support de rejet avec motif sur documents
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+

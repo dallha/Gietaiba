@@ -3,9 +3,56 @@ import { auditRepository } from '../repositories/audit.repository.js';
 import { notificationRepository } from '../repositories/notification.repository.js';
 import { PilgrimDocument, UserSession } from '../../src/types.js';
 
+export interface PassportValidityResult {
+  isValid: boolean;
+  marginMonths: number;
+  requiredMonths: number;
+  message: string;
+}
+
 export class DocumentService {
   public async getDocuments(query?: { clientId?: string; inscriptionId?: string }): Promise<PilgrimDocument[]> {
     return documentRepository.getDocuments(query);
+  }
+
+  /**
+   * Contrôle configurable de la validité du passeport par rapport à la date de fin de séjour (Correction 4).
+   * Vérifie que la validité résiduelle est strictement supérieure ou égale à requiredValidityMonths (par défaut 6 mois).
+   */
+  public validatePassportValidity(
+    passportExpiryStr: string,
+    campaignEndDateStr: string,
+    requiredValidityMonths: number = 6
+  ): PassportValidityResult {
+    const expiry = new Date(passportExpiryStr);
+    const returnDate = new Date(campaignEndDateStr);
+
+    if (isNaN(expiry.getTime()) || isNaN(returnDate.getTime())) {
+      throw new Error('Dates de passeport ou de retour de campagne invalides.');
+    }
+
+    // Calcul de l'écart exact en mois
+    const diffMs = expiry.getTime() - returnDate.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    const marginMonths = diffDays / 30.4375; // moyenne jours par mois
+
+    const isValid = marginMonths >= requiredValidityMonths;
+
+    if (!isValid) {
+      return {
+        isValid: false,
+        marginMonths: Math.round(marginMonths * 10) / 10,
+        requiredMonths: requiredValidityMonths,
+        message: `PASSPORT_EXPIRING_SOON: Le passeport expire le ${passportExpiryStr}, soit ${(Math.round(marginMonths * 10) / 10)} mois après la fin du voyage (${campaignEndDateStr}). Une marge minimale de ${requiredValidityMonths} mois est obligatoire pour l'obtention du visa saoudien.`,
+      };
+    }
+
+    return {
+      isValid: true,
+      marginMonths: Math.round(marginMonths * 10) / 10,
+      requiredMonths: requiredValidityMonths,
+      message: `Passeport conforme (${Math.round(marginMonths * 10) / 10} mois de validité résiduelle).`,
+    };
   }
 
   public async createDocument(
@@ -32,6 +79,10 @@ export class DocumentService {
     comment: string | undefined,
     actor: UserSession
   ): Promise<PilgrimDocument> {
+    if (status === 'REFUSE' && (!comment || !comment.trim())) {
+      throw new Error('Un motif de rejet est obligatoire pour tout document refusé.');
+    }
+
     const updated = await documentRepository.updateDocumentStatus(
       id,
       status,
@@ -46,6 +97,7 @@ export class DocumentService {
       entityType: 'DOCUMENT',
       entityId: id,
       newValue: { status, comment },
+      reason: comment,
     });
 
     // Notifications selon le statut

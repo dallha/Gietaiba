@@ -10,20 +10,24 @@ export class AuditRepository {
     return res.rows.map(this.mapRowToAudit);
   }
 
-  public async logAudit(data: {
-    actorUserId: string;
-    actorUserName: string;
-    action: string;
-    entityType: string;
-    entityId: string;
-    oldValue?: any;
-    newValue?: any;
-    reason?: string;
-    metadata?: any;
-  }): Promise<AuditLog> {
+  public async logAudit(
+    data: {
+      actorUserId: string;
+      actorUserName: string;
+      action: string;
+      entityType: string;
+      entityId: string;
+      oldValue?: any;
+      newValue?: any;
+      reason?: string;
+      metadata?: any;
+    },
+    client?: import('pg').PoolClient
+  ): Promise<AuditLog> {
+    const runner = client || pool;
     const id = `log-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    const res = await pool.query(
+    const res = await runner.query(
       `INSERT INTO audit_logs (
         id, actor_user_id, actor_user_name, action, entity_type, entity_id,
         old_value, new_value, reason, metadata, created_at

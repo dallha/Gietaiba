@@ -65,3 +65,22 @@ export async function getNextBusinessSequence(type: string, year: number = 0, cl
   return Number(res.rows[0].get_next_business_sequence);
 }
 
+/**
+ * Executes a callback within a managed PostgreSQL ACID transaction.
+ * Automatically issues BEGIN, COMMIT or ROLLBACK and releases the client.
+ */
+export async function withTransaction<T>(callback: (client: pg.PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+

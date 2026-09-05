@@ -153,15 +153,14 @@ async function runTests() {
     );
 
     // 10. Création d'une inscription avec UUID pur et code annuel dynamique
-    const testInscription = await inscriptionRepository.createInscription(
-      {
-        clientId: testClient.id,
-        campaignId: 'voy-haj2027-01',
-        packageId: 'pkg-std-2027',
-        status: 'EN_ATTENTE',
-      },
-      { id: 'usr-admin', email: 'admin@taiba.sn', role: 'SUPER_ADMIN' }
-    );
+    const testInscription = await inscriptionRepository.createInscription({
+      clientId: testClient.id,
+      campaignId: 'voy-haj2027-01',
+      packageId: 'pkg-std-2027',
+      status: 'EN_ATTENTE',
+      agentId: 'usr-admin',
+      agentName: 'admin@taiba.sn',
+    });
     tempInscriptionId = testInscription.id;
     const insUuidOk = UUID_V4_REGEX.test(testInscription.id);
     const insCodeOk = /^INS-2027-\d{6}$/.test(testInscription.code);
@@ -174,19 +173,16 @@ async function runTests() {
     );
 
     // 11. Création d'une dépense avec UUID pur et code EXP-YYYY-XXXXXX
-    const testExp = await expenseRepository.createExpense(
-      {
-        voyageId: 'voy-haj2027-01',
-        category: 'Transport Interne',
-        amount: 50000,
-        currency: 'FCFA',
-        date: '2026-09-05',
-        supplier: 'Test Supplier Dakar',
-        comment: 'Dépense de test unitaire',
-      },
-      'usr-admin',
-      'El Hadj Amadou Niang'
-    );
+    const testExp = await expenseRepository.createExpense({
+      voyageId: 'voy-haj2027-01',
+      category: 'Transport Interne',
+      amount: 50000,
+      currency: 'FCFA',
+      date: '2026-09-05',
+      supplier: 'Test Supplier Dakar',
+      comment: 'Dépense de test unitaire',
+      createdBy: 'usr-admin',
+    });
     tempExpenseId = testExp.id;
     const expUuidOk = UUID_V4_REGEX.test(testExp.id);
     const expCodeOk = /^EXP-2026-\d{6}$/.test(testExp.code || '');

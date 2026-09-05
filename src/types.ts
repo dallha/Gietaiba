@@ -132,6 +132,8 @@ export interface Voyage {
   createdAt: string;
 }
 
+export type Campaign = Voyage;
+
 export interface IncludedService {
   id: string;
   category: 'HEBERGEMENT' | 'TRANSPORT' | 'RESTAURATION' | 'VISA' | 'ENCADREMENT' | 'ZIARAS' | 'SANTE' | 'AUTRE';
@@ -182,6 +184,7 @@ export interface Inscription {
   code: string; // INS-2027-001
   clientId: string;
   voyageId: string;
+  campaignId?: string;
   packageId: string;
   packageVersionId: string;
   appliedPrice: number; // Snapshot historique immuable du prix convenu au moment de l'inscription
@@ -190,6 +193,7 @@ export interface Inscription {
   status: 'CONFIRMEE' | 'EN_ATTENTE' | 'ANNULEE';
   agentId: string;
   agentName: string;
+  registrationDate?: string;
   createdAt: string;
   updatedAt: string;
   // Computed / expanded fields for convenience
@@ -318,6 +322,10 @@ export interface RoomAssignment {
   clientId: string;
   inscriptionId: string;
   assignedAt: string;
+  checkInDate?: string;
+  checkOutDate?: string;
+  notes?: string;
+  createdAt?: string;
 }
 
 export interface Group {
@@ -411,7 +419,7 @@ export interface AppNotification {
   recipientClientId?: string;
   inscriptionId?: string;
   type: string;
-  category: 'SYSTEM' | 'PAYMENT' | 'DOCUMENT' | 'LOGISTICS' | 'GENERAL';
+  category: 'SYSTEM' | 'PAYMENT' | 'DOCUMENT' | 'LOGISTICS' | 'GENERAL' | 'INSCRIPTION';
   title: string;
   message: string;
   entityType?: 'payment' | 'document' | 'visa' | 'flight' | 'hotel' | 'inscription' | 'client';
