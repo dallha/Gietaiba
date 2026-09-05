@@ -1,4 +1,5 @@
-import { pool } from '../db/neon.js';
+import { randomUUID } from 'crypto';
+import { pool, getNextBusinessSequence } from '../db/neon.js';
 import { Client } from '../../src/types.js';
 
 export class ClientRepository {
@@ -36,14 +37,21 @@ export class ClientRepository {
   }
 
   public async getNextClientCode(): Promise<string> {
-    const res = await pool.query(`SELECT COUNT(*) as count FROM clients`);
-    const count = parseInt(res.rows[0].count, 10) + 1;
-    return `CLI-2027-${String(count).padStart(3, '0')}`;
+    const seq = await getNextBusinessSequence('CLIENT', 0);
+    return `CLI-${String(seq).padStart(6, '0')}`;
   }
 
-  public async createClient(clientData: Omit<Client, 'id' | 'code' | 'createdAt' | 'updatedAt'>): Promise<Client> {
+  public async createClient(
+    clientData: Omit<Client, 'id' | 'code' | 'createdAt' | 'updatedAt' | 'address' | 'birthDate' | 'profession' | 'contactPerson' | 'contactPhone'> & {
+      address?: string;
+      birthDate?: string;
+      profession?: string;
+      contactPerson?: string;
+      contactPhone?: string;
+    }
+  ): Promise<Client> {
     const code = await this.getNextClientCode();
-    const id = `cli-${Date.now()}`;
+    const id = randomUUID();
 
     const res = await pool.query(
       `INSERT INTO clients (

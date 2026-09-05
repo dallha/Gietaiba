@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { pool } from '../db/neon.js';
 import { PilgrimDocument } from '../../src/types.js';
 
@@ -27,7 +28,7 @@ export class DocumentRepository {
   }
 
   public async createDocument(data: Omit<PilgrimDocument, 'id' | 'createdAt'>): Promise<PilgrimDocument> {
-    const id = `doc-${Date.now()}`;
+    const id = randomUUID();
     const res = await pool.query(
       `INSERT INTO documents (
         id, client_id, inscription_id, type, file_name, file_url, received_date,

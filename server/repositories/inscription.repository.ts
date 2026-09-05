@@ -1,5 +1,6 @@
-import { pool } from '../db/neon.js';
-import { Inscription, Client, Voyage, VoyagePackage } from '../../src/types.js';
+import { randomUUID } from 'crypto';
+import { pool, getNextBusinessSequence } from '../db/neon.js';
+import { Inscription, Client, Voyage, VoyagePackage, PaymentSchedule } from '../../src/types.js';
 
 export class InscriptionRepository {
   public async getInscriptions(query?: { campaignId?: string; clientId?: string }): Promise<Inscription[]> {
@@ -52,10 +53,9 @@ export class InscriptionRepository {
     return found || null;
   }
 
-  public async getNextInscriptionCode(): Promise<string> {
-    const res = await pool.query(`SELECT COUNT(*) as count FROM inscriptions`);
-    const count = parseInt(res.rows[0].count, 10) + 1;
-    return `INS-2027-${String(count).padStart(3, '0')}`;
+  public async getNextInscriptionCode(year: number = 2027, client?: any): Promise<string> {
+    const seq = await getNextBusinessSequence('INSCRIPTION', year, client);
+    return `INS-${year}-${String(seq).padStart(6, '0')}`;
   }
 
   /**
@@ -89,6 +89,9 @@ export class InscriptionRepository {
       }
       const pkg = pkgRes.rows[0];
 
+      const campRes = await client.query(`SELECT year FROM campaigns WHERE id = $1`, [data.campaignId]);
+      const campaignYear = campRes.rows[0]?.year || new Date().getFullYear();
+
       const verRes = await client.query(
         `SELECT * FROM package_versions WHERE package_id = $1 ORDER BY version_number DESC LIMIT 1`,
         [data.packageId]
@@ -98,10 +101,8 @@ export class InscriptionRepository {
       const versionNumber = activeVersion ? activeVersion.version_number : 1;
       const appliedPrice = Number(pkg.price);
 
-      const countRes = await client.query(`SELECT COUNT(*) as count FROM inscriptions`);
-      const count = parseInt(countRes.rows[0].count, 10) + 1;
-      const code = `INS-2027-${String(count).padStart(3, '0')}`;
-      const id = `ins-${Date.now()}`;
+      const code = await this.getNextInscriptionCode(campaignYear, client);
+      const id = randomUUID();
 
       // 3. Insertion de l'inscription avec snapshot tarifaire
       await client.query(
@@ -126,7 +127,7 @@ export class InscriptionRepository {
       );
 
       // 4. Initialisation automatique du suivi de visa
-      const visaId = `visa-${Date.now()}`;
+      const visaId = randomUUID();
       await client.query(
         `INSERT INTO visas (
           id, client_id, inscription_id, status, notes, updated_at
@@ -246,6 +247,52 @@ export class InscriptionRepository {
       } as any : undefined,
     };
   }
+
+  public async getPaymentSchedules(inscriptionId: string): Promise<PaymentSchedule[]> {
+    const res = await pool.query(
+      `SELECT * FROM payment_schedules WHERE inscription_id = $1 ORDER BY due_date ASC`,
+      [inscriptionId]
+    );
+    return res.rows.map((r: any) => ({
+      id: r.id,
+      inscriptionId: r.inscription_id,
+      dueDate: r.due_date ? new Date(r.due_date).toISOString().split('T')[0] : '',
+      amountDue: Number(r.amount_due),
+      status: r.status,
+      comment: r.comment || undefined,
+      createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+      updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+    }));
+  }
+
+  public async createPaymentSchedule(data: Omit<PaymentSchedule, 'id' | 'createdAt' | 'updatedAt'>): Promise<PaymentSchedule> {
+    const id = randomUUID();
+    const res = await pool.query(
+      `INSERT INTO payment_schedules (id, inscription_id, due_date, amount_due, status, comment, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+       RETURNING *`,
+      [
+        id,
+        data.inscriptionId,
+        new Date(data.dueDate),
+        data.amountDue,
+        data.status || 'PENDING',
+        data.comment || null,
+      ]
+    );
+    const r = res.rows[0];
+    return {
+      id: r.id,
+      inscriptionId: r.inscription_id,
+      dueDate: r.due_date ? new Date(r.due_date).toISOString().split('T')[0] : '',
+      amountDue: Number(r.amount_due),
+      status: r.status,
+      comment: r.comment || undefined,
+      createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+      updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+    };
+  }
 }
 
 export const inscriptionRepository = new InscriptionRepository();
+

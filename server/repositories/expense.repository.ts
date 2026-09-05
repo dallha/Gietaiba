@@ -1,4 +1,5 @@
-import { pool } from '../db/neon.js';
+import { randomUUID } from 'crypto';
+import { pool, getNextBusinessSequence } from '../db/neon.js';
 import { Expense } from '../../src/types.js';
 
 export class ExpenseRepository {
@@ -25,20 +26,26 @@ export class ExpenseRepository {
     userId?: string,
     userName?: string
   ): Promise<Expense> {
-    const id = `exp-${Date.now()}`;
+    const expenseDate = data.date ? new Date(data.date) : new Date();
+    const year = expenseDate.getFullYear();
+    const seq = await getNextBusinessSequence('EXPENSE', year);
+    const code = `EXP-${year}-${String(seq).padStart(6, '0')}`;
+    const id = randomUUID();
+
     const res = await pool.query(
       `INSERT INTO expenses (
-        id, campaign_id, category, amount, currency, date, supplier, receipt_number,
+        id, code, campaign_id, category, amount, currency, date, supplier, receipt_number,
         comment, created_by, created_by_name, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
       RETURNING *`,
       [
         id,
+        code,
         data.voyageId,
         data.category,
         data.amount,
         data.currency || 'FCFA',
-        new Date(data.date),
+        expenseDate,
         data.supplier || null,
         data.receiptNumber || null,
         data.comment || null,
@@ -56,6 +63,7 @@ export class ExpenseRepository {
   private mapRowToExpense(r: any): Expense {
     return {
       id: r.id,
+      code: r.code || undefined,
       voyageId: r.campaign_id,
       category: r.category,
       amount: Number(r.amount),
@@ -71,3 +79,4 @@ export class ExpenseRepository {
 }
 
 export const expenseRepository = new ExpenseRepository();
+

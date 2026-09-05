@@ -1,4 +1,5 @@
-import { pool } from '../db/neon.js';
+import { randomUUID } from 'crypto';
+import { pool, getNextBusinessSequence } from '../db/neon.js';
 import { Payment } from '../../src/types.js';
 
 export class PaymentRepository {
@@ -35,10 +36,9 @@ export class PaymentRepository {
     return this.mapRowToPayment(res.rows[0]);
   }
 
-  public async getNextReceiptNumber(): Promise<string> {
-    const res = await pool.query(`SELECT COUNT(*) as count FROM payments`);
-    const count = parseInt(res.rows[0].count, 10) + 1;
-    return `PAY-2027-${String(count).padStart(4, '0')}`;
+  public async getNextReceiptNumber(year: number = 2027, client?: any): Promise<string> {
+    const seq = await getNextBusinessSequence('PAYMENT', year, client);
+    return `PAY-${year}-${String(seq).padStart(6, '0')}`;
   }
 
   /**
@@ -77,12 +77,11 @@ export class PaymentRepository {
       }
       const ins = insRes.rows[0];
 
-      // Générer numéro de reçu officiel infalsifiable
-      const countRes = await client.query(`SELECT COUNT(*) as count FROM payments`);
-      const count = parseInt(countRes.rows[0].count, 10) + 1;
-      const receiptNumber = `PAY-2027-${String(count).padStart(4, '0')}`;
-      const id = `pay-${Date.now()}`;
+      // Générer numéro de reçu officiel infalsifiable avec séquence annuelle atomique
       const paymentDate = data.paymentDate ? new Date(data.paymentDate) : new Date();
+      const year = paymentDate.getFullYear();
+      const receiptNumber = await this.getNextReceiptNumber(year, client);
+      const id = randomUUID();
 
       const insertRes = await client.query(
         `INSERT INTO payments (
@@ -148,7 +147,7 @@ export class PaymentRepository {
       }
 
       // 1. Enregistrement dans payment_reversals
-      const reversalId = `rev-${Date.now()}`;
+      const reversalId = randomUUID();
       await client.query(
         `INSERT INTO payment_reversals (
           id, payment_id, reason, amount, actor_user_id, actor_user_name, reversed_at, metadata

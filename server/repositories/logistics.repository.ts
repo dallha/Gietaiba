@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { pool } from '../db/neon.js';
 import {
   Flight,
@@ -9,6 +10,8 @@ import {
   GroupMember,
   Accompagnateur,
   Client,
+  HotelStay,
+  FlightSegment,
 } from '../../src/types.js';
 
 export class LogisticsRepository {
@@ -26,7 +29,7 @@ export class LogisticsRepository {
   }
 
   public async createFlight(flightData: Omit<Flight, 'id'>): Promise<Flight> {
-    const id = `flt-${Date.now()}`;
+    const id = randomUUID();
     const res = await pool.query(
       `INSERT INTO flights (
         id, campaign_id, airline, flight_number, departure_city, arrival_city,
@@ -67,7 +70,7 @@ export class LogisticsRepository {
   }
 
   public async createTicket(data: Omit<Ticket, 'id'>): Promise<Ticket> {
-    const id = `tkt-${Date.now()}`;
+    const id = randomUUID();
     const res = await pool.query(
       `INSERT INTO tickets (
         id, flight_id, client_id, inscription_id, ticket_number, pnr, issue_date, status, created_at
@@ -101,7 +104,7 @@ export class LogisticsRepository {
   }
 
   public async createHotel(data: Omit<Hotel, 'id'>): Promise<Hotel> {
-    const id = `htl-${Date.now()}`;
+    const id = randomUUID();
     const res = await pool.query(
       `INSERT INTO hotels (
         id, campaign_id, name, city, address, category, contact_phone, check_in_date, check_out_date, created_at
@@ -170,7 +173,7 @@ export class LogisticsRepository {
   }
 
   public async createRoom(data: Omit<Room, 'id' | 'currentOccupancy'>): Promise<Room> {
-    const id = `room-${Date.now()}`;
+    const id = randomUUID();
     const res = await pool.query(
       `INSERT INTO rooms (
         id, hotel_id, campaign_id, building, floor, room_number, room_type, capacity, current_occupancy, notes, created_at
@@ -221,7 +224,7 @@ export class LogisticsRepository {
         throw new Error('Ce pèlerin est déjà assigné à une chambre dans cet hôtel.');
       }
 
-      const id = `ra-${Date.now()}`;
+      const id = randomUUID();
       const insertRes = await client.query(
         `INSERT INTO room_assignments (id, room_id, hotel_id, client_id, inscription_id, assigned_at)
          VALUES ($1, $2, $3, $4, $5, NOW())
@@ -308,7 +311,7 @@ export class LogisticsRepository {
   }
 
   public async createGroup(data: Omit<Group, 'id'>): Promise<Group> {
-    const id = `grp-${Date.now()}`;
+    const id = randomUUID();
     const res = await pool.query(
       `INSERT INTO groups (id, campaign_id, name, guide_id, guide_name, bus_number, hotel_id, notes, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
@@ -342,7 +345,7 @@ export class LogisticsRepository {
     clientId: string,
     inscriptionId?: string
   ): Promise<GroupMember> {
-    const id = `gm-${Date.now()}`;
+    const id = randomUUID();
     const res = await pool.query(
       `INSERT INTO group_members (id, group_id, client_id, inscription_id, created_at)
        VALUES ($1, $2, $3, $4, NOW())
@@ -434,6 +437,145 @@ export class LogisticsRepository {
       notes: r.notes || undefined,
     };
   }
+
+  // 7. HOTEL STAYS (Séjours Makkah / Médine géolocalisés par pèlerin)
+  public async getHotelStays(query?: { campaignId?: string; inscriptionId?: string; clientId?: string }): Promise<HotelStay[]> {
+    let sql = `SELECT * FROM hotel_stays WHERE 1=1`;
+    const params: any[] = [];
+    if (query?.campaignId) {
+      params.push(query.campaignId);
+      sql += ` AND campaign_id = $${params.length}`;
+    }
+    if (query?.inscriptionId) {
+      params.push(query.inscriptionId);
+      sql += ` AND inscription_id = $${params.length}`;
+    }
+    if (query?.clientId) {
+      params.push(query.clientId);
+      sql += ` AND client_id = $${params.length}`;
+    }
+    sql += ` ORDER BY check_in_date ASC`;
+    const res = await pool.query(sql, params);
+    return res.rows.map((r: any) => ({
+      id: r.id,
+      inscriptionId: r.inscription_id,
+      clientId: r.client_id,
+      hotelId: r.hotel_id,
+      campaignId: r.campaign_id,
+      packageId: r.package_id || undefined,
+      city: r.city,
+      checkInDate: r.check_in_date ? new Date(r.check_in_date).toISOString().split('T')[0] : '',
+      checkOutDate: r.check_out_date ? new Date(r.check_out_date).toISOString().split('T')[0] : '',
+      roomType: r.room_type,
+      roomId: r.room_id || undefined,
+      shuttleService: Boolean(r.shuttle_service),
+      createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    }));
+  }
+
+  public async createHotelStay(data: Omit<HotelStay, 'id' | 'createdAt'>): Promise<HotelStay> {
+    const id = randomUUID();
+    const res = await pool.query(
+      `INSERT INTO hotel_stays (
+        id, inscription_id, client_id, hotel_id, campaign_id, package_id,
+        city, check_in_date, check_out_date, room_type, room_id, shuttle_service, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+      RETURNING *`,
+      [
+        id,
+        data.inscriptionId,
+        data.clientId,
+        data.hotelId,
+        data.campaignId,
+        data.packageId || null,
+        data.city,
+        new Date(data.checkInDate),
+        new Date(data.checkOutDate),
+        data.roomType,
+        data.roomId || null,
+        data.shuttleService || false,
+      ]
+    );
+    const r = res.rows[0];
+    return {
+      id: r.id,
+      inscriptionId: r.inscription_id,
+      clientId: r.client_id,
+      hotelId: r.hotel_id,
+      campaignId: r.campaign_id,
+      packageId: r.package_id || undefined,
+      city: r.city,
+      checkInDate: r.check_in_date ? new Date(r.check_in_date).toISOString().split('T')[0] : '',
+      checkOutDate: r.check_out_date ? new Date(r.check_out_date).toISOString().split('T')[0] : '',
+      roomType: r.room_type,
+      roomId: r.room_id || undefined,
+      shuttleService: Boolean(r.shuttle_service),
+      createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    };
+  }
+
+  // 8. FLIGHT SEGMENTS (Tronçons multi-escales)
+  public async getFlightSegments(flightId?: string): Promise<FlightSegment[]> {
+    let sql = `SELECT * FROM flight_segments`;
+    const params: any[] = [];
+    if (flightId) {
+      params.push(flightId);
+      sql += ` WHERE flight_id = $1`;
+    }
+    sql += ` ORDER BY departure_time ASC`;
+    const res = await pool.query(sql, params);
+    return res.rows.map((r: any) => ({
+      id: r.id,
+      flightId: r.flight_id,
+      segmentType: r.segment_type,
+      departureAirport: r.departure_airport,
+      arrivalAirport: r.arrival_airport,
+      flightNumber: r.flight_number,
+      airline: r.airline,
+      departureTime: new Date(r.departure_time).toISOString(),
+      arrivalTime: new Date(r.arrival_time).toISOString(),
+      terminal: r.terminal || undefined,
+      createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    }));
+  }
+
+  public async createFlightSegment(data: Omit<FlightSegment, 'id' | 'createdAt'>): Promise<FlightSegment> {
+    const id = randomUUID();
+    const res = await pool.query(
+      `INSERT INTO flight_segments (
+        id, flight_id, segment_type, departure_airport, arrival_airport,
+        flight_number, airline, departure_time, arrival_time, terminal, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+      RETURNING *`,
+      [
+        id,
+        data.flightId,
+        data.segmentType,
+        data.departureAirport,
+        data.arrivalAirport,
+        data.flightNumber,
+        data.airline,
+        new Date(data.departureTime),
+        new Date(data.arrivalTime),
+        data.terminal || null,
+      ]
+    );
+    const r = res.rows[0];
+    return {
+      id: r.id,
+      flightId: r.flight_id,
+      segmentType: r.segment_type,
+      departureAirport: r.departure_airport,
+      arrivalAirport: r.arrival_airport,
+      flightNumber: r.flight_number,
+      airline: r.airline,
+      departureTime: new Date(r.departure_time).toISOString(),
+      arrivalTime: new Date(r.arrival_time).toISOString(),
+      terminal: r.terminal || undefined,
+      createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    };
+  }
 }
 
 export const logisticsRepository = new LogisticsRepository();
+

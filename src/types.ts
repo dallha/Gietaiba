@@ -305,7 +305,7 @@ export interface Room {
   building?: string;
   floor?: string;
   roomNumber: string;
-  roomType: 'DOUBLE' | 'TRIPLE' | 'QUADRUPLE' | 'SUITE';
+  roomType: 'INDIVIDUELLE' | 'DOUBLE' | 'TRIPLE' | 'QUADRUPLE' | 'SUITE';
   capacity: number;
   currentOccupancy: number;
   notes?: string;
@@ -350,6 +350,7 @@ export interface Accompagnateur {
 
 export interface Expense {
   id: string;
+  code?: string; // EXP-YYYY-000001
   voyageId: string;
   category: string; // Billets, Hotel, Transport, Visa, Assurance, Restauration, Salaires, Communication, Administration, Autre
   amount: number;
@@ -360,6 +361,47 @@ export interface Expense {
   receiptUrl?: string;
   comment?: string;
   createdBy: string;
+  createdAt: string;
+}
+
+export interface PaymentSchedule {
+  id: string;
+  inscriptionId: string;
+  dueDate: string;
+  amountDue: number;
+  status: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+  comment?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HotelStay {
+  id: string;
+  inscriptionId: string;
+  clientId: string;
+  hotelId: string;
+  campaignId: string;
+  packageId?: string;
+  city: 'Makkah' | 'Médine' | 'Djeddah' | string;
+  checkInDate: string;
+  checkOutDate: string;
+  roomType: string;
+  roomId?: string;
+  shuttleService?: boolean;
+  createdAt: string;
+}
+
+export interface FlightSegment {
+  id: string;
+  flightId: string;
+  segmentType: 'ALLER' | 'RETOUR' | 'TRANSIT' | 'INTERNE';
+  departureAirport: string;
+  arrivalAirport: string;
+  flightNumber: string;
+  airline: string;
+  departureTime: string;
+  arrivalTime: string;
+  terminal?: string;
   createdAt: string;
 }
 

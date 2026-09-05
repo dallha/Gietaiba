@@ -10,9 +10,9 @@ export const pool = new Pool({
   ssl: {
     rejectUnauthorized: false,
   },
-  max: 10,
+  max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 15000,
 });
 
 pool.on('error', (err) => {
@@ -52,3 +52,16 @@ export async function initSchema(): Promise<void> {
     client.release();
   }
 }
+
+/**
+ * Atomically retrieves the next sequential number for a domain and year using PostgreSQL function.
+ */
+export async function getNextBusinessSequence(type: string, year: number = 0, client?: pg.PoolClient): Promise<number> {
+  const runner = client || pool;
+  const res = await runner.query<{ get_next_business_sequence: number }>(
+    `SELECT get_next_business_sequence($1, $2) as get_next_business_sequence`,
+    [type, year]
+  );
+  return Number(res.rows[0].get_next_business_sequence);
+}
+

@@ -460,3 +460,84 @@ ALTER TABLE flights ADD CONSTRAINT flights_status_check CHECK (status IN ('PROGR
 
 ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_status_check;
 ALTER TABLE tickets ADD CONSTRAINT tickets_status_check CHECK (status IN ('EMIS', 'RESERVE', 'EN_ATTENTE', 'ANNULE'));
+
+-- =====================================================================
+-- 20. PHASE 4.1 : COMPTEURS ATOMIQUES ET ERP HARDENING
+-- =====================================================================
+
+-- Table de compteurs métier atomiques (annuels ou globaux)
+CREATE TABLE IF NOT EXISTS business_sequences (
+  sequence_type TEXT NOT NULL,
+  year INT NOT NULL DEFAULT 0,
+  current_value INT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (sequence_type, year)
+);
+
+-- Fonction atomique de génération séquentielle
+CREATE OR REPLACE FUNCTION get_next_business_sequence(p_type TEXT, p_year INT DEFAULT 0)
+RETURNS INT AS $$
+DECLARE
+  v_next INT;
+BEGIN
+  INSERT INTO business_sequences (sequence_type, year, current_value, updated_at)
+  VALUES (p_type, p_year, 1, NOW())
+  ON CONFLICT (sequence_type, year)
+  DO UPDATE SET current_value = business_sequences.current_value + 1, updated_at = NOW()
+  RETURNING current_value INTO v_next;
+  
+  RETURN v_next;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Code métier distinct sur les dépenses
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS code TEXT UNIQUE;
+
+-- Échéancier prévisionnel de paiement par inscription
+CREATE TABLE IF NOT EXISTS payment_schedules (
+  id TEXT PRIMARY KEY,
+  inscription_id TEXT NOT NULL REFERENCES inscriptions(id) ON DELETE RESTRICT,
+  due_date DATE NOT NULL,
+  amount_due NUMERIC(15, 2) NOT NULL CHECK (amount_due > 0),
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PARTIAL', 'PAID', 'OVERDUE', 'CANCELLED')),
+  comment TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_payment_schedules_inscription ON payment_schedules(inscription_id);
+
+-- Séjours hôteliers géolocalisés par pèlerin (Makkah / Médine)
+CREATE TABLE IF NOT EXISTS hotel_stays (
+  id TEXT PRIMARY KEY,
+  inscription_id TEXT NOT NULL REFERENCES inscriptions(id) ON DELETE RESTRICT,
+  client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
+  hotel_id TEXT NOT NULL REFERENCES hotels(id) ON DELETE RESTRICT,
+  campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE RESTRICT,
+  package_id TEXT REFERENCES packages(id) ON DELETE SET NULL,
+  city TEXT NOT NULL CHECK (city IN ('Makkah', 'Médine', 'Djeddah')),
+  check_in_date DATE NOT NULL,
+  check_out_date DATE NOT NULL,
+  room_type TEXT NOT NULL,
+  room_id TEXT REFERENCES rooms(id) ON DELETE SET NULL,
+  shuttle_service BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_hotel_stays_inscription ON hotel_stays(inscription_id);
+CREATE INDEX IF NOT EXISTS idx_hotel_stays_client ON hotel_stays(client_id);
+
+-- Segments de vol multi-escales
+CREATE TABLE IF NOT EXISTS flight_segments (
+  id TEXT PRIMARY KEY,
+  flight_id TEXT NOT NULL REFERENCES flights(id) ON DELETE CASCADE,
+  segment_type TEXT NOT NULL CHECK (segment_type IN ('ALLER', 'RETOUR', 'TRANSIT', 'INTERNE')),
+  departure_airport TEXT NOT NULL,
+  arrival_airport TEXT NOT NULL,
+  flight_number TEXT NOT NULL,
+  airline TEXT NOT NULL,
+  departure_time TIMESTAMPTZ NOT NULL,
+  arrival_time TIMESTAMPTZ NOT NULL,
+  terminal TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_flight_segments_flight ON flight_segments(flight_id);
+
