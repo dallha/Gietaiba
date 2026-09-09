@@ -123,6 +123,14 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Identifiants invalides ou compte inactif' });
     }
     const token = createSignedSessionToken(session);
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('taiba_session', token, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
     res.json({ user: session, token });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -140,6 +148,14 @@ app.post('/api/auth/pilgrim-login', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Aucun pèlerin trouvé avec ce numéro ou code' });
     }
     const token = createSignedSessionToken(result.user);
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('taiba_session', token, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
     res.json({ ...result, token });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -230,8 +246,8 @@ app.get('/api/auth/google/callback', async (req: Request, res: Response) => {
       path: '/',
     });
 
-    // 3. Redirection : conservation temporaire de ?token= pour rétrocompatibilité frontend (DÉPRÉCIÉ)
-    res.redirect(`${redirectPath}?token=${encodeURIComponent(token)}`);
+    // 3. Redirection vers l'application : session 100% HttpOnly (aucun token dans l'URL)
+    res.redirect(redirectPath);
   } catch (err: any) {
     console.error('[Google OAuth Callback Error]', err?.message || 'Échec auth');
     const errorMessage = err?.message || 'Échec de l\'authentification Google.';

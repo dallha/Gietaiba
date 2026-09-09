@@ -93,21 +93,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [applySessionUser]);
 
   const logoutUser = useCallback(async () => {
-    api.logout();
+    await api.logout();
     setCurrentUser(null);
     setRole(null);
   }, []);
 
   const refreshUserData = useCallback(async () => {
-    const token = api.getToken();
-    if (!token) return;
     try {
       const u = await api.getCurrentUser();
       if (u) {
         applySessionUser(u);
       }
     } catch {
-      api.logout();
+      await api.logout();
       setCurrentUser(null);
       setRole(null);
     }
@@ -117,36 +115,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let active = true;
 
     async function initAuth() {
-      // 1. Détection éventuelle d'un token transmis dans l'URL (ex: redirection Google OAuth)
-      if (typeof window !== 'undefined') {
-        try {
-          const urlParams = new URLSearchParams(window.location.search);
-          const urlToken = urlParams.get('token');
-          if (urlToken) {
-            api.setToken(urlToken);
-            urlParams.delete('token');
-            const remainingQuery = urlParams.toString();
-            const cleanUrl = window.location.pathname + (remainingQuery ? `?${remainingQuery}` : '') + window.location.hash;
-            window.history.replaceState({}, document.title, cleanUrl);
-          }
-        } catch (urlErr) {
-          console.warn('[AuthContext] Erreur lecture token URL:', urlErr);
+      // Restauration de session automatique : interroge /api/auth/me avec le cookie HttpOnly taiba_session
+      try {
+        const userSession = await api.getCurrentUser();
+        if (active && userSession) {
+          applySessionUser(userSession);
+          setLoading(false);
+          return;
         }
-      }
-
-      const token = api.getToken();
-      if (token) {
-        try {
-          const userSession = await api.getCurrentUser();
-          if (active && userSession) {
-            applySessionUser(userSession);
-            setLoading(false);
-            return;
-          }
-        } catch (e) {
-          console.warn('[AuthContext] Session REST expirée ou invalide:', e);
-          api.logout();
-        }
+      } catch {
+        // Utilisateur non authentifié ou session absente/expirée
       }
 
       if (active) {

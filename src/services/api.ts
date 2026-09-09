@@ -65,6 +65,7 @@ class ApiService {
         res = await fetch(endpoint, {
           ...options,
           headers,
+          credentials: 'same-origin',
         });
         break;
       } catch (networkErr: any) {
@@ -144,8 +145,17 @@ class ApiService {
     return res.user;
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
     this.setToken(null);
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+      });
+    } catch {
+      // Nettoyage garanti
+    }
   }
 
   async getUsers(): Promise<UserSession[]> {

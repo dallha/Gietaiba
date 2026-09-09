@@ -172,21 +172,35 @@ async function runNativeGoogleAuthSuite() {
     testUserToken = attachResult.token;
     logResult(3, 'AUTH_CYCLE', 'Rapprochement client -> rôle PELERIN uniquement (jamais SUPER_ADMIN)', attachOk, 200);
 
-    // 4. /api/auth/me avec jeton Bearer valide
-    const meBearerRes = await fetch(`${baseUrl}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${testUserToken}` },
-    });
-    const meBearerData = await meBearerRes.json().catch(() => ({}));
-    const meBearerOk = meBearerRes.status === 200 && meBearerData?.user?.email === testEmail;
-    logResult(4, 'AUTH_CYCLE', 'Validation de session via Authorization: Bearer <token>', meBearerOk, meBearerRes.status);
+    // 4. Callback Google : pose cookie HttpOnly taiba_session et redirection 302 SANS ?token=
+    const originalExchange = googleOAuthService.exchangeCodeAndGetUserInfo;
+    (googleOAuthService as any).exchangeCodeAndGetUserInfo = async () => fakeGoogleUser;
 
-    // 5. /api/auth/me avec cookie HttpOnly taiba_session (mécanisme cible)
+    const cbSuccessRes = await fetch(`${baseUrl}/api/auth/google/callback?code=mock-auth-code&state=mock-csrf-state`, {
+      headers: { Cookie: 'oauth_state=mock-csrf-state' },
+      redirect: 'manual',
+    });
+
+    googleOAuthService.exchangeCodeAndGetUserInfo = originalExchange;
+
+    const cbLocation = cbSuccessRes.headers.get('location') || '';
+    const cbSetCookie = cbSuccessRes.headers.get('set-cookie') || '';
+    const cbNoTokenInUrl = !cbLocation.includes('token=');
+    const cbCookieHttpOnly = cbSetCookie.includes('taiba_session=') && cbSetCookie.toLowerCase().includes('httponly');
+    const cbTargetCorrect = cbLocation === '/portail' || cbLocation.startsWith('/portail?');
+    const cbFlowOk = cbSuccessRes.status === 302 && cbNoTokenInUrl && cbCookieHttpOnly && cbTargetCorrect;
+
+    logResult(4, 'AUTH_CYCLE', 'Callback OAuth : Cookie HttpOnly taiba_session posé et redirection 302 SANS ?token=', cbFlowOk, cbSuccessRes.status);
+
+    // 5. Restauration de session via Cookie HttpOnly taiba_session reçu (zéro token dans l'URL)
+    const cookieMatch = cbSetCookie.match(/taiba_session=([^;]+)/);
+    const receivedCookieValue = cookieMatch ? cookieMatch[1] : '';
     const meCookieRes = await fetch(`${baseUrl}/api/auth/me`, {
-      headers: { Cookie: `taiba_session=${testUserToken}` },
+      headers: { Cookie: `taiba_session=${receivedCookieValue}` },
     });
     const meCookieData = await meCookieRes.json().catch(() => ({}));
     const meCookieOk = meCookieRes.status === 200 && meCookieData?.user?.email === testEmail;
-    logResult(5, 'AUTH_CYCLE', 'Validation de session via Cookie HttpOnly taiba_session', meCookieOk, meCookieRes.status);
+    logResult(5, 'AUTH_CYCLE', 'Restauration de session via Cookie HttpOnly taiba_session (zéro token URL)', meCookieOk, meCookieRes.status);
 
     // 6. Déconnexion via /api/auth/logout (invalidation cookie et réponse 200)
     const logoutRes = await fetch(`${baseUrl}/api/auth/logout`, {
