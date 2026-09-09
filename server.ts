@@ -306,7 +306,7 @@ app.get('/api/auth/me', requireAuth, async (req: Request, res: Response) => {
 });
 
 // User listing (Requires Auth & users.read permission - PELERIN strictly forbidden)
-app.get('/api/auth/users', requireAuth, requirePermission('users.read'), async (req: Request, res: Response) => {
+app.get('/api/auth/users', requireNeonAuth, requirePermission('users.read'), async (req: Request, res: Response) => {
   try {
     const users = await userRepository.getUsers();
     res.json(users);
@@ -315,7 +315,7 @@ app.get('/api/auth/users', requireAuth, requirePermission('users.read'), async (
   }
 });
 
-app.get('/api/users', requireAuth, requirePermission('users.read'), async (req: Request, res: Response) => {
+app.get('/api/users', requireNeonAuth, requirePermission('users.read'), async (req: Request, res: Response) => {
   try {
     const users = await userRepository.getFullUsers();
     res.json(users);
@@ -324,7 +324,7 @@ app.get('/api/users', requireAuth, requirePermission('users.read'), async (req: 
   }
 });
 
-app.post('/api/users', requireAuth, requirePermission('users.create'), async (req: Request, res: Response) => {
+app.post('/api/users', requireNeonAuth, requirePermission('users.create'), async (req: Request, res: Response) => {
   try {
     const newUser = await userRepository.createUser(req.body);
     res.status(201).json(newUser);
@@ -333,7 +333,7 @@ app.post('/api/users', requireAuth, requirePermission('users.create'), async (re
   }
 });
 
-app.put('/api/users/:id', requireAuth, requirePermission('users.update'), async (req: Request, res: Response) => {
+app.put('/api/users/:id', requireNeonAuth, requirePermission('users.update'), async (req: Request, res: Response) => {
   try {
     const updated = await userRepository.updateUser(req.params.id, req.body);
     if (!updated) return res.status(404).json({ error: 'Utilisateur introuvable' });
@@ -343,7 +343,7 @@ app.put('/api/users/:id', requireAuth, requirePermission('users.update'), async 
   }
 });
 
-app.delete('/api/users/:id', requireAuth, requirePermission('users.delete'), async (req: Request, res: Response) => {
+app.delete('/api/users/:id', requireNeonAuth, requirePermission('users.delete'), async (req: Request, res: Response) => {
   try {
     const success = await userRepository.deleteUser(req.params.id);
     res.json({ success });
@@ -354,7 +354,7 @@ app.delete('/api/users/:id', requireAuth, requirePermission('users.delete'), asy
 });
 
 // User Client Access routes (Multi-client / Tuteurs)
-app.get('/api/users/:id/client-access', requireAuth, requirePermission('users.read'), async (req: Request, res: Response) => {
+app.get('/api/users/:id/client-access', requireNeonAuth, requirePermission('users.read'), async (req: Request, res: Response) => {
   try {
     const access = await userRepository.getUserAccessibleClients(req.params.id);
     res.json(access);
@@ -363,7 +363,7 @@ app.get('/api/users/:id/client-access', requireAuth, requirePermission('users.re
   }
 });
 
-app.post('/api/users/:id/client-access', requireAuth, requirePermission('users.update'), async (req: Request, res: Response) => {
+app.post('/api/users/:id/client-access', requireNeonAuth, requirePermission('users.update'), async (req: Request, res: Response) => {
   try {
     const { clientId, relationshipType, canView, canPay, canUploadDocs } = req.body;
     if (!clientId) return res.status(400).json({ error: 'clientId est requis' });
@@ -381,7 +381,7 @@ app.post('/api/users/:id/client-access', requireAuth, requirePermission('users.u
   }
 });
 
-app.delete('/api/users/:id/client-access/:clientId', requireAuth, requirePermission('users.update'), async (req: Request, res: Response) => {
+app.delete('/api/users/:id/client-access/:clientId', requireNeonAuth, requirePermission('users.update'), async (req: Request, res: Response) => {
   try {
     const success = await userRepository.revokeClientAccess(req.params.id, req.params.clientId);
     res.json({ success });
@@ -1005,7 +1005,7 @@ app.post('/api/audit-logs', requireNeonAuth, async (req: Request, res: Response)
 });
 
 // 16. Espace Pèlerin (Strict Isolation & 5D Multi-Clients)
-app.get('/api/pilgrim/beneficiaries', requireAuth, async (req: Request, res: Response) => {
+app.get('/api/pilgrim/beneficiaries', requireNeonAuth, async (req: Request, res: Response) => {
   try {
     const list = await pilgrimService.getAccessiblePilgrims(req.user!);
     res.json(list);
@@ -1014,7 +1014,7 @@ app.get('/api/pilgrim/beneficiaries', requireAuth, async (req: Request, res: Res
   }
 });
 
-app.get('/api/pilgrim/dossier', requireAuth, async (req: Request, res: Response) => {
+app.get('/api/pilgrim/dossier', requireNeonAuth, async (req: Request, res: Response) => {
   let clientId = (req.query.clientId as string) || (req.headers['x-client-id'] as string);
   
   if (!clientId) {
@@ -1036,7 +1036,7 @@ app.get('/api/pilgrim/dossier', requireAuth, async (req: Request, res: Response)
   }
 });
 
-app.post('/api/pilgrim/beneficiaries', requireAuth, async (req: Request, res: Response) => {
+app.post('/api/pilgrim/beneficiaries', requireNeonAuth, async (req: Request, res: Response) => {
   try {
     const result = await pilgrimService.addBeneficiary(req.user!, req.body);
     res.status(201).json(result);
@@ -1045,7 +1045,7 @@ app.post('/api/pilgrim/beneficiaries', requireAuth, async (req: Request, res: Re
   }
 });
 
-app.post('/api/pilgrim/documents', requireAuth, async (req: Request, res: Response) => {
+app.post('/api/pilgrim/documents', requireNeonAuth, async (req: Request, res: Response) => {
   const { clientId, inscriptionId, type, fileName, fileUrl } = req.body;
   if (!clientId || !type) {
     return res.status(400).json({ error: 'Client et Type de document requis' });
