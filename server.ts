@@ -33,7 +33,7 @@ import { logisticsWorkflowService } from './server/services/logistics-workflow.s
 import { campaignWorkflowService } from './server/services/campaign-workflow.service.js';
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Règle de Sécurité Phase 3 : Validation stricte des secrets en production
 if (process.env.NODE_ENV === 'production') {
@@ -787,7 +787,12 @@ async function startServer() {
 }
 
 // Start server only if executed directly
-if (process.argv[1] && process.argv[1].endsWith('server.ts')) {
+if (
+  process.argv[1] &&
+  (process.argv[1].endsWith('server.ts') ||
+   process.argv[1].endsWith('server.cjs') ||
+   process.argv[1].endsWith('server.js'))
+) {
   startServer();
 }
 
