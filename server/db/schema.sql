@@ -93,10 +93,13 @@ CREATE TABLE IF NOT EXISTS users (
   active BOOLEAN NOT NULL DEFAULT TRUE,
   client_id TEXT REFERENCES clients(id) ON DELETE SET NULL,
   allowed_inscription_ids TEXT[],
+  neon_auth_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   last_login_at TIMESTAMPTZ
 );
+
+CREATE INDEX IF NOT EXISTS idx_users_neon_auth_id ON users(neon_auth_id);
 
 CREATE TABLE IF NOT EXISTS user_roles (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

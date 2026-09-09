@@ -154,6 +154,11 @@ export class PaymentRepository {
         throw new Error('Ce paiement a déjà été annulé.');
       }
 
+      // Protection absolue du Sanctuaire Financier : Seuls les paiements de test peuvent être annulés
+      if (!payment.is_test) {
+        throw new Error('SANCTUAIRE_FINANCIER_INVIOLABLE: L\'annulation de versements certifiés réels est strictement interdite.');
+      }
+
       // 1. Enregistrement dans payment_reversals
       const reversalId = randomUUID();
       await client.query(
