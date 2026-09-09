@@ -409,7 +409,7 @@ app.get('/api/settings', requireNeonAuth, requirePermission('settings.read'), as
   }
 });
 
-app.put('/api/settings', requireAuth, requirePermission('settings.manage'), async (req: Request, res: Response) => {
+app.put('/api/settings', requireNeonAuth, requirePermission('settings.manage'), async (req: Request, res: Response) => {
   try {
     const updated = await settingsRepository.updateSettings(req.body);
     res.json(updated);
@@ -736,7 +736,7 @@ app.post('/api/payments/:id/cancel', requireAuth, requirePermission('payments.ca
 });
 
 // 9. Documents
-app.get('/api/documents', requireAuth, requirePermission('documents.read'), async (req: Request, res: Response) => {
+app.get('/api/documents', requireNeonAuth, requirePermission('documents.read'), async (req: Request, res: Response) => {
   const user = req.user!;
   const { clientId, inscriptionId } = req.query as { clientId?: string; inscriptionId?: string };
   try {
@@ -751,7 +751,7 @@ app.get('/api/documents', requireAuth, requirePermission('documents.read'), asyn
   }
 });
 
-app.post('/api/documents', requireAuth, requirePermission('documents.create'), async (req: Request, res: Response) => {
+app.post('/api/documents', requireNeonAuth, requirePermission('documents.create'), async (req: Request, res: Response) => {
   try {
     const doc = await documentService.createDocument(req.body, req.user!);
     res.status(201).json(doc);
@@ -760,7 +760,7 @@ app.post('/api/documents', requireAuth, requirePermission('documents.create'), a
   }
 });
 
-app.put('/api/documents/:id/status', requireAuth, requirePermission('documents.validate'), async (req: Request, res: Response) => {
+app.put('/api/documents/:id/status', requireNeonAuth, requirePermission('documents.validate'), async (req: Request, res: Response) => {
   const { status, comment } = req.body;
   try {
     const updated = await documentService.updateDocumentStatus(req.params.id, status, comment, req.user!);
@@ -771,7 +771,7 @@ app.put('/api/documents/:id/status', requireAuth, requirePermission('documents.v
 });
 
 // 10. Visas
-app.get('/api/visas', requireAuth, requirePermission('visas.read'), async (req: Request, res: Response) => {
+app.get('/api/visas', requireNeonAuth, requirePermission('visas.read'), async (req: Request, res: Response) => {
   const { voyageId } = req.query as { voyageId?: string };
   try {
     const visas = await visaService.getVisas(voyageId);
@@ -781,7 +781,7 @@ app.get('/api/visas', requireAuth, requirePermission('visas.read'), async (req: 
   }
 });
 
-app.put('/api/visas/:id', requireAuth, requirePermission('visas.update'), async (req: Request, res: Response) => {
+app.put('/api/visas/:id', requireNeonAuth, requirePermission('visas.update'), async (req: Request, res: Response) => {
   try {
     const updated = await visaService.updateVisa(req.params.id, req.body, req.user!);
     res.json(updated);
@@ -985,7 +985,7 @@ app.delete('/api/expenses/:id', requireAuth, requirePermission('expenses.delete'
 });
 
 // 15. Audit Logs
-app.get('/api/audit-logs', requireAuth, requirePermission('audit.read'), async (req: Request, res: Response) => {
+app.get('/api/audit-logs', requireNeonAuth, requirePermission('audit.read'), async (req: Request, res: Response) => {
   try {
     const logs = await auditRepository.getAuditLogs(200);
     res.json(logs);
@@ -994,7 +994,7 @@ app.get('/api/audit-logs', requireAuth, requirePermission('audit.read'), async (
   }
 });
 
-app.post('/api/audit-logs', requireAuth, async (req: Request, res: Response) => {
+app.post('/api/audit-logs', requireNeonAuth, async (req: Request, res: Response) => {
   try {
     const { action, entityType, entityId, metadata } = req.body;
     await auditRepository.logAction(req.user!.id, action, entityType, entityId, metadata);
@@ -1115,7 +1115,7 @@ app.get('/api/notifications', requireNeonAuth, async (req: Request, res: Respons
   }
 });
 
-app.post('/api/notifications', requireAuth, async (req: Request, res: Response) => {
+app.post('/api/notifications', requireNeonAuth, async (req: Request, res: Response) => {
   try {
     const idempotencyKey = await notificationRepository.createNotification(req.body);
     res.json({ success: true, idempotencyKey });
@@ -1124,7 +1124,7 @@ app.post('/api/notifications', requireAuth, async (req: Request, res: Response) 
   }
 });
 
-app.put('/api/notifications/:id/read', requireAuth, async (req: Request, res: Response) => {
+app.put('/api/notifications/:id/read', requireNeonAuth, async (req: Request, res: Response) => {
   try {
     await notificationRepository.markAsRead(req.params.id);
     res.json({ success: true });
@@ -1133,7 +1133,7 @@ app.put('/api/notifications/:id/read', requireAuth, async (req: Request, res: Re
   }
 });
 
-app.put('/api/notifications/read-all', requireAuth, async (req: Request, res: Response) => {
+app.put('/api/notifications/read-all', requireNeonAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user!;
     await notificationRepository.markAllAsRead(user.id, user.clientId);
