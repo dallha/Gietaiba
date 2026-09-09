@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { pool } from '../db/neon.js';
 import { UserSession } from '../../src/types.js';
 import { authorizationService } from './authorization.service.js';
-import { verifySignedSessionToken } from './token.service.js';
+import { verifySignedSessionToken, parseCookieHeader } from './token.service.js';
 
 // Extend Express Request type
 declare global {
@@ -30,7 +30,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
   let resolvedUserId: string | null = null;
 
-  // 1. Priorité absolue : Jeton cryptographique dans l'en-tête Authorization
+  // 1. Priorité 1 : Jeton cryptographique dans l'en-tête Authorization
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const rawToken = authHeader.substring(7).trim();
 
@@ -47,7 +47,26 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
   }
 
-  // 2. Gestion de l'en-tête x-user-id
+  // 2. Priorité 2 : Cookie HttpOnly sécurisé taiba_session (mécanisme cible officiel)
+  if (!resolvedUserId) {
+    const cookies = (req as any).cookies || parseCookieHeader(req.headers.cookie);
+    const cookieToken = cookies['taiba_session']?.trim();
+
+    if (cookieToken) {
+      const tokenPayload = verifySignedSessionToken(cookieToken);
+      if (tokenPayload) {
+        resolvedUserId = tokenPayload.userId;
+      } else {
+        res.status(401).json({
+          error: 'Cookie de session invalide, falsifié ou expiré.',
+          code: 'INVALID_TOKEN',
+        });
+        return;
+      }
+    }
+  }
+
+  // 3. Gestion de l'en-tête x-user-id (développement uniquement)
   if (!resolvedUserId && devUserIdHeader) {
     if (isProduction) {
       // RÈGLE CRITIQUE PHASE 2.5 : Rejet formel de x-user-id en production

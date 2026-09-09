@@ -35,6 +35,30 @@ function base64UrlDecode(str: string): string {
 }
 
 /**
+ * Parse raw Cookie header string into key-value map
+ */
+export function parseCookieHeader(header: string | undefined): Record<string, string> {
+  if (!header) return {};
+  const cookies: Record<string, string> = {};
+  for (const part of header.split(';')) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.substring(0, eqIdx).trim();
+    const val = trimmed.substring(eqIdx + 1).trim();
+    if (key) {
+      try {
+        cookies[key] = decodeURIComponent(val);
+      } catch {
+        cookies[key] = val;
+      }
+    }
+  }
+  return cookies;
+}
+
+/**
  * Creates a cryptographically signed session token (HMAC-SHA256)
  */
 export function createSignedSessionToken(

@@ -7,7 +7,7 @@ import { createServer as createViteServer } from 'vite';
 // Middleware & Auth
 import { requireAuth, requirePermission, requireStaff } from './server/auth/auth.middleware.js';
 import { authorizationService } from './server/auth/authorization.service.js';
-import { createSignedSessionToken, getSessionSecret } from './server/auth/token.service.js';
+import { createSignedSessionToken, getSessionSecret, parseCookieHeader, verifySignedSessionToken } from './server/auth/token.service.js';
 import { googleOAuthService } from './server/auth/google-oauth.service.js';
 
 // Repositories
@@ -49,6 +49,14 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.use(express.json());
+
+// Middleware léger d'extraction des cookies (zéro dépendance externe)
+app.use((req: Request, _res: Response, next) => {
+  if (!(req as any).cookies) {
+    (req as any).cookies = parseCookieHeader(req.headers.cookie);
+  }
+  next();
+});
 
 // Normalisation des erreurs API (Phase 5)
 function formatErrorResponse(err: any) {
@@ -161,16 +169,40 @@ app.get('/api/auth/google', (req: Request, res: Response) => {
   const baseUrl = process.env.APP_URL || `${proto}://${host}`;
   const redirectUri = `${baseUrl}/api/auth/google/callback`;
 
+  const isProd = process.env.NODE_ENV === 'production';
+  // Cookie anti-CSRF temporaire (durée de validité : 10 minutes)
+  res.cookie('oauth_state', state, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'lax',
+    maxAge: 10 * 60 * 1000,
+    path: '/',
+  });
+
   const authUrl = googleOAuthService.generateAuthUrl(redirectUri, state);
   res.redirect(authUrl);
 });
 
 app.get('/api/auth/google/callback', async (req: Request, res: Response) => {
-  const { code, error } = req.query;
+  const { code, state, error } = req.query;
+  const isProd = process.env.NODE_ENV === 'production';
 
   if (error) {
+    res.clearCookie('oauth_state', { path: '/', httpOnly: true, secure: isProd, sameSite: 'lax' });
     return res.redirect(
       '/login?error=' + encodeURIComponent(`Connexion Google annulée ou refusée (${error})`)
+    );
+  }
+
+  // 1. Contrôle strict anti-CSRF sur le paramètre state
+  const cookies = (req as any).cookies || parseCookieHeader(req.headers.cookie);
+  const storedState = cookies['oauth_state'];
+  res.clearCookie('oauth_state', { path: '/', httpOnly: true, secure: isProd, sameSite: 'lax' });
+
+  if (!state || typeof state !== 'string' || !storedState || state !== storedState) {
+    console.warn('[Google OAuth] Échec vérification anti-CSRF : state manquant ou invalide');
+    return res.redirect(
+      '/login?error=' + encodeURIComponent('Tentative de connexion invalide : échec de vérification anti-CSRF.')
     );
   }
 
@@ -189,13 +221,53 @@ app.get('/api/auth/google/callback', async (req: Request, res: Response) => {
     const googleUser = await googleOAuthService.exchangeCodeAndGetUserInfo(code, redirectUri);
     const { token, redirectPath } = await googleOAuthService.authenticateWithGoogleUser(googleUser);
 
-    // Redirection vers le portail pèlerin ou l'ERP avec le token sécurisé
+    // 2. Cookie HttpOnly de session (mécanisme cible officiel)
+    res.cookie('taiba_session', token, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
+      path: '/',
+    });
+
+    // 3. Redirection : conservation temporaire de ?token= pour rétrocompatibilité frontend (DÉPRÉCIÉ)
     res.redirect(`${redirectPath}?token=${encodeURIComponent(token)}`);
   } catch (err: any) {
-    console.error('[Google OAuth Callback Error]', err);
+    console.error('[Google OAuth Callback Error]', err?.message || 'Échec auth');
     const errorMessage = err?.message || 'Échec de l\'authentification Google.';
     res.redirect('/login?error=' + encodeURIComponent(errorMessage));
   }
+});
+
+// Endpoint de déconnexion officiel (invalidation cookies de session et audit log)
+app.post('/api/auth/logout', async (req: Request, res: Response) => {
+  const isProd = process.env.NODE_ENV === 'production';
+  res.clearCookie('taiba_session', { path: '/', httpOnly: true, secure: isProd, sameSite: 'lax' });
+  res.clearCookie('oauth_state', { path: '/', httpOnly: true, secure: isProd, sameSite: 'lax' });
+
+  try {
+    const rawToken = req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.substring(7).trim()
+      : ((req as any).cookies?.taiba_session || parseCookieHeader(req.headers.cookie)['taiba_session']);
+
+    if (rawToken) {
+      const payload = verifySignedSessionToken(rawToken);
+      if (payload) {
+        await auditRepository.logAudit({
+          actorUserId: payload.userId,
+          actorUserName: payload.email,
+          action: 'AUTH_LOGOUT',
+          entityType: 'USER',
+          entityId: payload.userId,
+          reason: 'Déconnexion utilisateur',
+        });
+      }
+    }
+  } catch {
+    // Non bloquant
+  }
+
+  res.json({ success: true, message: 'Déconnexion réussie.' });
 });
 
 app.get('/api/auth/me', requireAuth, async (req: Request, res: Response) => {

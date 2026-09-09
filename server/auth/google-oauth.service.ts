@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { OAuth2Client } from "google-auth-library";
 import { pool } from "../db/neon.js";
 import { createSignedSessionToken } from "./token.service.js";
 import { userRepository } from "../repositories/user.repository.js";
@@ -15,6 +16,7 @@ export interface GoogleUserInfo {
   givenName?: string;
   familyName?: string;
   picture?: string;
+  authAssuranceLevel?: 'OIDC_ID_TOKEN_CRYPTOGRAPHICALLY_VERIFIED' | 'USERINFO_ENDPOINT_ACCESS_TOKEN';
 }
 
 export interface GoogleTokenResponse {
@@ -106,12 +108,49 @@ export class GoogleOAuthService {
 
     const tokenData = (await tokenRes.json()) as GoogleTokenResponse;
     const accessToken = tokenData.access_token;
+    const idToken = tokenData.id_token;
 
+    if (!accessToken && !idToken) {
+      throw new Error("Jeton d'authentification Google manquant dans la réponse.");
+    }
+
+    // 1. Validation cryptographique de l'id_token si présent (OpenID Connect certifié)
+    if (idToken) {
+      try {
+        const oauthClient = new OAuth2Client(clientId);
+        const ticket = await oauthClient.verifyIdToken({
+          idToken,
+          audience: clientId,
+        });
+        const payload = ticket.getPayload();
+        if (
+          payload &&
+          payload.iss &&
+          ["accounts.google.com", "https://accounts.google.com"].includes(payload.iss) &&
+          payload.sub &&
+          payload.email
+        ) {
+          return {
+            id: payload.sub,
+            email: payload.email,
+            emailVerified: Boolean(payload.email_verified),
+            name: payload.name,
+            givenName: payload.given_name,
+            familyName: payload.family_name,
+            picture: payload.picture,
+            authAssuranceLevel: "OIDC_ID_TOKEN_CRYPTOGRAPHICALLY_VERIFIED",
+          };
+        }
+      } catch (verifyErr: any) {
+        console.warn("[GoogleOAuth] Échec vérification cryptographique id_token, repli sur userinfo:", verifyErr?.message);
+      }
+    }
+
+    // 2. Repli sur l'endpoint UserInfo officiel avec access_token
     if (!accessToken) {
       throw new Error("Jeton d'accès Google manquant dans la réponse.");
     }
 
-    // 2. Récupération des informations utilisateur via l'endpoint UserInfo officiel
     const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -134,6 +173,36 @@ export class GoogleOAuthService {
       givenName: rawUser.given_name,
       familyName: rawUser.family_name,
       picture: rawUser.picture,
+      authAssuranceLevel: "USERINFO_ENDPOINT_ACCESS_TOKEN",
+    };
+  }
+
+  /**
+   * Vérification cryptographique directe d'un id_token Google
+   */
+  public async verifyGoogleIdToken(idToken: string): Promise<GoogleUserInfo> {
+    const clientId = this.getClientId();
+    const oauthClient = new OAuth2Client(clientId);
+    const ticket = await oauthClient.verifyIdToken({
+      idToken,
+      audience: clientId,
+    });
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email || !payload.sub) {
+      throw new Error("Payload id_token Google incomplet ou invalide.");
+    }
+    if (!payload.iss || !["accounts.google.com", "https://accounts.google.com"].includes(payload.iss)) {
+      throw new Error("Émetteur (issuer) id_token Google non reconnu.");
+    }
+    return {
+      id: payload.sub,
+      email: payload.email,
+      emailVerified: Boolean(payload.email_verified),
+      name: payload.name,
+      givenName: payload.given_name,
+      familyName: payload.family_name,
+      picture: payload.picture,
+      authAssuranceLevel: "OIDC_ID_TOKEN_CRYPTOGRAPHICALLY_VERIFIED",
     };
   }
 
