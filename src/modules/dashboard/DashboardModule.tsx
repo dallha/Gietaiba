@@ -417,7 +417,7 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
               {formatFCFA(finance.totalCollected)}
             </div>
             <div className="mt-1 text-xs text-slate-500 font-medium">
-              3 versements validés avec reçus infalsifiables
+              3 versements validés avec reçu officiel
             </div>
           </div>
 
@@ -495,10 +495,10 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl font-black text-slate-900 font-serif">{activity.totalPilgrims}</span>
-              <span className="text-xs font-bold text-emerald-700">dossiers confirmés</span>
+              <span className="text-xs font-bold text-emerald-700">pèlerins engagés</span>
             </div>
             <div className="mt-1 text-xs text-slate-500 flex items-center gap-3 font-medium">
-              <span className="text-blue-600 font-bold">{finance.inProgressCount} en cours</span>
+              <span className="text-blue-600 font-bold">{finance.inProgressCount} avec acompte</span>
               <span className="text-rose-600 font-bold">{finance.overdueCount} sans acompte</span>
             </div>
           </div>
@@ -548,7 +548,7 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Vol Direct AIBD Dakar ⇄ Djeddah / Médine • Hôtels 5★ Pullman Zamzam & Anwar Al Madinah
+                Campagne Hajj 2027 • Préparatifs et gestion des dossiers d'inscription
               </p>
             </div>
           </div>
@@ -571,9 +571,9 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
           <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
-            <span className="text-[11px] font-medium text-slate-400 block">Dossiers Inscrits</span>
-            <span className="text-xl font-black text-white font-serif">{activity.totalPilgrims} pèlerins</span>
-            <span className="text-[10px] text-emerald-400 block mt-0.5">100% statut confirmé</span>
+            <span className="text-[11px] font-medium text-slate-400 block">Dossiers Enregistrés</span>
+            <span className="text-xl font-black text-white font-serif">{activity.totalPilgrims} dossiers</span>
+            <span className="text-[10px] text-emerald-400 block mt-0.5">Campagne Hajj 2027</span>
           </div>
 
           <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
@@ -589,7 +589,7 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
           </div>
 
           <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
-            <span className="text-[11px] font-medium text-slate-400 block">Occupation du Quota</span>
+            <span className="text-[11px] font-medium text-slate-400 block">Capacité Campagne</span>
             <span className="text-xl font-black text-amber-400 font-serif">{activity.totalPilgrims} / {totalCapacity} places</span>
             <span className="text-[10px] text-slate-400 block mt-0.5">{occupancyRate}% engagé</span>
           </div>
@@ -655,13 +655,13 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
               Départ Prévu le 18 Mai 2027
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Rassemblement des pèlerins à l'Aéroport International Blaise Diagne (AIBD) de Dakar.
+              Date prévisionnelle de départ • Préparatifs et suivi des formalités en cours.
             </p>
           </div>
 
           <div className="mt-4 pt-4 border-t border-slate-100">
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between text-xs">
-              <span className="text-slate-600 font-medium">Temps restant avant convocation :</span>
+              <span className="text-slate-600 font-medium">Temps restant avant départ :</span>
               <span className="font-mono font-black text-slate-900 text-sm">
                 {daysLeftHajj} jours
               </span>
@@ -669,15 +669,15 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
           </div>
         </div>
 
-        {/* Formalités Visas, Passeports & Billets */}
+        {/* Suivi documentaire et préparatifs de voyage */}
         <div className="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <FileCheck2 className="w-4 h-4 text-emerald-600" />
-                Avancement des Formalités Pèlerins
+                Suivi Documentaire & Préparatifs de Voyage
               </h3>
-              <p className="text-xs text-slate-500">Statut des pièces exigées avant édition des billets</p>
+              <p className="text-xs text-slate-500">Statut réel issu de la base de données</p>
             </div>
             <button
               onClick={() => onNavigate('documents')}
@@ -689,32 +689,32 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
 
           <div className="grid grid-cols-3 gap-3">
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
-              <span className="text-[11px] font-medium text-slate-500 block">Passeports Valides</span>
+              <span className="text-[11px] font-medium text-slate-500 block">Passeports Reçus</span>
               <span className="text-xl font-black text-slate-900 block mt-1">
                 {activity.totalPilgrims - documents.missingPassports} / {activity.totalPilgrims}
               </span>
               <span className="text-[10px] text-amber-700 font-medium block mt-0.5">
-                {documents.missingPassports} manquants
+                {documents.missingPassports} à collecter
               </span>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200 text-center">
-              <span className="text-[11px] font-medium text-emerald-800 block">Visas Nusuk Émis</span>
-              <span className="text-xl font-black text-emerald-800 block mt-1">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+              <span className="text-[11px] font-medium text-slate-500 block">Visas Délivrés</span>
+              <span className="text-xl font-black text-slate-700 block mt-1">
                 {Math.max(0, activity.totalPilgrims - documents.missingVisas)} / {activity.totalPilgrims}
               </span>
-              <span className="text-[10px] text-emerald-700 font-medium block mt-0.5">
-                Attribution en cours
+              <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
+                Procédure non ouverte
               </span>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-sky-50/60 border border-sky-200 text-center">
-              <span className="text-[11px] font-medium text-sky-800 block">Billets Directs AIBD</span>
-              <span className="text-xl font-black text-sky-900 block mt-1">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+              <span className="text-[11px] font-medium text-slate-500 block">Billets Émis</span>
+              <span className="text-xl font-black text-slate-700 block mt-1">
                 {Math.max(0, activity.totalPilgrims - documents.missingTickets)} / {activity.totalPilgrims}
               </span>
-              <span className="text-[10px] text-sky-700 font-medium block mt-0.5">
-                Émission groupée
+              <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
+                Plannings non engagés
               </span>
             </div>
           </div>
@@ -791,7 +791,7 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
                           onClick={() => onOpenReceipt ? onOpenReceipt(p, ins) : onNavigate('paiements')}
                           className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-200 transition cursor-pointer"
                         >
-                          Consulter Reçu
+                          Consulter le reçu
                         </button>
                       </td>
                     </tr>
