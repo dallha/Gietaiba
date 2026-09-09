@@ -76,7 +76,14 @@ export class ClientService {
     const old = await clientRepository.getClientById(id);
     if (!old) throw new Error('Client introuvable.');
 
-    await clientRepository.deleteClient(id);
+    try {
+      await clientRepository.deleteClient(id);
+    } catch (err: any) {
+      if (err.message?.includes('SUPPRESSION_REFUSEE_DEPENDANCES_EXISTANTES')) {
+        err.code = 'SUPPRESSION_REFUSEE_DEPENDANCES_EXISTANTES';
+      }
+      throw err;
+    }
 
     await auditRepository.logAudit({
       actorUserId: actor.id,
