@@ -144,18 +144,49 @@ export class ClientRepository {
     return this.mapRowToClient(res.rows[0]);
   }
 
+  public async checkClientDependencies(id: string): Promise<{
+    hasDependencies: boolean;
+    inscriptionsCount: number;
+    paymentsCount: number;
+    documentsCount: number;
+    visasCount: number;
+  }> {
+    const [insRes, payRes, docRes, visaRes] = await Promise.all([
+      pool.query(`SELECT COUNT(*) as count FROM inscriptions WHERE client_id = $1`, [id]),
+      pool.query(`SELECT COUNT(*) as count FROM payments WHERE client_id = $1`, [id]),
+      pool.query(`SELECT COUNT(*) as count FROM documents WHERE client_id = $1`, [id]),
+      pool.query(`SELECT COUNT(*) as count FROM visas WHERE client_id = $1`, [id]),
+    ]);
+
+    const inscriptionsCount = parseInt(insRes.rows[0].count, 10);
+    const paymentsCount = parseInt(payRes.rows[0].count, 10);
+    const documentsCount = parseInt(docRes.rows[0].count, 10);
+    const visasCount = parseInt(visaRes.rows[0].count, 10);
+
+    const hasDependencies = (inscriptionsCount + paymentsCount + documentsCount + visasCount) > 0;
+    return { hasDependencies, inscriptionsCount, paymentsCount, documentsCount, visasCount };
+  }
+
+  public async archiveClient(id: string): Promise<Client> {
+    const current = await this.getClientById(id);
+    if (!current) throw new Error('Client introuvable');
+
+    const res = await pool.query(
+      `UPDATE clients SET status = 'ARCHIVE', updated_at = NOW() WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    return this.mapRowToClient(res.rows[0]);
+  }
+
   public async deleteClient(id: string): Promise<void> {
-    // Vérification de sécurité : interdire la suppression si le client a des dossiers ou des paiements
-    const insCheck = await pool.query(`SELECT COUNT(*) as count FROM inscriptions WHERE client_id = $1`, [id]);
-    if (parseInt(insCheck.rows[0].count, 10) > 0) {
-      throw new Error('Impossible de supprimer un pèlerin possédant des dossiers d\'inscription.');
+    const deps = await this.checkClientDependencies(id);
+    if (deps.hasDependencies) {
+      throw new Error(
+        `SUPPRESSION_REFUSEE_DEPENDANCES_EXISTANTES: Impossible de supprimer ce pèlerin (${deps.inscriptionsCount} dossier(s), ${deps.paymentsCount} paiement(s), ${deps.documentsCount} document(s)). Utilisez l'action 'Archiver'.`
+      );
     }
 
-    const payCheck = await pool.query(`SELECT COUNT(*) as count FROM payments WHERE client_id = $1`, [id]);
-    if (parseInt(payCheck.rows[0].count, 10) > 0) {
-      throw new Error('Impossible de supprimer un pèlerin possédant des paiements enregistrés.');
-    }
-
+    await pool.query(`DELETE FROM user_client_access WHERE client_id = $1`, [id]);
     await pool.query(`DELETE FROM clients WHERE id = $1`, [id]);
   }
 

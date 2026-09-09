@@ -241,6 +241,38 @@ export class UserRepository {
   }
 
   public async deleteUser(id: string): Promise<boolean> {
+    const userRes = await pool.query(`SELECT id, email, role_id FROM users WHERE id = $1`, [id]);
+    if (userRes.rows.length === 0) return false;
+    const target = userRes.rows[0];
+
+    // Protection 1: Ne jamais supprimer un SUPER_ADMIN
+    if (target.role_id === 'SUPER_ADMIN') {
+      throw new Error("SUPPRESSION_REFUSEE_SUPERADMIN: Impossible de supprimer un Super Administrateur.");
+    }
+
+    // Protection 2: Vérifier les dépendances financières et administratives
+    const [insRes, payRes, expRes, auditRes] = await Promise.all([
+      pool.query(`SELECT COUNT(*) as count FROM inscriptions WHERE agent_id = $1`, [id]),
+      pool.query(`SELECT COUNT(*) as count FROM payments WHERE agent_id = $1`, [id]),
+      pool.query(`SELECT COUNT(*) as count FROM expenses WHERE created_by = $1`, [id]),
+      pool.query(`SELECT COUNT(*) as count FROM audit_logs WHERE actor_user_id = $1`, [id]),
+    ]);
+
+    const insCount = parseInt(insRes.rows[0].count, 10);
+    const payCount = parseInt(payRes.rows[0].count, 10);
+    const expCount = parseInt(expRes.rows[0].count, 10);
+    const auditCount = parseInt(auditRes.rows[0].count, 10);
+
+    if ((insCount + payCount + expCount + auditCount) > 0) {
+      throw new Error(
+        `SUPPRESSION_REFUSEE_DEPENDANCES_EXISTANTES: Cet utilisateur est lié à des opérations (${insCount} dossier(s), ${payCount} paiement(s), ${expCount} dépense(s), ${auditCount} action(s) d'audit). Veuillez désactiver le compte plutôt que de le supprimer.`
+      );
+    }
+
+    // Nettoyage des relations user_client_access et user_roles
+    await pool.query(`DELETE FROM user_client_access WHERE user_id = $1`, [id]);
+    await pool.query(`DELETE FROM user_roles WHERE user_id = $1`, [id]);
+
     const res = await pool.query(`DELETE FROM users WHERE id = $1`, [id]);
     return (res.rowCount ?? 0) > 0;
   }

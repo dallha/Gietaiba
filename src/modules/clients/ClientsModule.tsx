@@ -17,6 +17,7 @@ import {
   Printer,
   ChevronRight,
   Trash2,
+  Archive,
   Upload,
   Download,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ import { Client, Inscription, Payment, PilgrimDocument, AgencySettings } from '.
 import { formatFCFA, formatDate, getDocStatusBadge, getPaymentStatusBadge } from '../../utils/format.js';
 import { ConfirmModal } from '../../components/ui/ConfirmModal.js';
 import { exportToCSV, parseCSV } from '../../utils/csv.js';
+import { api } from '../../services/api.js';
 
 interface ClientsModuleProps {
   clients: Client[];
@@ -60,6 +62,9 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [activeTab, setActiveTab] = useState<'info' | 'inscriptions' | 'paiements' | 'documents'>('info');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [archiveReason, setArchiveReason] = useState('');
+  const [archiveLoading, setArchiveLoading] = useState(false);
 
   const confirmDeleteClient = async () => {
     if (!selectedClient) return;
@@ -69,7 +74,29 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
       setShowDeleteConfirm(false);
       onRefresh();
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la suppression');
+      if (err.message?.includes('SUPPRESSION_REFUSEE') || err.message?.includes('409') || err.message?.includes('dossier')) {
+        setShowDeleteConfirm(false);
+        setArchiveReason('Archivage administratif (dossiers ou paiements actifs)');
+        setShowArchiveModal(true);
+      } else {
+        alert(err.message || 'Erreur lors de la suppression');
+      }
+    }
+  };
+
+  const confirmArchiveClient = async () => {
+    if (!selectedClient) return;
+    setArchiveLoading(true);
+    try {
+      await api.archiveClient(selectedClient.id, archiveReason || 'Archivage administratif');
+      setShowArchiveModal(false);
+      setArchiveReason('');
+      setSelectedClient(null);
+      onRefresh();
+    } catch (err: any) {
+      alert(err.message || "Erreur lors de l'archivage du pèlerin");
+    } finally {
+      setArchiveLoading(false);
     }
   };
 
@@ -441,6 +468,19 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
               </div>
 
               <div className="flex items-center gap-2">
+                {selectedClient.status !== 'ARCHIVE' && (
+                  <button
+                    onClick={() => {
+                      setArchiveReason('');
+                      setShowArchiveModal(true);
+                    }}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-600 text-slate-200 text-xs transition-colors cursor-pointer flex items-center gap-1 px-2.5"
+                    title="Archiver le pèlerin"
+                  >
+                    <Archive className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Archiver</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-600 text-slate-200 text-xs transition-colors cursor-pointer"
@@ -870,6 +910,52 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
         onConfirm={confirmDeleteClient}
         onCancel={() => setShowDeleteConfirm(false)}
       />
+
+      {/* Modal d'Archivage Sécurisé */}
+      {showArchiveModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
+                <Archive className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Archiver le pèlerin</h3>
+                <p className="text-xs text-slate-400">Ce dossier restera consultable dans l'historique mais sera marqué comme archivé.</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Motif de l'archivage</label>
+              <textarea
+                value={archiveReason}
+                onChange={(e) => setArchiveReason(e.target.value)}
+                placeholder="Ex : Report de voyage, désistement justifié, clôture..."
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowArchiveModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={archiveLoading}
+                onClick={confirmArchiveClient}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {archiveLoading ? 'Archivage...' : 'Confirmer l\'archivage'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

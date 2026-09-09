@@ -176,6 +176,23 @@ class ApiService {
     });
   }
 
+  async getUserClientAccess(userId: string): Promise<any[]> {
+    return this.request(`/api/users/${userId}/client-access`);
+  }
+
+  async grantUserClientAccess(userId: string, data: { clientId: string; relationshipType?: string; canView?: boolean; canPay?: boolean; canUploadDocs?: boolean }): Promise<{ success: boolean }> {
+    return this.request(`/api/users/${userId}/client-access`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async revokeUserClientAccess(userId: string, clientId: string): Promise<{ success: boolean }> {
+    return this.request(`/api/users/${userId}/client-access/${clientId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async getRoles(): Promise<Role[]> {
     return this.request('/api/roles');
   }
@@ -259,6 +276,23 @@ class ApiService {
   async deleteClient(id: string): Promise<{ success: boolean; message: string }> {
     return this.request(`/api/clients/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  async getClientDependencies(id: string): Promise<{
+    hasDependencies: boolean;
+    inscriptionsCount: number;
+    paymentsCount: number;
+    documentsCount: number;
+    visasCount: number;
+  }> {
+    return this.request(`/api/clients/${id}/dependencies`);
+  }
+
+  async archiveClient(id: string, reason?: string): Promise<Client> {
+    return this.request(`/api/clients/${id}/archive`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
     });
   }
 

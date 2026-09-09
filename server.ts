@@ -181,6 +181,44 @@ app.delete('/api/users/:id', requireAuth, requirePermission('users.delete'), asy
     const success = await userRepository.deleteUser(req.params.id);
     res.json({ success });
   } catch (err: any) {
+    const isConflict = err.message?.includes('SUPPRESSION_REFUSEE');
+    res.status(isConflict ? 409 : 400).json({ error: err.message });
+  }
+});
+
+// User Client Access routes (Multi-client / Tuteurs)
+app.get('/api/users/:id/client-access', requireAuth, requirePermission('users.read'), async (req: Request, res: Response) => {
+  try {
+    const access = await userRepository.getUserAccessibleClients(req.params.id);
+    res.json(access);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/users/:id/client-access', requireAuth, requirePermission('users.update'), async (req: Request, res: Response) => {
+  try {
+    const { clientId, relationshipType, canView, canPay, canUploadDocs } = req.body;
+    if (!clientId) return res.status(400).json({ error: 'clientId est requis' });
+    await userRepository.grantClientAccess({
+      userId: req.params.id,
+      clientId,
+      relationshipType,
+      canView,
+      canPay,
+      canUploadDocs,
+    });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/users/:id/client-access/:clientId', requireAuth, requirePermission('users.update'), async (req: Request, res: Response) => {
+  try {
+    const success = await userRepository.revokeClientAccess(req.params.id, req.params.clientId);
+    res.json({ success });
+  } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
 });
@@ -273,12 +311,32 @@ app.put('/api/clients/:id', requireAuth, requirePermission('clients.update'), as
   }
 });
 
+app.get('/api/clients/:id/dependencies', requireAuth, requirePermission('clients.read'), async (req: Request, res: Response) => {
+  try {
+    const deps = await clientService.getClientDependencies(req.params.id);
+    res.json(deps);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/clients/:id/archive', requireAuth, requirePermission('clients.update'), async (req: Request, res: Response) => {
+  try {
+    const { reason } = req.body;
+    const archived = await clientService.archiveClient(req.params.id, reason, req.user!);
+    res.json(archived);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 app.delete('/api/clients/:id', requireAuth, requirePermission('clients.delete'), async (req: Request, res: Response) => {
   try {
     const result = await clientService.deleteClient(req.params.id, req.user!);
     res.json(result);
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    const isConflict = err.message?.includes('SUPPRESSION_REFUSEE');
+    res.status(isConflict ? 409 : 400).json({ error: err.message });
   }
 });
 

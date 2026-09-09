@@ -48,6 +48,30 @@ export class ClientService {
     return updated;
   }
 
+  public async getClientDependencies(id: string) {
+    return clientRepository.checkClientDependencies(id);
+  }
+
+  public async archiveClient(id: string, reason: string | undefined, actor: UserSession): Promise<Client> {
+    const old = await clientRepository.getClientById(id);
+    if (!old) throw new Error('Client introuvable.');
+
+    const archived = await clientRepository.archiveClient(id);
+
+    await auditRepository.logAudit({
+      actorUserId: actor.id,
+      actorUserName: actor.displayName || actor.email,
+      action: 'ARCHIVAGE_CLIENT',
+      entityType: 'CLIENT',
+      entityId: id,
+      oldValue: { status: old.status },
+      newValue: { status: 'ARCHIVE', reason: reason || 'Archivage administratif' },
+      reason: reason || 'Archivage administratif',
+    });
+
+    return archived;
+  }
+
   public async deleteClient(id: string, actor: UserSession): Promise<{ success: boolean; message: string }> {
     const old = await clientRepository.getClientById(id);
     if (!old) throw new Error('Client introuvable.');
