@@ -390,6 +390,11 @@ export interface Expense {
   receiptNumber?: string;
   receiptUrl?: string;
   comment?: string;
+  status?: 'VALIDE' | 'ANNULEE';
+  cancellationReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  isTest?: boolean;
   createdBy: string;
   createdAt: string;
 }

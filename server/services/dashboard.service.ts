@@ -116,7 +116,9 @@ export class DashboardService {
     const profitability = campaigns.map((v) => {
       const voyageInscriptions = activeInscriptions.filter((i) => i.voyageId === v.id);
       const voyageRevenue = voyageInscriptions.reduce((sum, i) => sum + i.appliedPrice, 0);
-      const voyageExpenses = expenses.filter((e) => e.voyageId === v.id).reduce((sum, e) => sum + e.amount, 0);
+      const voyageExpenses = expenses
+        .filter((e) => e.voyageId === v.id && e.status !== 'ANNULEE' && !e.isTest)
+        .reduce((sum, e) => sum + e.amount, 0);
       const netResult = voyageRevenue - voyageExpenses;
       const marginRate = voyageRevenue > 0 ? Math.round((netResult / voyageRevenue) * 100) : 0;
       return {

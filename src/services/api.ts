@@ -692,6 +692,20 @@ class ApiService {
     });
   }
 
+  async updateExpense(id: string, updates: Partial<Expense>): Promise<Expense> {
+    return this.request(`/api/expenses/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async cancelExpense(id: string, reason: string): Promise<Expense> {
+    return this.request(`/api/expenses/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
   async deleteExpense(id: string) {
     return this.request(`/api/expenses/${id}`, {
       method: 'DELETE',

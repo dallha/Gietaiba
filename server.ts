@@ -788,12 +788,32 @@ app.post('/api/expenses', requireAuth, requirePermission('expenses.create'), asy
   }
 });
 
+app.put('/api/expenses/:id', requireAuth, requirePermission('expenses.create'), async (req: Request, res: Response) => {
+  try {
+    const updated = await expenseService.updateExpense(req.params.id, req.body, req.user!);
+    res.json(updated);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/expenses/:id/cancel', requireAuth, requirePermission('expenses.delete'), async (req: Request, res: Response) => {
+  try {
+    const reason = req.body?.reason || 'Annulation administrative de la dépense';
+    const cancelled = await expenseService.cancelExpense(req.params.id, reason, req.user!);
+    res.json(cancelled);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 app.delete('/api/expenses/:id', requireAuth, requirePermission('expenses.delete'), async (req: Request, res: Response) => {
   try {
     const resDel = await expenseService.deleteExpense(req.params.id, req.user!);
     res.json(resDel);
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    const isConflict = err.message?.includes('SUPPRESSION_REFUSEE');
+    res.status(isConflict ? 409 : 400).json({ error: err.message });
   }
 });
 

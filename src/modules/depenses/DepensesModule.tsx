@@ -7,9 +7,12 @@ import {
   DollarSign,
   TrendingUp,
   X,
+  Ban,
+  AlertCircle,
 } from 'lucide-react';
 import { Expense, Voyage, Inscription, AgencySettings } from '../../types.js';
 import { formatFCFA, formatDate } from '../../utils/format.js';
+import { api } from '../../services/api.js';
 
 interface DepensesModuleProps {
   expenses: Expense[];
@@ -45,14 +48,20 @@ export const DepensesModule: React.FC<DepensesModuleProps> = ({
 
   const activeVoyage = voyages.find((v) => v.id === selectedVoyageId);
 
-  // Financial calculations for active voyage
-  const voyageInscriptions = inscriptions.filter((i) => i.voyageId === selectedVoyageId);
+  // Financial calculations for active voyage (excluding cancelled & test expenses)
+  const voyageInscriptions = inscriptions.filter((i) => i.voyageId === selectedVoyageId && i.status !== 'ANNULEE');
   const voyageExpenses = expenses.filter((e) => e.voyageId === selectedVoyageId);
+  const activeVoyageExpenses = voyageExpenses.filter((e) => e.status !== 'ANNULEE' && !e.isTest);
 
   const totalCA = voyageInscriptions.reduce((acc, i) => acc + (i.appliedPrice || 0), 0);
-  const totalExpenses = voyageExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+  const totalExpenses = activeVoyageExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
   const netResult = totalCA - totalExpenses;
   const marginRate = totalCA > 0 ? Math.round((netResult / totalCA) * 100) : 0;
+
+  // Cancellation modal state
+  const [cancelModalExpense, setCancelModalExpense] = useState<Expense | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   const handleCreateExpense = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +89,32 @@ export const DepensesModule: React.FC<DepensesModuleProps> = ({
     }
   };
 
+  const handleCancelExpense = async () => {
+    if (!cancelModalExpense) return;
+    if (!cancelReason.trim()) {
+      alert('Le motif d\'annulation est obligatoire.');
+      return;
+    }
+    setCancelLoading(true);
+    try {
+      await api.cancelExpense(cancelModalExpense.id, cancelReason.trim());
+      setCancelModalExpense(null);
+      setCancelReason('');
+      onRefresh();
+    } catch (err: any) {
+      alert(`Erreur lors de l'annulation: ${err.message}`);
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
+    const exp = expenses.find((e) => e.id === id);
+    if (exp && exp.status !== 'ANNULEE') {
+      setCancelModalExpense(exp);
+      setCancelReason('');
+      return;
+    }
     if (!confirm('Supprimer cette charge d’exploitation ?')) return;
     try {
       await onDeleteExpense(id);
@@ -222,6 +256,7 @@ export const DepensesModule: React.FC<DepensesModuleProps> = ({
                 <th className="py-3 px-4">Date</th>
                 <th className="py-3 px-4">Poste de Dépense</th>
                 <th className="py-3 px-4">Libellé & Fournisseur</th>
+                <th className="py-3 px-4">Statut</th>
                 <th className="py-3 px-4">Mode de Règlement</th>
                 <th className="py-3 px-4 text-right">Montant Décaissé</th>
                 <th className="py-3 px-4 text-right">Action</th>
@@ -230,32 +265,60 @@ export const DepensesModule: React.FC<DepensesModuleProps> = ({
             <tbody className="divide-y divide-slate-100">
               {voyageExpenses.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400">
+                  <td colSpan={7} className="py-8 text-center text-slate-400">
                     Aucune dépense enregistrée sur cette campagne.
                   </td>
                 </tr>
               ) : (
                 voyageExpenses.map((exp) => (
-                  <tr key={exp.id} className="hover:bg-slate-50">
+                  <tr key={exp.id} className={`hover:bg-slate-50 ${exp.status === 'ANNULEE' ? 'opacity-60 bg-slate-50/50' : ''}`}>
                     <td className="py-3 px-4 text-slate-600">{formatDate(exp.date)}</td>
                     <td className="py-3 px-4">
                       <span className="px-2 py-0.5 rounded bg-slate-100 font-bold text-[10px] text-slate-800">
                         {exp.category}
                       </span>
                     </td>
-                    <td className="py-3 px-4 font-semibold text-slate-800">{exp.description}</td>
-                    <td className="py-3 px-4 text-slate-600">{exp.paymentMethod}</td>
-                    <td className="py-3 px-4 text-right font-bold text-slate-900 text-sm">
+                    <td className="py-3 px-4">
+                      <p className="font-semibold text-slate-800">{exp.description || exp.comment || 'Charge engagée'}</p>
+                      {exp.supplier && <p className="text-[10px] text-slate-400">{exp.supplier}</p>}
+                    </td>
+                    <td className="py-3 px-4">
+                      {exp.status === 'ANNULEE' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                          <Ban className="w-3 h-3" />
+                          Annulée
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Validée
+                        </span>
+                      )}
+                      {exp.cancellationReason && (
+                        <p className="text-[10px] text-rose-500 italic mt-0.5 max-w-xs truncate" title={exp.cancellationReason}>
+                          {exp.cancellationReason}
+                        </p>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-slate-600">{exp.paymentMethod || 'Espèces'}</td>
+                    <td className={`py-3 px-4 text-right font-bold text-sm ${exp.status === 'ANNULEE' ? 'line-through text-slate-400' : 'text-slate-900'}`}>
                       {formatFCFA(exp.amount, exp.currency)}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => handleDelete(exp.id)}
-                        className="p-1 rounded text-slate-400 hover:text-rose-600 cursor-pointer"
-                        title="Supprimer la dépense"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {exp.status !== 'ANNULEE' ? (
+                        <button
+                          onClick={() => {
+                            setCancelModalExpense(exp);
+                            setCancelReason('');
+                          }}
+                          className="p-1.5 rounded text-amber-600 hover:bg-amber-50 cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold"
+                          title="Annuler cette dépense"
+                        >
+                          <Ban className="w-3.5 h-3.5" />
+                          <span>Annuler</span>
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 italic">Clôturée</span>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -365,6 +428,61 @@ export const DepensesModule: React.FC<DepensesModuleProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal d'Annulation de Dépense */}
+      {cancelModalExpense && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden">
+            <div className="bg-rose-900 text-white px-6 py-4 flex items-center justify-between">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <Ban className="w-4 h-4 text-rose-300" />
+                Annulation de Charge d'Exploitation
+              </h3>
+              <button onClick={() => setCancelModalExpense(null)} className="text-slate-300 hover:text-white cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800 space-y-1">
+                <p className="font-bold">Dépense à annuler :</p>
+                <p>{cancelModalExpense.category} — {formatFCFA(cancelModalExpense.amount, cancelModalExpense.currency)}</p>
+                <p className="text-[11px] text-rose-600">Cette opération exclura le montant des charges réelles tout en conservant la traçabilité comptable.</p>
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1 text-xs">Motif d'annulation *</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Ex : Erreur de saisie, remboursement fournisseur, doublon..."
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs text-slate-900 focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setCancelModalExpense(null)}
+                  className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
+                >
+                  Fermer
+                </button>
+                <button
+                  type="button"
+                  disabled={cancelLoading}
+                  onClick={handleCancelExpense}
+                  className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                >
+                  {cancelLoading ? 'Annulation...' : 'Confirmer l\'annulation'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
