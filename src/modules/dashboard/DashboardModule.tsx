@@ -582,12 +582,23 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
           {/* Quick margin badge strip */}
           <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs">
             {profitability.map((p) => (
-              <div key={p.voyageCode} className="flex items-center gap-2 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+              <div key={p.voyageCode} className="flex flex-wrap items-center gap-2 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
                 <span className="font-bold text-slate-800">{p.voyageCode}:</span>
-                <span className="text-slate-600 font-medium">{formatFCFA(p.netResult)}</span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                  {p.marginRate}% marge
-                </span>
+                {p.expenses === 0 ? (
+                  <>
+                    <span className="text-slate-600 font-medium">Trésorerie nette encaissée : {formatFCFA(finance.totalCollected)}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200" title="Les coûts d'exploitation (vols, hôtels, Mina) ne sont pas encore engagés pour cette campagne">
+                      Résultat / Marge : NON DÉTERMINÉ
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-slate-600 font-medium">{formatFCFA(p.netResult)}</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                      {p.marginRate}% marge
+                    </span>
+                  </>
+                )}
               </div>
             ))}
           </div>

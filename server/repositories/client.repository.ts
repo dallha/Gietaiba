@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { pool, getNextBusinessSequence } from '../db/neon.js';
 import { Client } from '../../src/types.js';
+import { formatClientCode } from '../utils/business-format.js';
 
 export class ClientRepository {
   public async getClients(params?: { search?: string; status?: string }): Promise<Client[]> {
@@ -36,9 +37,9 @@ export class ClientRepository {
     return this.mapRowToClient(res.rows[0]);
   }
 
-  public async getNextClientCode(): Promise<string> {
-    const seq = await getNextBusinessSequence('CLIENT', 0);
-    return `CLI-${String(seq).padStart(6, '0')}`;
+  public async getNextClientCode(client?: import('pg').PoolClient): Promise<string> {
+    const seq = await getNextBusinessSequence('CLIENT', 0, client);
+    return formatClientCode(seq);
   }
 
   public async createClient(

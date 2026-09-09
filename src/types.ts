@@ -9,6 +9,8 @@ export interface UserSession {
   allowedInscriptionIds?: string[];
   phone?: string;
   active?: boolean;
+  permissions?: string[];
+  roles?: string[];
 }
 
 export interface SystemConfig {

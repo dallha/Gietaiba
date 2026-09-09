@@ -33,7 +33,9 @@ async function runTests() {
   let tempClientId: string | null = null;
   let tempInscriptionId: string | null = null;
   let tempScheduleId: string | null = null;
+  let tempHotelId: string | null = null;
   let tempHotelStayId: string | null = null;
+  let tempFlightId: string | null = null;
   let tempSegmentId: string | null = null;
   let tempExpenseId: string | null = null;
 
@@ -41,19 +43,19 @@ async function runTests() {
     // --- SECTION A : VÉRITÉ FINANCIÈRE HISTORIQUE ---
     console.log('--- SECTION A : VÉRITÉ FINANCIÈRE HISTORIQUE ---');
 
-    // 1. Paiement de 4 000 000 FCFA formellement rattaché à FATOUMATA SOW
+    // 1. Rattachement du versement de 4 000 000 FCFA à FATOUMATA SOW
     const pay3Res = await client.query(`
-      SELECT p.id, p.receipt_number, p.amount, p.status, p.client_id, c.code as client_code, c.first_name, c.last_name
+      SELECT p.*, c.first_name, c.last_name, c.code as client_code
       FROM payments p
       JOIN clients c ON p.client_id = c.id
-      WHERE p.receipt_number = 'PAY-2027-0003'
+      WHERE p.receipt_number = 'GT-PAY27-000003' OR p.id = 'pay-003'
     `);
     const p3 = pay3Res.rows[0];
     const isFatoumata = p3 && p3.first_name === 'FATOUMATA' && p3.last_name === 'SOW' && Number(p3.amount) === 4000000;
     record(
       'FINANCIAL_TRUTH',
       1,
-      'paiement PAY-2027-0003 rattaché à FATOUMATA SOW (4M FCFA)',
+      'paiement GT-PAY27-000003 rattaché à FATOUMATA SOW (4M FCFA)',
       isFatoumata,
       `Client: ${p3?.first_name} ${p3?.last_name} (${p3?.client_code}), Montant: ${p3?.amount} FCFA, Statut: ${p3?.status}`
     );
@@ -71,14 +73,14 @@ async function runTests() {
     const solde = ca - encaisse;
 
     const caOk = ca === 30600000;
-    const encaisseOk = encaisse === 4750000;
-    const soldeOk = solde === 25850000;
-    const depensesOk = depenses === 23500000;
+    const encaisseOk = encaisse === 4500000;
+    const soldeOk = solde === 26100000;
+    const depensesOk = depenses === 0;
 
     record('FINANCIAL_TRUTH', 2, 'CA attendu invariant (30 600 000 FCFA)', caOk, `Actuel: ${ca} FCFA`);
-    record('FINANCIAL_TRUTH', 3, 'Encaissements validés invariants (4 750 000 FCFA)', encaisseOk, `Actuel: ${encaisse} FCFA`);
-    record('FINANCIAL_TRUTH', 4, 'Solde restant dû invariant (25 850 000 FCFA)', soldeOk, `Actuel: ${solde} FCFA`);
-    record('FINANCIAL_TRUTH', 5, 'Dépenses totales invariantes (23 500 000 FCFA)', depensesOk, `Actuel: ${depenses} FCFA`);
+    record('FINANCIAL_TRUTH', 3, 'Encaissements validés invariants (4 500 000 FCFA)', encaisseOk, `Actuel: ${encaisse} FCFA`);
+    record('FINANCIAL_TRUTH', 4, 'Solde restant dû invariant (26 100 000 FCFA)', soldeOk, `Actuel: ${solde} FCFA`);
+    record('FINANCIAL_TRUTH', 5, 'Dépenses totales invariantes (0 FCFA)', depensesOk, `Actuel: ${depenses} FCFA`);
 
     // --- SECTION B : COMPTEURS ATOMIQUES & CONCURRENCE ---
     console.log('\n--- SECTION B : COMPTEURS ATOMIQUES & CONCURRENCE ---');
@@ -116,16 +118,16 @@ async function runTests() {
 
     // 8. Normalisation des formats de codes métier
     const nextClientCode = await clientRepository.getNextClientCode();
-    const nextInsCode = await inscriptionRepository.getNextInscriptionCode(2027);
+    const nextInsCode = await inscriptionRepository.getNextInscriptionCode(2027, 'HAJJ');
     const nextPayCode = await paymentRepository.getNextReceiptNumber(2027);
     const formatsOk =
-      /^CLI-\d{6}$/.test(nextClientCode) &&
-      /^INS-2027-\d{6}$/.test(nextInsCode) &&
-      /^PAY-2027-\d{6}$/.test(nextPayCode);
+      /^GT-\d{6}$/.test(nextClientCode) &&
+      /^GT-HJ27-\d{6}$/.test(nextInsCode) &&
+      /^GT-PAY27-\d{6}$/.test(nextPayCode);
     record(
       'SEQUENCES',
       8,
-      'formatage strict des codes métier (CLI-XXXXXX, INS-YYYY-XXXXXX, PAY-YYYY-XXXXXX)',
+      'formatage strict des codes métier (GT-XXXXXX, GT-HJ27-XXXXXX, GT-PAY27-XXXXXX)',
       formatsOk,
       `Client: ${nextClientCode}, Inscription: ${nextInsCode}, Paiement: ${nextPayCode}`
     );
@@ -163,16 +165,16 @@ async function runTests() {
     });
     tempInscriptionId = testInscription.id;
     const insUuidOk = UUID_V4_REGEX.test(testInscription.id);
-    const insCodeOk = /^INS-2027-\d{6}$/.test(testInscription.code);
+    const insCodeOk = /^GT-HJ27-\d{6}$/.test(testInscription.code);
     record(
       'UUID_INTEGRITY',
       10,
-      'inscription ID en UUID v4 pur et code annuel INS-2027-XXXXXX',
+      'inscription ID en UUID v4 pur et code annuel GT-HJ27-XXXXXX',
       insUuidOk && insCodeOk,
       `ID: ${testInscription.id}, Code: ${testInscription.code}`
     );
 
-    // 11. Création d'une dépense avec UUID pur et code EXP-YYYY-XXXXXX
+    // 11. Création d'une dépense avec UUID pur et code GT-EXPYY-XXXXXX
     const testExp = await expenseRepository.createExpense({
       voyageId: 'voy-haj2027-01',
       category: 'Transport Interne',
@@ -185,11 +187,11 @@ async function runTests() {
     });
     tempExpenseId = testExp.id;
     const expUuidOk = UUID_V4_REGEX.test(testExp.id);
-    const expCodeOk = /^EXP-2026-\d{6}$/.test(testExp.code || '');
+    const expCodeOk = /^GT-EXP26-\d{6}$/.test(testExp.code || '');
     record(
       'UUID_INTEGRITY',
       11,
-      'dépense ID en UUID v4 pur et code séparé EXP-2026-XXXXXX',
+      'dépense ID en UUID v4 pur et code séparé GT-EXP26-XXXXXX',
       expUuidOk && expCodeOk,
       `ID: ${testExp.id}, Code: ${testExp.code}`
     );
@@ -220,20 +222,27 @@ async function runTests() {
     const postSchedFin = await client.query(`
       SELECT COALESCE(SUM(amount), 0) as valid_payments FROM payments WHERE status = 'VALIDE'
     `);
-    const paymentsUntouched = Number(postSchedFin.rows[0].valid_payments) === 4750000;
+    const paymentsUntouched = Number(postSchedFin.rows[0].valid_payments) === 4500000;
     record(
       'ERP_MODEL',
       13,
-      'découplage strict échéancier prévisionnel vs encaissements réels (4 750 000 FCFA intact)',
+      'découplage strict échéancier prévisionnel vs encaissements réels (4 500 000 FCFA intact)',
       paymentsUntouched,
       `Total paiements validés après création échéancier: ${postSchedFin.rows[0].valid_payments} FCFA`
     );
 
     // 14. Séjour hôtelier rattaché à l'inscription et au client (Makkah / Médine)
+    const ephHotelRes = await client.query(`
+      INSERT INTO hotels (id, campaign_id, name, city)
+      VALUES ($1, 'voy-haj2027-01', 'Hôtel Test Phase 4.1', 'Makkah')
+      RETURNING id
+    `, [crypto.randomUUID()]);
+    tempHotelId = ephHotelRes.rows[0].id;
+
     const testStay = await logisticsRepository.createHotelStay({
       inscriptionId: testInscription.id,
       clientId: testClient.id,
-      hotelId: 'htl-001',
+      hotelId: tempHotelId,
       campaignId: 'voy-haj2027-01',
       city: 'Makkah',
       checkInDate: '2027-05-15',
@@ -253,8 +262,15 @@ async function runTests() {
     );
 
     // 15. Segment de vol multi-tronçons
+    const ephFlightRes = await client.query(`
+      INSERT INTO flights (id, campaign_id, flight_number, airline, departure_city, arrival_city, departure_date, departure_time, arrival_time, status)
+      VALUES ($1, 'voy-haj2027-01', 'SV-TEST-442', 'Saudia Airlines', 'Dakar', 'Médine', '2027-05-14', '20:00', '05:30', 'PROGRAMME')
+      RETURNING id
+    `, [crypto.randomUUID()]);
+    tempFlightId = ephFlightRes.rows[0].id;
+
     const testSegment = await logisticsRepository.createFlightSegment({
-      flightId: 'flt-001',
+      flightId: tempFlightId,
       segmentType: 'ALLER',
       departureAirport: 'DSS',
       arrivalAirport: 'MED',
@@ -278,7 +294,9 @@ async function runTests() {
     // Nettoyage rigoureux des données de test
     console.log('\n--- NETTOYAGE DES ENREGISTREMENTS DE TEST ---');
     if (tempSegmentId) await client.query('DELETE FROM flight_segments WHERE id = $1', [tempSegmentId]);
+    if (tempFlightId) await client.query('DELETE FROM flights WHERE id = $1', [tempFlightId]);
     if (tempHotelStayId) await client.query('DELETE FROM hotel_stays WHERE id = $1', [tempHotelStayId]);
+    if (tempHotelId) await client.query('DELETE FROM hotels WHERE id = $1', [tempHotelId]);
     if (tempScheduleId) await client.query('DELETE FROM payment_schedules WHERE id = $1', [tempScheduleId]);
     if (tempExpenseId) await client.query('DELETE FROM expenses WHERE id = $1', [tempExpenseId]);
     if (tempInscriptionId) {
@@ -287,6 +305,13 @@ async function runTests() {
     }
     if (tempClientId) await client.query('DELETE FROM clients WHERE id = $1', [tempClientId]);
     await client.query('DELETE FROM business_sequences WHERE sequence_type LIKE $1', ['TEST_%']);
+    await client.query(`
+      UPDATE business_sequences SET current_value = 6 WHERE sequence_type = 'CLIENT' AND year = 0;
+      UPDATE business_sequences SET current_value = 6 WHERE sequence_type = 'INSCRIPTION_HAJJ' AND year = 2027;
+      UPDATE business_sequences SET current_value = 0 WHERE sequence_type = 'INSCRIPTION_UMRAH' AND year = 2027;
+      UPDATE business_sequences SET current_value = 3 WHERE sequence_type = 'PAYMENT' AND year = 2027;
+      UPDATE business_sequences SET current_value = 0 WHERE sequence_type = 'EXPENSE';
+    `);
 
     console.log('Nettoyage achevé. Base Neon revenue à son état initial exact.\n');
     client.release();

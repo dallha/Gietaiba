@@ -13,6 +13,8 @@ export const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 15000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
 });
 
 pool.on('error', (err) => {
@@ -27,7 +29,11 @@ export async function query<T extends pg.QueryResultRow = any>(
 }
 
 export async function getClient(): Promise<pg.PoolClient> {
-  return pool.connect();
+  const client = await pool.connect();
+  client.on('error', (err) => {
+    console.error('[Neon Client Error]:', err.message);
+  });
+  return client;
 }
 
 /**
@@ -71,15 +77,24 @@ export async function getNextBusinessSequence(type: string, year: number = 0, cl
  */
 export async function withTransaction<T>(callback: (client: pg.PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();
+  const errorHandler = (err: any) => {
+    console.error('[Neon Client Transaction Error]:', err.message);
+  };
+  client.on('error', errorHandler);
   try {
     await client.query('BEGIN');
     const result = await callback(client);
     await client.query('COMMIT');
     return result;
   } catch (error) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch (rbErr) {
+      // rollback error if connection already broken
+    }
     throw error;
   } finally {
+    client.removeListener('error', errorHandler);
     client.release();
   }
 }

@@ -100,7 +100,7 @@ export class LogisticsWorkflowService {
           newOccupancy,
           capacity: room.capacity,
         },
-      });
+      }, client);
 
       const row = insertRes.rows[0];
       return {

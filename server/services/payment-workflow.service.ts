@@ -5,6 +5,7 @@ import { auditRepository } from '../repositories/audit.repository.js';
 import { notificationRepository } from '../repositories/notification.repository.js';
 import { idempotencyService } from './idempotency.service.js';
 import { campaignWorkflowService } from './campaign-workflow.service.js';
+import { formatPaymentReceiptNumber } from '../utils/business-format.js';
 import { Payment, UserSession } from '../../src/types.js';
 
 export interface RecordPaymentInput {
@@ -104,9 +105,9 @@ export class PaymentWorkflowService {
       const campRes = await client.query<{ year: number }>(`SELECT year FROM campaigns WHERE id = $1`, [campaignId]);
       const year = campRes.rows[0]?.year || new Date().getFullYear();
 
-      // d. Numéro de reçu atomique annuel
+      // d. Numéro de reçu atomique annuel GT-PAY<YY>-XXXXXX
       const seq = await getNextBusinessSequence('PAYMENT', year, client);
-      const receiptNumber = `PAY-${year}-${seq.toString().padStart(6, '0')}`;
+      const receiptNumber = formatPaymentReceiptNumber(year, seq);
 
       // e. Insertion du paiement (statut VALIDE, UUID v4)
       const paymentId = crypto.randomUUID();

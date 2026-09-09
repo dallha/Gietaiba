@@ -2,7 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../firebase.js';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { User, Role } from '../types.js';
+import { User, Role, UserSession } from '../types.js';
+import { api } from '../services/api.js';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -15,6 +16,8 @@ interface AuthContextType {
   getAuthorizedPath: () => string;
   hasPermission: (permission: string) => boolean;
   refreshUserData: () => Promise<void>;
+  loginWithSession: (session: UserSession) => void;
+  logoutUser: () => Promise<void>;
 }
 
 const DEFAULT_SUPER_ADMIN_ROLE: Role = {
@@ -44,6 +47,8 @@ const AuthContext = createContext<AuthContextType>({
   getAuthorizedPath: () => '/login',
   hasPermission: () => false,
   refreshUserData: async () => {},
+  loginWithSession: () => {},
+  logoutUser: async () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -155,55 +160,147 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const applySessionUser = (userSession: UserSession) => {
+    const nameParts = (userSession.displayName || userSession.email).split(' ');
+    const userRole = (userSession.role || 'AGENT').toUpperCase();
+    const isPelerin = userRole === 'PELERIN' || userRole === 'PILGRIM';
+    const roleId = isPelerin ? 'PILGRIM' : userRole;
+
+    const u: User = {
+      id: userSession.id,
+      authUid: userSession.id,
+      email: userSession.email,
+      firstName: userSession.firstName || nameParts[0] || 'Utilisateur',
+      lastName: userSession.lastName || nameParts.slice(1).join(' ') || '',
+      roleId: roleId,
+      status: 'ACTIF',
+      active: true,
+      clientId: userSession.clientId,
+      allowedInscriptionIds: userSession.allowedInscriptionIds,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setCurrentUser(u);
+    setFirebaseUser({ uid: userSession.id, email: userSession.email } as any);
+
+    if (roleId === 'SUPER_ADMIN') {
+      setRole(DEFAULT_SUPER_ADMIN_ROLE);
+    } else if (isPelerin) {
+      setRole(DEFAULT_PILGRIM_ROLE);
+    } else {
+      setRole({
+        id: roleId,
+        name: roleId,
+        permissions: (userSession as any).permissions || ['*'],
+      });
+    }
+  };
+
+  const loginWithSession = (session: UserSession) => {
+    applySessionUser(session);
+  };
+
+  const logoutUser = async () => {
+    api.logout();
+    try {
+      await auth.signOut();
+    } catch {}
+    setCurrentUser(null);
+    setFirebaseUser(null);
+    setRole(null);
+  };
+
   const refreshUserData = async () => {
+    const token = api.getToken();
+    if (token) {
+      try {
+        const u = await api.getCurrentUser();
+        if (u) {
+          applySessionUser(u);
+          return;
+        }
+      } catch {
+        // Fallback to firebase
+      }
+    }
     if (auth.currentUser) {
       await fetchOrProvisionUser(auth.currentUser);
     }
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setFirebaseUser(user);
-      if (user) {
-        await fetchOrProvisionUser(user);
-      } else {
+    let active = true;
+
+    async function initAuth() {
+      const token = api.getToken();
+      if (token) {
+        try {
+          const userSession = await api.getCurrentUser();
+          if (active && userSession) {
+            applySessionUser(userSession);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.warn('[AuthContext] Jeton REST invalide, tentative fallback:', e);
+          api.logout();
+        }
+      }
+
+      // Fallback on Firebase Auth state
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        if (!active) return;
+        setFirebaseUser(user);
+        if (user) {
+          await fetchOrProvisionUser(user);
+        } else {
+          setCurrentUser(null);
+          setRole(null);
+        }
+        setLoading(false);
+      });
+
+      return () => unsubscribe();
+    }
+
+    const unreg = initAuth();
+
+    const handleUnauthorized = () => {
+      if (active) {
         setCurrentUser(null);
+        setFirebaseUser(null);
         setRole(null);
       }
-      setLoading(false);
-    });
+    };
+    window.addEventListener('taiba:unauthorized', handleUnauthorized);
 
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      window.removeEventListener('taiba:unauthorized', handleUnauthorized);
+      unreg.then((fn) => fn && fn());
+    };
   }, []);
 
   const hasPermission = (permission: string) => {
     const email = (firebaseUser?.email || currentUser?.email)?.toLowerCase();
     const isAdminEmail = email === 'mr.niass@gmail.com' || email === 'admin@taibavoyages.sn';
     
-    console.log('RBAC Check:', { permission, email, isAdminEmail, roleId: currentUser?.roleId, active: currentUser?.active });
-
-    // Absolute God Mode for root owner - rely on authenticated token email, not just firestore doc
+    // Absolute God Mode for root owner
     if (isAdminEmail) {
-      console.log('RBAC Allowed: God Mode');
       return true;
     }
     
     if (!currentUser || !currentUser.active || currentUser.status !== 'ACTIF') {
-      console.log('RBAC Denied: User inactive or missing');
       return false; // Inactive or blocked user has ZERO permissions
     }
     
     if (!role) {
-      console.log('RBAC Denied: Role not loaded');
       return false;
     }
     if (role.permissions.includes('*')) {
-      console.log('RBAC Allowed: Role has *');
       return true;
     }
-    const allowed = role.permissions.includes(permission);
-    console.log('RBAC Result:', allowed);
-    return allowed;
+    return role.permissions.includes(permission);
   };
 
   const isSuperAdmin = Boolean(
@@ -223,7 +320,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (currentUser.roleId === 'PILGRIM') {
       return '/portail';
     }
-    // All staff roles (SUPER_ADMIN, DIRECTION, CAISSE, LOGISTIQUE, etc.) go to ERP Espace Équipe
     return '/erp';
   };
 
@@ -240,6 +336,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getAuthorizedPath,
         hasPermission,
         refreshUserData,
+        loginWithSession,
+        logoutUser,
       }}
     >
       {children}

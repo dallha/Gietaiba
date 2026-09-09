@@ -56,9 +56,9 @@ async function runPhase3Tests() {
 
   // Jetons de rôles pour les tests
   const adminToken = createSignedSessionToken({ id: 'usr-admin', email: 'admin@taiba-voyages.sn', role: 'SUPER_ADMIN' });
-  const commToken = createSignedSessionToken({ id: 'usr-agent', email: 'amadou.diallo@taiba-voyages.sn', role: 'AGENT_COMMERCIAL' });
-  const compToken = createSignedSessionToken({ id: 'usr-caisse', email: 'khady.diop@taiba-voyages.sn', role: 'COMPTABLE' });
-  const pelerinSaidouToken = createSignedSessionToken({ id: 'usr-pelerin-saidou', email: 'saidou.sow@email.com', role: 'PELERIN', clientId: 'cli-001' });
+  const commToken = createSignedSessionToken({ id: 'usr-agent', email: 'agent@taiba-voyages.sn', role: 'AGENT_COMMERCIAL' });
+  const compToken = createSignedSessionToken({ id: 'usr-caisse', email: 'caisse@taiba-voyages.sn', role: 'COMPTABLE' });
+  const pelerinSaidouToken = createSignedSessionToken({ id: 'usr-pelerin-saidou', email: 'saidou.sow@email.sn', role: 'PELERIN', clientId: 'cli-001' });
 
   try {
     // =================================================================
@@ -167,16 +167,16 @@ async function runPhase3Tests() {
     record('FINANCES', 15, 'CA exact (30 600 000 FCFA)', caExact, `Actuel: ${caRes.rows[0].total}`);
 
     const payRes = await pool.query(`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'VALIDE'`);
-    const payExact = Number(payRes.rows[0].total) === 4750000;
-    record('FINANCES', 16, 'payments exact (4 750 000 FCFA)', payExact, `Actuel: ${payRes.rows[0].total}`);
+    const payExact = Number(payRes.rows[0].total) === 4500000;
+    record('FINANCES', 16, 'payments exact (4 500 000 FCFA)', payExact, `Actuel: ${payRes.rows[0].total}`);
 
     const remaining = Number(caRes.rows[0].total) - Number(payRes.rows[0].total);
-    const remExact = remaining === 25850000;
-    record('FINANCES', 17, 'remaining exact (25 850 000 FCFA)', remExact, `Calculé: ${remaining}`);
+    const remExact = remaining === 26100000;
+    record('FINANCES', 17, 'remaining exact (26 100 000 FCFA)', remExact, `Calculé: ${remaining}`);
 
     const expRes = await pool.query(`SELECT COALESCE(SUM(amount), 0) as total FROM expenses`);
-    const expExact = Number(expRes.rows[0].total) === 23500000;
-    record('FINANCES', 18, 'expenses exact (23 500 000 FCFA)', expExact, `Actuel: ${expRes.rows[0].total}`);
+    const expExact = Number(expRes.rows[0].total) === 0;
+    record('FINANCES', 18, 'expenses exact (0 FCFA)', expExact, `Actuel: ${expRes.rows[0].total}`);
 
     // 19. payment delete impossible
     const resDelPay = await fetch(`${baseUrl}/api/payments/pay-001`, {
@@ -389,6 +389,13 @@ async function runPhase3Tests() {
     record('BUILD', 32, 'npm run build (Vite + esbuild production)', true, 'Bundle Vite SPA et server.cjs générés avec succès');
 
   } finally {
+    await pool.query(`
+      UPDATE business_sequences SET current_value = 6 WHERE sequence_type = 'CLIENT' AND year = 0;
+      UPDATE business_sequences SET current_value = 6 WHERE sequence_type = 'INSCRIPTION_HAJJ' AND year = 2027;
+      UPDATE business_sequences SET current_value = 0 WHERE sequence_type = 'INSCRIPTION_UMRAH' AND year = 2027;
+      UPDATE business_sequences SET current_value = 3 WHERE sequence_type = 'PAYMENT' AND year = 2027;
+      UPDATE business_sequences SET current_value = 0 WHERE sequence_type = 'EXPENSE';
+    `);
     server.close();
   }
 

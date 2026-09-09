@@ -26,6 +26,12 @@ import { expenseService } from './server/services/expense.service.js';
 import { dashboardService } from './server/services/dashboard.service.js';
 import { pilgrimService } from './server/services/pilgrim.service.js';
 
+// Workflow Services (Phase 4.2 / Phase 5)
+import { inscriptionWorkflowService } from './server/services/inscription-workflow.service.js';
+import { paymentWorkflowService } from './server/services/payment-workflow.service.js';
+import { logisticsWorkflowService } from './server/services/logistics-workflow.service.js';
+import { campaignWorkflowService } from './server/services/campaign-workflow.service.js';
+
 const app = express();
 const PORT = 3000;
 
@@ -38,6 +44,50 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.use(express.json());
+
+// Normalisation des erreurs API (Phase 5)
+function formatErrorResponse(err: any) {
+  const message = err?.message || 'Erreur interne du serveur';
+  let status = 400;
+  let code = 'BAD_REQUEST';
+
+  if (message.includes('IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_REQUEST')) {
+    status = 409;
+    code = 'IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_REQUEST';
+  } else if (message.includes('DUPLICATE_INSCRIPTION') || message.includes('déjà une inscription active')) {
+    status = 400;
+    code = 'INSCRIPTION_ALREADY_EXISTS';
+  } else if (message.includes('ROOM_FULL_ERROR') || message.includes('Capacité maximale')) {
+    status = 422;
+    code = 'ROOM_FULL_ERROR';
+  } else if (message.includes('PASSPORT_EXPIRING_SOON') || message.includes('PASSPORT_INVALID')) {
+    status = 422;
+    code = 'PASSPORT_INVALID';
+  } else if (message.includes('CAMPAIGN_MUTATION_FORBIDDEN_CLOSED') || message.includes('MUTATION_FORBIDDEN_ON_CLOSED_CAMPAIGN')) {
+    status = 422;
+    code = 'CAMPAIGN_MUTATION_FORBIDDEN_CLOSED';
+  } else if (message.includes('introuvable') || message.includes('non trouvé')) {
+    status = 404;
+    code = 'NOT_FOUND';
+  } else if (message.includes('interdit') || message.includes('non autorisé')) {
+    status = 403;
+    code = 'FORBIDDEN';
+  }
+
+  return {
+    status,
+    body: {
+      error: message,
+      code,
+      details: {},
+      error_info: {
+        code,
+        message,
+        details: {},
+      },
+    },
+  };
+}
 
 // ----------------------------------------------------
 // API ROUTES
@@ -81,6 +131,10 @@ app.post('/api/auth/pilgrim-login', async (req: Request, res: Response) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
+});
+
+app.get('/api/auth/me', requireAuth, async (req: Request, res: Response) => {
+  res.json({ user: (req as any).user });
 });
 
 // User listing (Requires Auth & users.read permission - PELERIN strictly forbidden)
@@ -303,10 +357,21 @@ app.get('/api/inscriptions', requireAuth, requirePermission('inscriptions.read')
 
 app.post('/api/inscriptions', requireAuth, requirePermission('inscriptions.create'), async (req: Request, res: Response) => {
   try {
-    const ins = await inscriptionService.createInscription(req.body, req.user!);
+    const idempotencyKey = (req.headers['idempotency-key'] as string) || req.body.idempotencyKey;
+    const ins = await inscriptionWorkflowService.createInscription({
+      clientId: req.body.clientId,
+      campaignId: req.body.campaignId || req.body.voyageId,
+      packageId: req.body.packageId,
+      agreedPrice: req.body.agreedPrice || req.body.appliedPrice,
+      priceModificationReason: req.body.priceModificationReason,
+      registrationDate: req.body.registrationDate,
+      idempotencyKey,
+      overrideClosedCampaign: req.body.overrideClosedCampaign,
+    }, req.user!);
     res.status(201).json(ins);
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    const errResp = formatErrorResponse(err);
+    res.status(errResp.status).json(errResp.body);
   }
 });
 
@@ -322,7 +387,8 @@ app.patch('/api/inscriptions/:id/price', requireAuth, requirePermission('inscrip
     const updated = await inscriptionService.updateInscriptionPrice(req.params.id, Number(newPrice), reason.trim(), req.user!);
     res.json(updated);
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    const errResp = formatErrorResponse(err);
+    res.status(errResp.status).json(errResp.body);
   }
 });
 
@@ -332,7 +398,8 @@ app.put('/api/inscriptions/:id/status', requireAuth, requirePermission('inscript
     const updated = await inscriptionService.updateInscriptionStatus(req.params.id, status, req.user!);
     res.json(updated);
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    const errResp = formatErrorResponse(err);
+    res.status(errResp.status).json(errResp.body);
   }
 });
 
@@ -342,7 +409,8 @@ app.delete('/api/inscriptions/:id', requireAuth, requirePermission('inscriptions
     const result = await inscriptionService.cancelInscription(req.params.id, reason, req.user!);
     res.json({ success: true, message: `Dossier ${result.code} annulé avec succès.`, inscription: result });
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    const errResp = formatErrorResponse(err);
+    res.status(errResp.status).json(errResp.body);
   }
 });
 
@@ -368,20 +436,39 @@ app.get('/api/payments', requireAuth, requirePermission('payments.read'), async 
 
 app.post('/api/payments', requireAuth, requirePermission('payments.create'), async (req: Request, res: Response) => {
   try {
-    const payment = await paymentService.createPayment(req.body, req.user!);
+    const idempotencyKey = (req.headers['idempotency-key'] as string) || req.body.idempotencyKey;
+    const payment = await paymentWorkflowService.recordPayment({
+      clientId: req.body.clientId,
+      inscriptionId: req.body.inscriptionId,
+      amount: Number(req.body.amount),
+      paymentMethod: req.body.paymentMethod,
+      reference: req.body.reference,
+      comment: req.body.comment,
+      paymentDate: req.body.paymentDate,
+      idempotencyKey,
+      overrideClosedCampaign: req.body.overrideClosedCampaign,
+    }, req.user!);
     res.status(201).json(payment);
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    const errResp = formatErrorResponse(err);
+    res.status(errResp.status).json(errResp.body);
   }
 });
 
 app.post('/api/payments/:id/cancel', requireAuth, requirePermission('payments.cancel'), async (req: Request, res: Response) => {
-  const reason = req.body.reason || 'Erreur de saisie';
   try {
-    const canceled = await paymentService.cancelPayment(req.params.id, reason, req.user!);
+    const idempotencyKey = (req.headers['idempotency-key'] as string) || req.body.idempotencyKey;
+    const reason = req.body.reason || 'Erreur de saisie';
+    const canceled = await paymentWorkflowService.cancelPayment({
+      paymentId: req.params.id,
+      reason,
+      idempotencyKey,
+      overrideClosedCampaign: req.body.overrideClosedCampaign,
+    }, req.user!);
     res.json(canceled);
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    const errResp = formatErrorResponse(err);
+    res.status(errResp.status).json(errResp.body);
   }
 });
 
@@ -519,12 +606,20 @@ app.post('/api/rooms', requireAuth, requirePermission('logistics.manage'), async
 });
 
 app.post('/api/rooms/:id/assign', requireAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
-  const { clientId, inscriptionId } = req.body;
+  const { clientId, inscriptionId, checkInDate, checkOutDate, notes } = req.body;
   try {
-    const assignment = await logisticsService.assignClientToRoom(req.params.id, clientId, inscriptionId, req.user!);
+    const assignment = await logisticsWorkflowService.assignRoomPessimistic({
+      roomId: req.params.id,
+      clientId,
+      inscriptionId,
+      checkInDate: checkInDate || '2027-05-15',
+      checkOutDate: checkOutDate || '2027-06-05',
+      notes,
+    }, req.user!);
     res.status(201).json(assignment);
   } catch (err: any) {
-    res.status(422).json({ error: err.message });
+    const errResp = formatErrorResponse(err);
+    res.status(errResp.status).json(errResp.body);
   }
 });
 

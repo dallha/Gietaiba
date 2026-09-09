@@ -21,31 +21,35 @@ import {
 import { createNotification } from './notification.service.js';
 
 class ApiService {
-  private currentUserId: string = 'usr-admin';
-  private token: string | null = null;
+  private token: string | null = typeof window !== 'undefined' ? localStorage.getItem('taiba_auth_token') : null;
 
-  public setToken(token: string) {
+  public setToken(token: string | null) {
     this.token = token;
+    if (typeof window !== 'undefined') {
+      if (token) {
+        localStorage.setItem('taiba_auth_token', token);
+      } else {
+        localStorage.removeItem('taiba_auth_token');
+      }
+    }
   }
 
-  public setUserId(userId: string) {
-    this.currentUserId = userId;
+  public getToken(): string | null {
+    return this.token;
   }
 
-  public setCurrentUserId(userId: string) {
-    this.currentUserId = userId;
-  }
+  // Deprecated compatibility methods
+  public setUserId(_userId: string) {}
+  public setCurrentUserId(_userId: string) {}
 
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  private async request<T>(endpoint: string, options?: RequestInit & { idempotencyKey?: string }): Promise<T> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : { 'x-user-id': this.currentUserId }),
+      ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
+      ...(options?.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
       ...(options?.headers as Record<string, string> || {}),
     };
-    if (!this.token) {
-      console.log(`[ApiService] Requesting ${endpoint} with dev user context`);
-    }
 
     let res: Response | null = null;
     let attempts = 0;
@@ -76,6 +80,12 @@ class ApiService {
     const isHtml = rawText.trim().startsWith('<') || contentType.includes('text/html');
 
     if (!res.ok) {
+      if (res.status === 401) {
+        this.setToken(null);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('taiba:unauthorized'));
+        }
+      }
       let errorMsg = `Erreur HTTP ${res.status}`;
       if (!isHtml) {
         try {
@@ -109,9 +119,8 @@ class ApiService {
       body: JSON.stringify({ email: emailOrPhone, password }),
     });
     if (res.token) {
-      this.token = res.token;
+      this.setToken(res.token);
     }
-    this.currentUserId = res.user.id;
     return res;
   }
 
@@ -121,10 +130,18 @@ class ApiService {
       body: JSON.stringify({ identifier }),
     });
     if (res.token) {
-      this.token = res.token;
+      this.setToken(res.token);
     }
-    this.currentUserId = res.user.id;
     return res;
+  }
+
+  async getCurrentUser(): Promise<UserSession> {
+    const res = await this.request<{ user: UserSession }>('/api/auth/me');
+    return res.user;
+  }
+
+  logout(): void {
+    this.setToken(null);
   }
 
   async getUsers(): Promise<UserSession[]> {

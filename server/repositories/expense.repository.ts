@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { pool, getNextBusinessSequence } from '../db/neon.js';
 import { Expense } from '../../src/types.js';
+import { formatExpenseCode } from '../utils/business-format.js';
 
 export class ExpenseRepository {
   public async getExpenses(campaignId?: string): Promise<Expense[]> {
@@ -29,7 +30,7 @@ export class ExpenseRepository {
     const expenseDate = data.date ? new Date(data.date) : new Date();
     const year = expenseDate.getFullYear();
     const seq = await getNextBusinessSequence('EXPENSE', year);
-    const code = `EXP-${year}-${String(seq).padStart(6, '0')}`;
+    const code = formatExpenseCode(year, seq);
     const id = randomUUID();
 
     const res = await pool.query(

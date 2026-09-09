@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { pool, getNextBusinessSequence } from '../db/neon.js';
 import { Inscription, Client, Voyage, VoyagePackage, PaymentSchedule } from '../../src/types.js';
+import { formatInscriptionCode } from '../utils/business-format.js';
 
 export class InscriptionRepository {
   public async getInscriptions(query?: { campaignId?: string; clientId?: string }): Promise<Inscription[]> {
@@ -53,9 +54,25 @@ export class InscriptionRepository {
     return found || null;
   }
 
-  public async getNextInscriptionCode(year: number = 2027, client?: any): Promise<string> {
-    const seq = await getNextBusinessSequence('INSCRIPTION', year, client);
-    return `INS-${year}-${String(seq).padStart(6, '0')}`;
+  public async getNextInscriptionCode(year: number = 2027, campaignTypeOrClient?: string | any, client?: any): Promise<string> {
+    let resolvedCampaignType = 'HAJJ';
+    let resolvedClient = client;
+
+    if (typeof campaignTypeOrClient === 'string') {
+      resolvedCampaignType = campaignTypeOrClient;
+    } else if (campaignTypeOrClient) {
+      resolvedClient = campaignTypeOrClient;
+    }
+
+    const type = resolvedCampaignType.trim().toUpperCase();
+    const isUmrah = type === 'UMRAH' || type === 'OUMRAH';
+    const isHajj = type === 'HAJJ';
+    if (!isHajj && !isUmrah) {
+      throw new Error(`UNSUPPORTED_CAMPAIGN_TYPE: ${resolvedCampaignType}`);
+    }
+    const seqType = isUmrah ? 'INSCRIPTION_UMRAH' : 'INSCRIPTION_HAJJ';
+    const seq = await getNextBusinessSequence(seqType, year, resolvedClient);
+    return formatInscriptionCode(resolvedCampaignType, year, seq);
   }
 
   /**
@@ -89,8 +106,9 @@ export class InscriptionRepository {
       }
       const pkg = pkgRes.rows[0];
 
-      const campRes = await client.query(`SELECT year FROM campaigns WHERE id = $1`, [data.campaignId]);
+      const campRes = await client.query(`SELECT year, type FROM campaigns WHERE id = $1`, [data.campaignId]);
       const campaignYear = campRes.rows[0]?.year || new Date().getFullYear();
+      const campaignType = campRes.rows[0]?.type || 'HAJJ';
 
       const verRes = await client.query(
         `SELECT * FROM package_versions WHERE package_id = $1 ORDER BY version_number DESC LIMIT 1`,
@@ -101,7 +119,7 @@ export class InscriptionRepository {
       const versionNumber = activeVersion ? activeVersion.version_number : 1;
       const appliedPrice = Number(pkg.price);
 
-      const code = await this.getNextInscriptionCode(campaignYear, client);
+      const code = await this.getNextInscriptionCode(campaignYear, campaignType, client);
       const id = randomUUID();
 
       // 3. Insertion de l'inscription avec snapshot tarifaire

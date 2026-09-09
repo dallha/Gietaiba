@@ -40,7 +40,7 @@ function base64UrlDecode(str: string): string {
  * Creates a cryptographically signed session token (HMAC-SHA256)
  */
 export function createSignedSessionToken(
-  user: { id: string; email: string; role: string; clientId?: string },
+  user: { id: string; email: string; role: string; clientId?: string; [key: string]: any },
   expiresInSeconds: number = 86400 * 7 // 7 days default
 ): string {
   const now = Math.floor(Date.now() / 1000);

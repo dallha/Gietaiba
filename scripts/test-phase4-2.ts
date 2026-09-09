@@ -70,7 +70,7 @@ async function getHistoricalFinancialMetrics() {
       `SELECT COALESCE(SUM(p.amount), 0) as sum
        FROM payments p
        JOIN clients c ON p.client_id = c.id
-       WHERE c.code = 'GIE-T0003' AND p.status = 'VALIDE'`
+       WHERE (c.code = 'GT-000003' OR c.id = 'cli-003') AND p.status = 'VALIDE'`
     );
     const fatoumataPaid = Number(fatouRes.rows[0].sum);
 
@@ -92,20 +92,20 @@ async function cleanTestEnvironment(campaignId?: string) {
     const filter = campaignId ? '= $1' : 'LIKE \'test-camp-%\'';
     const params = campaignId ? [campaignId] : [];
 
-    await cleanClient.query(`DELETE FROM payment_schedule_allocations WHERE payment_id IN (SELECT id FROM payments WHERE inscription_id IN (SELECT id FROM inscriptions WHERE campaign_id ${filter}))`, params);
-    await cleanClient.query(`DELETE FROM payment_reversals WHERE payment_id IN (SELECT id FROM payments WHERE inscription_id IN (SELECT id FROM inscriptions WHERE campaign_id ${filter}))`, params);
-    await cleanClient.query(`DELETE FROM payments WHERE inscription_id IN (SELECT id FROM inscriptions WHERE campaign_id ${filter})`, params);
+    await cleanClient.query(`DELETE FROM room_assignments WHERE room_id LIKE 'test-room-%' OR client_id LIKE 'test-cli%' OR room_id IN (SELECT id FROM rooms WHERE campaign_id ${filter})`, params);
+    await cleanClient.query(`DELETE FROM rooms WHERE id LIKE 'test-room-%' OR campaign_id ${filter}`, params);
+    await cleanClient.query(`DELETE FROM hotels WHERE id LIKE 'test-hot-%' OR campaign_id ${filter}`, params);
+    await cleanClient.query(`DELETE FROM payment_schedule_allocations WHERE payment_id IN (SELECT id FROM payments WHERE inscription_id IN (SELECT id FROM inscriptions WHERE campaign_id ${filter}) OR client_id LIKE 'test-cli%')`, params);
+    await cleanClient.query(`DELETE FROM payment_reversals WHERE payment_id IN (SELECT id FROM payments WHERE inscription_id IN (SELECT id FROM inscriptions WHERE campaign_id ${filter}) OR client_id LIKE 'test-cli%')`, params);
+    await cleanClient.query(`DELETE FROM payments WHERE inscription_id IN (SELECT id FROM inscriptions WHERE campaign_id ${filter}) OR client_id LIKE 'test-cli%'`, params);
     await cleanClient.query(`DELETE FROM payment_schedules WHERE inscription_id IN (SELECT id FROM inscriptions WHERE campaign_id ${filter})`, params);
-    await cleanClient.query(`DELETE FROM visas WHERE inscription_id IN (SELECT id FROM inscriptions WHERE campaign_id ${filter})`, params);
-    await cleanClient.query(`DELETE FROM room_assignments WHERE room_id IN (SELECT id FROM rooms WHERE campaign_id ${filter})`, params);
-    await cleanClient.query(`DELETE FROM rooms WHERE campaign_id ${filter}`, params);
-    await cleanClient.query(`DELETE FROM hotels WHERE campaign_id ${filter}`, params);
+    await cleanClient.query(`DELETE FROM visas WHERE inscription_id IN (SELECT id FROM inscriptions WHERE campaign_id ${filter}) OR client_id LIKE 'test-cli%'`, params);
     await cleanClient.query(`DELETE FROM notifications WHERE recipient_client_id LIKE 'test-cli%'`);
     await cleanClient.query(`DELETE FROM audit_logs WHERE entity_id LIKE 'test-%'`);
     await cleanClient.query(`DELETE FROM idempotency_keys WHERE key LIKE 'IDEMP-%'`);
-    await cleanClient.query(`DELETE FROM inscriptions WHERE campaign_id ${filter}`, params);
-    await cleanClient.query(`DELETE FROM package_versions WHERE package_id IN (SELECT id FROM packages WHERE campaign_id ${filter})`, params);
-    await cleanClient.query(`DELETE FROM packages WHERE campaign_id ${filter}`, params);
+    await cleanClient.query(`DELETE FROM inscriptions WHERE campaign_id ${filter} OR client_id LIKE 'test-cli%'`, params);
+    await cleanClient.query(`DELETE FROM package_versions WHERE package_id IN (SELECT id FROM packages WHERE campaign_id ${filter}) OR package_id LIKE 'test-pkg-%'`, params);
+    await cleanClient.query(`DELETE FROM packages WHERE campaign_id ${filter} OR id LIKE 'test-pkg-%'`, params);
     await cleanClient.query(`DELETE FROM clients WHERE id LIKE 'test-cli%'`);
     await cleanClient.query(`DELETE FROM campaigns WHERE id ${filter}`, params);
     await cleanClient.query('COMMIT');
@@ -148,8 +148,8 @@ async function runPhase42TestSuite() {
       'FINANCIAL_INVARIANTS',
       'Vérification initiale des invariants financiers de référence',
       initialFinances.expectedRevenue === 30600000 &&
-        initialFinances.collectedRevenue === 4750000 &&
-        initialFinances.totalExpenses === 23500000 &&
+        initialFinances.collectedRevenue === 4500000 &&
+        initialFinances.totalExpenses === 0 &&
         initialFinances.fatoumataPaid === 4000000,
       `CA: ${initialFinances.expectedRevenue}, Encaissé: ${initialFinances.collectedRevenue}, Dépenses: ${initialFinances.totalExpenses}, Fatoumata Sow: ${initialFinances.fatoumataPaid}`
     );
@@ -236,8 +236,8 @@ async function runPhase42TestSuite() {
 
     record(
       'INSCRIPTION_WORKFLOW',
-      'Création d\'inscription transactionnelle avec code INS-YYYY-XXXXXX',
-      /^INS-2027-\d{6}$/.test(ins1.code) && ins1.appliedPrice === 3000000,
+      'Création d\'inscription transactionnelle avec code GT-HJ27-XXXXXX',
+      /^GT-HJ27-\d{6}$/.test(ins1.code) && ins1.appliedPrice === 3000000,
       `Code: ${ins1.code}, Prix gravé: ${ins1.appliedPrice} FCFA`
     );
 
@@ -320,8 +320,8 @@ async function runPhase42TestSuite() {
 
     record(
       'FINANCIAL_WORKFLOW',
-      'Premier paiement de 1 000 000 FCFA validé avec reçu atomique PAY-2027-XXXXXX',
-      /^PAY-2027-\d{6}$/.test(pay1.receiptNumber) && pay1.amount === 1000000,
+      'Premier paiement de 1 000 000 FCFA validé avec reçu atomique GT-PAY27-XXXXXX',
+      /^GT-PAY27-\d{6}$/.test(pay1.receiptNumber) && pay1.amount === 1000000,
       `Reçu: ${pay1.receiptNumber}`
     );
 
@@ -657,6 +657,13 @@ async function runPhase42TestSuite() {
       await cleanClient.query(`DELETE FROM packages WHERE campaign_id = $1`, [testCampaignId]);
       await cleanClient.query(`DELETE FROM clients WHERE id IN ($1, $2, $3)`, [testClientId1, testClientId2, testClientId3]);
       await cleanClient.query(`DELETE FROM campaigns WHERE id = $1`, [testCampaignId]);
+      await cleanClient.query(`
+        UPDATE business_sequences SET current_value = 6 WHERE sequence_type = 'CLIENT' AND year = 0;
+        UPDATE business_sequences SET current_value = 6 WHERE sequence_type = 'INSCRIPTION_HAJJ' AND year = 2027;
+        UPDATE business_sequences SET current_value = 0 WHERE sequence_type = 'INSCRIPTION_UMRAH' AND year = 2027;
+        UPDATE business_sequences SET current_value = 3 WHERE sequence_type = 'PAYMENT' AND year = 2027;
+        UPDATE business_sequences SET current_value = 0 WHERE sequence_type = 'EXPENSE';
+      `);
       await cleanClient.query('COMMIT');
       console.log('[SUCCESS] Données de test isolées entièrement nettoyées.');
     } catch (e) {

@@ -26,6 +26,7 @@ import {
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthContext.js';
 import { User } from '../types.js';
+import { api } from '../services/api.js';
 
 // In-memory token cache for Google Workspace APIs
 let cachedAccessToken: string | null = null;
@@ -34,7 +35,7 @@ export const getWorkspaceAccessToken = () => cachedAccessToken;
 export const UnifiedLogin: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser, firebaseUser, loading: authLoading, getAuthorizedPath } = useAuth();
+  const { currentUser, firebaseUser, loading: authLoading, getAuthorizedPath, loginWithSession } = useAuth();
 
   const [mode, setMode] = useState<'LOGIN' | 'ACTIVATE' | 'RESET'>('LOGIN');
   const [email, setEmail] = useState('');
@@ -102,6 +103,29 @@ export const UnifiedLogin: React.FC = () => {
     setSuccessMsg(null);
 
     try {
+      // Priorité 1 : Authentification Session REST PostgreSQL (Signed Bearer Token)
+      try {
+        const res = await api.login(email.trim(), password);
+        if (res?.user && res.token) {
+          loginWithSession(res.user);
+          const userRole = (res.user.role || '').toUpperCase();
+          if (userRole === 'PELERIN' || userRole === 'PILGRIM') {
+            navigate('/portail', { replace: true });
+          } else {
+            navigate('/erp', { replace: true });
+          }
+          return;
+        }
+      } catch (apiErr: any) {
+        // En cas d'échec API, si le serveur est joignable et renvoie des identifiants invalides
+        if (apiErr?.message?.includes('invalides') || apiErr?.message?.includes('inactif')) {
+          setError(apiErr.message);
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // Priorité 2 : Fallback Firebase pour les comptes administrateurs historiques
       const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
       await handlePostAuthRedirect(cred.user.uid, cred.user.email);
     } catch (err: any) {

@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { pool, getNextBusinessSequence } from '../db/neon.js';
 import { Payment } from '../../src/types.js';
+import { formatPaymentReceiptNumber } from '../utils/business-format.js';
 
 export class PaymentRepository {
   public async getPayments(query?: {
@@ -38,7 +39,7 @@ export class PaymentRepository {
 
   public async getNextReceiptNumber(year: number = 2027, client?: any): Promise<string> {
     const seq = await getNextBusinessSequence('PAYMENT', year, client);
-    return `PAY-${year}-${String(seq).padStart(6, '0')}`;
+    return formatPaymentReceiptNumber(year, seq);
   }
 
   /**

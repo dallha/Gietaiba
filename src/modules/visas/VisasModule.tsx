@@ -217,7 +217,7 @@ export const VisasModule: React.FC<VisasModuleProps> = ({
               {filteredVisas.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-8 text-center text-slate-400">
-                    Aucune fiche visa ne correspond à vos critères.
+                    Aucun visa délivré à ce stade (campagne Hajj 2027 en phase d'enrôlement et d'instruction consulaire préalable).
                   </td>
                 </tr>
               ) : (

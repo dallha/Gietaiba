@@ -5,6 +5,7 @@ import { auditRepository } from '../repositories/audit.repository.js';
 import { notificationRepository } from '../repositories/notification.repository.js';
 import { idempotencyService } from './idempotency.service.js';
 import { campaignWorkflowService } from './campaign-workflow.service.js';
+import { formatInscriptionCode } from '../utils/business-format.js';
 import { Inscription, UserSession } from '../../src/types.js';
 
 export interface CreateInscriptionInput {
@@ -160,8 +161,8 @@ export class InscriptionWorkflowService {
       const clientFullName = `${clientRecord.first_name} ${clientRecord.last_name}`;
 
       // b. Vérifier campagne
-      const campRes = await client.query<{ id: string; title: string; year: number; departure_date: string; status: string }>(
-        `SELECT id, title, year, departure_date, status FROM campaigns WHERE id = $1`,
+      const campRes = await client.query<{ id: string; title: string; type: string; year: number; departure_date: string; status: string }>(
+        `SELECT id, title, type, year, departure_date, status FROM campaigns WHERE id = $1`,
         [input.campaignId]
       );
       if (campRes.rows.length === 0) throw new Error(`Campagne ${input.campaignId} introuvable.`);
@@ -193,7 +194,7 @@ export class InscriptionWorkflowService {
 
       if (dupRes.rows.length > 0) {
         throw new Error(
-          `DUPLICATE_INSCRIPTION: Le client ${clientFullName} (${clientRecord.code}) possède déjà un dossier actif (${dupRes.rows[0].code}, statut: ${dupRes.rows[0].status}) sur cette campagne.`
+          `DUPLICATE_INSCRIPTION: Le client ${clientFullName} (${clientRecord.code}) possède déjà une inscription active / dossier actif (${dupRes.rows[0].code}, statut: ${dupRes.rows[0].status}) sur cette campagne.`
         );
       }
 
@@ -221,8 +222,15 @@ export class InscriptionWorkflowService {
 
       // f. Numéro de dossier atomique séquentiel
       const year = campaign.year || new Date().getFullYear();
-      const seq = await getNextBusinessSequence('INSCRIPTION', year, client);
-      const code = `INS-${year}-${seq.toString().padStart(6, '0')}`;
+      const campaignTypeNorm = (campaign.type || '').trim().toUpperCase();
+      const isUmrah = campaignTypeNorm === 'UMRAH' || campaignTypeNorm === 'OUMRAH';
+      const isHajj = campaignTypeNorm === 'HAJJ';
+      if (!isHajj && !isUmrah) {
+        throw new Error(`UNSUPPORTED_CAMPAIGN_TYPE: ${campaign.type}`);
+      }
+      const seqType = isUmrah ? 'INSCRIPTION_UMRAH' : 'INSCRIPTION_HAJJ';
+      const seq = await getNextBusinessSequence(seqType, year, client);
+      const code = formatInscriptionCode(campaign.type, year, seq);
 
       // g. Insertion inscription
       const inscriptionId = crypto.randomUUID();

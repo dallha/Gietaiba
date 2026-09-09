@@ -65,7 +65,7 @@ export class CampaignWorkflowService {
             campaignStatus: campaign.status,
             overrideGranted: true,
           },
-        });
+        }, client);
         return;
       }
 
@@ -126,7 +126,7 @@ export class CampaignWorkflowService {
         oldValue: { status: current.status },
         newValue: { status: newStatus, reason: reason || 'Changement normal de phase' },
         reason,
-      });
+      }, client);
 
       const row = updateRes.rows[0];
       return {
