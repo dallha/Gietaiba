@@ -25,7 +25,12 @@ async function getRawBody(req: ExpressRequest): Promise<Buffer | undefined> {
  * Proxy Middleware vers Neon Auth Server.
  * Traduit la requête Express en Standard Web API Request, et inversement pour la réponse.
  */
-export const neonAuthProxyMiddleware = async (req: ExpressRequest, res: ExpressResponse): Promise<void> => {
+export const neonAuthProxyMiddleware = async (req: ExpressRequest, res: ExpressResponse, next: any): Promise<void> => {
+  // Ignorer les routes locales spécifiques à notre backend GIE TAIBA
+  if (req.path === '/api/auth/me' || req.path === '/api/auth/users') {
+    return next();
+  }
+
   try {
     const neonAuthUrl = process.env.NEON_AUTH_URL;
     const cookieSecret = process.env.NEON_AUTH_COOKIE_SECRET;
