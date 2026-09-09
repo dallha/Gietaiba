@@ -508,7 +508,7 @@ app.delete('/api/clients/:id', requireAuth, requirePermission('clients.delete'),
 });
 
 // 5. Voyages (Campaigns) routes
-app.get(['/api/voyages', '/api/campaigns'], requireAuth, requirePermission('voyages.read'), async (req: Request, res: Response) => {
+app.get(['/api/voyages', '/api/campaigns'], requireNeonAuth, requirePermission('voyages.read'), async (req: Request, res: Response) => {
   try {
     const voyages = await campaignService.getCampaigns();
     res.json(voyages);
@@ -517,7 +517,7 @@ app.get(['/api/voyages', '/api/campaigns'], requireAuth, requirePermission('voya
   }
 });
 
-app.post(['/api/voyages', '/api/campaigns'], requireAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
+app.post(['/api/voyages', '/api/campaigns'], requireNeonAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
   try {
     const voyage = await campaignService.createCampaign(req.body, req.user!);
     res.status(201).json(voyage);
@@ -526,7 +526,7 @@ app.post(['/api/voyages', '/api/campaigns'], requireAuth, requirePermission('voy
   }
 });
 
-app.put('/api/voyages/:id', requireAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
+app.put('/api/voyages/:id', requireNeonAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
   try {
     const updated = await campaignService.updateCampaign(req.params.id, req.body, req.user!);
     res.json(updated);
@@ -535,7 +535,7 @@ app.put('/api/voyages/:id', requireAuth, requirePermission('voyages.manage'), as
   }
 });
 
-app.delete('/api/voyages/:id', requireAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
+app.delete('/api/voyages/:id', requireNeonAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
   try {
     const result = await campaignService.deleteCampaign(req.params.id, req.user!);
     res.json(result);
@@ -545,7 +545,7 @@ app.delete('/api/voyages/:id', requireAuth, requirePermission('voyages.manage'),
 });
 
 // 6. Packages routes & Price Versioning
-app.get('/api/packages', requireAuth, requirePermission('voyages.read'), async (req: Request, res: Response) => {
+app.get('/api/packages', requireNeonAuth, requirePermission('voyages.read'), async (req: Request, res: Response) => {
   try {
     const { voyageId } = req.query as { voyageId?: string };
     const packages = await campaignService.getPackages(voyageId);
@@ -555,7 +555,7 @@ app.get('/api/packages', requireAuth, requirePermission('voyages.read'), async (
   }
 });
 
-app.post('/api/packages', requireAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
+app.post('/api/packages', requireNeonAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
   try {
     const pkg = await campaignService.createPackage(req.body, req.user!);
     res.status(201).json(pkg);
@@ -564,7 +564,7 @@ app.post('/api/packages', requireAuth, requirePermission('voyages.manage'), asyn
   }
 });
 
-app.put('/api/packages/:id', requireAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
+app.put('/api/packages/:id', requireNeonAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
   try {
     const updated = await campaignService.updatePackage(req.params.id, req.body, req.user!);
     res.json(updated);
@@ -573,7 +573,7 @@ app.put('/api/packages/:id', requireAuth, requirePermission('voyages.manage'), a
   }
 });
 
-app.delete('/api/packages/:id', requireAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
+app.delete('/api/packages/:id', requireNeonAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
   try {
     await packageRepository.deletePackage(req.params.id);
     res.json({ success: true, message: 'Package supprimé' });
@@ -582,10 +582,10 @@ app.delete('/api/packages/:id', requireAuth, requirePermission('voyages.manage')
   }
 });
 
-app.post('/api/packages/:id/new-price-version', requireAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
+app.post('/api/packages/:id/new-price-version', requireNeonAuth, requirePermission('voyages.manage'), async (req: Request, res: Response) => {
   const { newPrice, status, effectiveFrom, note } = req.body;
   if (!newPrice || !status || !effectiveFrom) {
-    return res.status(400).json({ error: 'Nouveau prix, statut et date de prise d’effet requis' });
+    return res.status(400).json({ error: "Nouveau prix, statut et date de prise d'effet requis" });
   }
   try {
     const updated = await campaignService.addPackagePriceVersion(
