@@ -48,6 +48,13 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
+// --------------------------------------------------------------------------------
+// NEON AUTH PROXY (DOIT ÊTRE MONTÉ AVANT express.json() POUR LE BODY BRUT)
+// --------------------------------------------------------------------------------
+import { neonAuthProxyMiddleware } from './server/auth/neon-auth.proxy.js';
+app.all('/api/auth/*', neonAuthProxyMiddleware);
+// --------------------------------------------------------------------------------
+
 app.use(express.json());
 
 // Normalisation des erreurs API (Phase 5)
