@@ -1,21 +1,20 @@
 import crypto from 'crypto';
 
 export function getSessionSecret(): string {
+  const isProduction = process.env.NODE_ENV === 'production';
   const secret = process.env.SESSION_SECRET;
-  if (secret && secret.trim().length >= 32) {
+
+  if (isProduction) {
+    if (!secret || secret.trim().length < 32) {
+      throw new Error(
+        '[FATAL SECURITY] En production, la variable SESSION_SECRET est strictement obligatoire (minimum 32 caractères). Démarrage refusé.'
+      );
+    }
     return secret.trim();
   }
 
-  // En production Render, si la variable n'est pas encore injectée,
-  // dérivation cryptographique stable (HMAC-SHA256 64 chars) basée sur l'instance Neon
-  // pour éviter tout crash tout en préservant la stabilité des sessions.
-  const dbUrl = process.env.DATABASE_URL;
-  if (dbUrl) {
-    return crypto.createHmac('sha256', dbUrl).update('taiba-voyages-session-salt-2027').digest('hex');
-  }
-
-  // En développement local sans DB URL
-  return 'dev-only-secret-taiba-voyages-jwt-key-not-for-production-use';
+  // En développement / test uniquement
+  return secret || 'dev-only-secret-taiba-voyages-jwt-key-not-for-production-use';
 }
 
 export interface TokenPayload {
