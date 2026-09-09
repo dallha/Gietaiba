@@ -36,10 +36,12 @@ import { campaignWorkflowService } from './server/services/campaign-workflow.ser
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-// Règle de Sécurité : Initialisation de secours de SESSION_SECRET si non injecté par Render
-if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.trim().length < 32) {
-  process.env.SESSION_SECRET = 'taiba-voyages-jwt-session-secret-production-2027-official-key-minimum-32-chars';
-  console.warn('[SECURITY NOTICE] SESSION_SECRET absent de l\'environnement Render, initialisé avec le secret sécurisé officiel Taiba.');
+// Règle de Sécurité Phase 3 : Validation stricte des secrets en production
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.trim().length < 32) {
+    console.error('[FATAL SECURITY ERROR] SESSION_SECRET est obligatoire en production (minimum 32 caractères). Démarrage du serveur refusé.');
+    process.exit(1);
+  }
 }
 
 app.use(express.json());
