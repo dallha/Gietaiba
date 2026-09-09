@@ -1,12 +1,14 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import path from 'path';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 
 // Middleware & Auth
 import { requireAuth, requirePermission, requireStaff } from './server/auth/auth.middleware.js';
 import { authorizationService } from './server/auth/authorization.service.js';
 import { createSignedSessionToken } from './server/auth/token.service.js';
+import { googleOAuthService } from './server/auth/google-oauth.service.js';
 
 // Repositories
 import { userRepository } from './server/repositories/user.repository.js';
@@ -131,6 +133,66 @@ app.post('/api/auth/pilgrim-login', async (req: Request, res: Response) => {
     res.json({ ...result, token });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Google OAuth 2.0 / OpenID Connect (Sans Firebase)
+app.get('/api/auth/google/status', (req: Request, res: Response) => {
+  res.json({
+    configured: googleOAuthService.isConfigured(),
+  });
+});
+
+app.get('/api/auth/google', (req: Request, res: Response) => {
+  if (!googleOAuthService.isConfigured()) {
+    return res.redirect(
+      '/login?error=' +
+        encodeURIComponent(
+          'Authentification Google non configurée sur le serveur. Veuillez configurer GOOGLE_CLIENT_ID et GOOGLE_CLIENT_SECRET.'
+        )
+    );
+  }
+
+  const state = crypto.randomBytes(16).toString('hex');
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  const baseUrl = process.env.APP_URL || `${proto}://${host}`;
+  const redirectUri = `${baseUrl}/api/auth/google/callback`;
+
+  const authUrl = googleOAuthService.generateAuthUrl(redirectUri, state);
+  res.redirect(authUrl);
+});
+
+app.get('/api/auth/google/callback', async (req: Request, res: Response) => {
+  const { code, error } = req.query;
+
+  if (error) {
+    return res.redirect(
+      '/login?error=' + encodeURIComponent(`Connexion Google annulée ou refusée (${error})`)
+    );
+  }
+
+  if (!code || typeof code !== 'string') {
+    return res.redirect(
+      '/login?error=' + encodeURIComponent('Code d\'autorisation Google manquant.')
+    );
+  }
+
+  try {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const baseUrl = process.env.APP_URL || `${proto}://${host}`;
+    const redirectUri = `${baseUrl}/api/auth/google/callback`;
+
+    const googleUser = await googleOAuthService.exchangeCodeAndGetUserInfo(code, redirectUri);
+    const { token, redirectPath } = await googleOAuthService.authenticateWithGoogleUser(googleUser);
+
+    // Redirection vers le portail pèlerin ou l'ERP avec le token sécurisé
+    res.redirect(`${redirectPath}?token=${encodeURIComponent(token)}`);
+  } catch (err: any) {
+    console.error('[Google OAuth Callback Error]', err);
+    const errorMessage = err?.message || 'Échec de l\'authentification Google.';
+    res.redirect('/login?error=' + encodeURIComponent(errorMessage));
   }
 });
 

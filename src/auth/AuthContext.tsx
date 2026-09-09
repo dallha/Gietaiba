@@ -117,6 +117,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let active = true;
 
     async function initAuth() {
+      // 1. Détection éventuelle d'un token transmis dans l'URL (ex: redirection Google OAuth)
+      if (typeof window !== 'undefined') {
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const urlToken = urlParams.get('token');
+          if (urlToken) {
+            api.setToken(urlToken);
+            urlParams.delete('token');
+            const remainingQuery = urlParams.toString();
+            const cleanUrl = window.location.pathname + (remainingQuery ? `?${remainingQuery}` : '') + window.location.hash;
+            window.history.replaceState({}, document.title, cleanUrl);
+          }
+        } catch (urlErr) {
+          console.warn('[AuthContext] Erreur lecture token URL:', urlErr);
+        }
+      }
+
       const token = api.getToken();
       if (token) {
         try {

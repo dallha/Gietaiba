@@ -35,11 +35,25 @@ export const UnifiedLogin: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Auto-redirect if already authenticated
+  // Auto-redirect if already authenticated & capture OAuth errors
   useEffect(() => {
     if (!authLoading && currentUser) {
       const authorizedPath = getAuthorizedPath();
       navigate(authorizedPath, { replace: true });
+      return;
+    }
+
+    // Capture des erreurs transmises par callback OAuth (ex: compte inconnu)
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlError = urlParams.get('error');
+      if (urlError) {
+        setError(decodeURIComponent(urlError));
+        urlParams.delete('error');
+        const remainingQuery = urlParams.toString();
+        const cleanUrl = window.location.pathname + (remainingQuery ? `?${remainingQuery}` : '') + window.location.hash;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
     }
   }, [authLoading, currentUser, navigate, getAuthorizedPath]);
 
@@ -273,8 +287,41 @@ export const UnifiedLogin: React.FC = () => {
             </form>
           )}
 
+          {/* Séparateur & Bouton Google OAuth */}
+          <div className="mt-5 pt-4 border-t border-slate-100">
+            <div className="relative mb-4 text-center">
+              <span className="bg-white px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Ou authentification directe
+              </span>
+            </div>
+            <a
+              href="/api/auth/google"
+              className="w-full py-2.5 px-4 border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-3 cursor-pointer group"
+            >
+              <svg className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              <span>Continuer avec Google</span>
+            </a>
+          </div>
+
           {/* Assistance contact footer */}
-          <div className="mt-6 pt-5 border-t border-slate-100 text-center">
+          <div className="mt-5 pt-4 border-t border-slate-100 text-center">
             <p className="text-[11px] text-slate-500">
               Assistance & renseignements pèlerins :
             </p>
