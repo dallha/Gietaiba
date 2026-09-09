@@ -1,5 +1,4 @@
-import { auth } from '../firebase';
-import { getWorkspaceAccessToken } from '../pages/UnifiedLogin';
+import { getWorkspaceAccessToken } from '../pages/UnifiedLogin.js';
 
 const getAccessToken = (): string => {
   const cachedToken = getWorkspaceAccessToken();

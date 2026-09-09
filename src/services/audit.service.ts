@@ -1,5 +1,4 @@
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase.js';
+import { api } from './api.js';
 
 export type AuditAction = 
   | 'USER_CREATED'
@@ -29,26 +28,22 @@ export type AuditAction =
   | string;
 
 export const logAudit = async (
-  actorUid: string,
-  actorRole: string,
+  _actorUid: string,
+  _actorRole: string,
   action: AuditAction,
   entityType: string,
   entityId: string,
   metadata?: any
 ) => {
   try {
-    await addDoc(collection(db, 'auditLogs'), {
-      actorUid,
-      actorRole,
+    await api.createAuditLog({
       action,
       entityType,
       entityId,
       metadata: metadata || null,
-      timestamp: serverTimestamp(),
-      createdAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Failed to log audit event', error);
+    console.error('Failed to log audit event to Neon:', error);
   }
 };
 

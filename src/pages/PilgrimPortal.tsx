@@ -11,17 +11,8 @@ import {
   Mail, 
   AlertCircle 
 } from 'lucide-react';
-import { auth, db } from '../firebase.js';
 import { useAuth } from '../auth/AuthContext.js';
-import { 
-  doc, 
-  getDoc, 
-  collection, 
-  query, 
-  where, 
-  getDocs,
-  orderBy 
-} from 'firebase/firestore';
+import { api } from '../services/api.js';
 import { 
   Client, 
   Inscription, 
@@ -53,7 +44,7 @@ import { PilgrimNotificationsView } from '../components/pilgrim/PilgrimNotificat
 export const PilgrimPortal: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser } = useAuth();
+  const { currentUser, logoutUser } = useAuth();
 
   const [activeTab, setActiveTab] = useState<PilgrimTab>('accueil');
   const [loading, setLoading] = useState(true);
@@ -157,7 +148,7 @@ export const PilgrimPortal: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await auth.signOut();
+    await logoutUser();
     navigate('/login');
   };
 
@@ -173,117 +164,36 @@ export const PilgrimPortal: React.FC = () => {
       setError(null);
 
       try {
-        // 1. Fetch Client Document (Strictly where id == currentUser.clientId)
-        const clientSnap = await getDoc(doc(db, 'clients', currentUser.clientId));
-        if (clientSnap.exists()) {
-          setClientData({ ...clientSnap.data(), id: clientSnap.id } as Client);
+        const [dossier, hotelList, settings] = await Promise.all([
+          api.getPilgrimDossier(currentUser.clientId),
+          api.getHotels().catch(() => []),
+          api.getSettings().catch(() => undefined),
+        ]);
+
+        if (dossier.client) {
+          setClientData(dossier.client as Client);
         }
 
-        // 2. Fetch Inscriptions for this client
-        const qInscriptions = query(
-          collection(db, 'inscriptions'),
-          where('clientId', '==', currentUser.clientId)
-        );
-        const insSnap = await getDocs(qInscriptions);
-        let insList: Inscription[] = insSnap.docs.map(d => ({ ...d.data(), id: d.id } as Inscription));
-
-        // Filter by allowedInscriptionIds if restricted by Staff (Requirement 5: Multi-dossier restriction)
+        let insList: Inscription[] = (dossier as any).inscriptions || (dossier.inscription ? [dossier.inscription] : []);
         if (currentUser.allowedInscriptionIds && currentUser.allowedInscriptionIds.length > 0) {
           insList = insList.filter(ins => currentUser.allowedInscriptionIds?.includes(ins.id));
         }
 
-        // Enrich Inscriptions with Voyage and Package information
-        const enrichedInscriptions = await Promise.all(
-          insList.map(async (ins) => {
-            let voyageData = ins.voyage;
-            let packageData = ins.package;
-
-            if (!voyageData && ins.voyageId) {
-              try {
-                const vSnap = await getDoc(doc(db, 'voyages', ins.voyageId));
-                if (vSnap.exists()) {
-                  voyageData = { ...vSnap.data(), id: vSnap.id } as Voyage;
-                }
-              } catch (e) {}
-            }
-
-            if (!packageData && ins.packageId) {
-              try {
-                const pSnap = await getDoc(doc(db, 'packages', ins.packageId));
-                if (pSnap.exists()) {
-                  packageData = { ...pSnap.data(), id: pSnap.id } as VoyagePackage;
-                }
-              } catch (e) {}
-            }
-
-            return {
-              ...ins,
-              voyage: voyageData,
-              package: packageData,
-            };
-          })
-        );
-
-        setInscriptions(enrichedInscriptions);
-
-        if (enrichedInscriptions.length > 0) {
-          setSelectedInscriptionId((prev) => prev || enrichedInscriptions[0].id);
+        setInscriptions(insList);
+        if (insList.length > 0) {
+          setSelectedInscriptionId((prev) => prev || insList[0].id);
         }
 
-        // 3. Fetch Payments (Client-scoped)
-        const qPayments = query(
-          collection(db, 'payments'),
-          where('clientId', '==', currentUser.clientId)
-        );
-        const paySnap = await getDocs(qPayments);
-        setPayments(paySnap.docs.map(d => ({ ...d.data(), id: d.id } as Payment)));
-
-        // 4. Fetch Documents (Strictly isClientVisible == true, Requirement 11)
-        const qDocs = query(
-          collection(db, 'documents'),
-          where('clientId', '==', currentUser.clientId),
-          where('isClientVisible', '==', true)
-        );
-        try {
-          const docSnap = await getDocs(qDocs);
-          setDocuments(docSnap.docs.map(d => ({ ...d.data(), id: d.id } as PilgrimDocument)));
-        } catch (docErr) {
-          console.warn('Document query note:', docErr);
+        setPayments(dossier.payments || []);
+        setDocuments(dossier.documents || []);
+        setVisas(dossier.visa ? [dossier.visa] : []);
+        setFlights(dossier.flights || []);
+        setHotels(hotelList || []);
+        if (settings) {
+          setAgencySettings(settings);
         }
-
-        // 5. Fetch Visas for this client
-        try {
-          const qVisas = query(
-            collection(db, 'visas'),
-            where('clientId', '==', currentUser.clientId)
-          );
-          const visaSnap = await getDocs(qVisas);
-          setVisas(visaSnap.docs.map(d => ({ ...d.data(), id: d.id } as Visa)));
-        } catch (vErr) {
-          console.warn('Visas query note:', vErr);
-        }
-
-        // 6. Fetch Flights & Hotels for the active voyage
-        try {
-          const flightsSnap = await getDocs(collection(db, 'flights'));
-          setFlights(flightsSnap.docs.map(d => ({ ...d.data(), id: d.id } as Flight)));
-        } catch (fErr) {}
-
-        try {
-          const hotelsSnap = await getDocs(collection(db, 'hotels'));
-          setHotels(hotelsSnap.docs.map(d => ({ ...d.data(), id: d.id } as Hotel)));
-        } catch (hErr) {}
-
-        // 7. Fetch Agency Settings for Official Receipts
-        try {
-          const settingsSnap = await getDoc(doc(db, 'settings', 'agency'));
-          if (settingsSnap.exists()) {
-            setAgencySettings(settingsSnap.data() as AgencySettings);
-          }
-        } catch (sErr) {}
-
       } catch (err: any) {
-        console.error('Error loading pilgrim portal data:', err);
+        console.error('Error loading pilgrim portal data via API:', err);
         setError('Impossible de charger les données de votre dossier.');
       } finally {
         setLoading(false);

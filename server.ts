@@ -149,8 +149,45 @@ app.get('/api/auth/users', requireAuth, requirePermission('users.read'), async (
 
 app.get('/api/users', requireAuth, requirePermission('users.read'), async (req: Request, res: Response) => {
   try {
-    const users = await userRepository.getUsers();
+    const users = await userRepository.getFullUsers();
     res.json(users);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/users', requireAuth, requirePermission('users.create'), async (req: Request, res: Response) => {
+  try {
+    const newUser = await userRepository.createUser(req.body);
+    res.status(201).json(newUser);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.put('/api/users/:id', requireAuth, requirePermission('users.update'), async (req: Request, res: Response) => {
+  try {
+    const updated = await userRepository.updateUser(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    res.json(updated);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/users/:id', requireAuth, requirePermission('users.delete'), async (req: Request, res: Response) => {
+  try {
+    const success = await userRepository.deleteUser(req.params.id);
+    res.json({ success });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/roles', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const roles = await userRepository.getRoles();
+    res.json(roles);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -711,6 +748,16 @@ app.get('/api/audit-logs', requireAuth, requirePermission('audit.read'), async (
   }
 });
 
+app.post('/api/audit-logs', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { action, entityType, entityId, metadata } = req.body;
+    await auditRepository.logAction(req.user!.id, action, entityType, entityId, metadata);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // 16. Espace Pèlerin (Strict Isolation)
 app.get('/api/pilgrim/dossier', requireAuth, async (req: Request, res: Response) => {
   const clientId = (req.query.clientId as string) || (req.headers['x-client-id'] as string) || req.user!.clientId;
@@ -736,6 +783,15 @@ app.get('/api/notifications', requireAuth, async (req: Request, res: Response) =
     res.json(notifs);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/notifications', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const idempotencyKey = await notificationRepository.createNotification(req.body);
+    res.json({ success: true, idempotencyKey });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
   }
 });
 

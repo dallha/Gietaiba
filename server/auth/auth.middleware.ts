@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { pool } from '../db/neon.js';
 import { UserSession } from '../../src/types.js';
 import { authorizationService } from './authorization.service.js';
-import { verifySignedSessionToken, verifyFirebaseIdToken } from './token.service.js';
+import { verifySignedSessionToken } from './token.service.js';
 
 // Extend Express Request type
 declare global {
@@ -19,7 +19,7 @@ declare global {
  * 
  * Cryptographic verification:
  * 1. Checks 'Authorization: Bearer <token>'
- * 2. Cryptographically verifies HMAC-SHA256 signature and expiry (or Firebase ID token)
+ * 2. Cryptographically verifies HMAC-SHA256 signature and expiry
  * 3. Enforces that in production (NODE_ENV === 'production'), 'x-user-id' is STRICTLY REJECTED.
  * 4. NEVER defaults to users[0] or SUPER_ADMIN.
  */
@@ -34,22 +34,16 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const rawToken = authHeader.substring(7).trim();
 
-    // A. Vérification de la signature cryptographique HMAC-SHA256
+    // Vérification de la signature cryptographique HMAC-SHA256
     const tokenPayload = verifySignedSessionToken(rawToken);
     if (tokenPayload) {
       resolvedUserId = tokenPayload.userId;
     } else {
-      // B. Tentative de vérification d'un jeton Firebase Auth
-      const firebaseDecoded = await verifyFirebaseIdToken(rawToken);
-      if (firebaseDecoded) {
-        resolvedUserId = firebaseDecoded.uid;
-      } else {
-        res.status(401).json({
-          error: 'Jeton de session cryptographique invalide, falsifié ou expiré.',
-          code: 'INVALID_TOKEN',
-        });
-        return;
-      }
+      res.status(401).json({
+        error: 'Jeton de session cryptographique invalide, falsifié ou expiré.',
+        code: 'INVALID_TOKEN',
+      });
+      return;
     }
   }
 

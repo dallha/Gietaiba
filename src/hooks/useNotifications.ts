@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, limit } from 'firebase/firestore';
-import { db } from '../firebase.js';
+import { useState, useEffect, useCallback } from 'react';
 import { AppNotification } from '../types.js';
 import { useAuth } from '../auth/AuthContext.js';
+import { api } from '../services/api.js';
 
 export const useNotifications = () => {
   const { currentUser } = useAuth();
@@ -10,7 +9,7 @@ export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchNotifications = useCallback(async () => {
     if (!currentUser) {
       setNotifications([]);
       setUnreadCount(0);
@@ -18,70 +17,40 @@ export const useNotifications = () => {
       return;
     }
 
-    // Build recipient identifiers:
-    // For pilgrims: currentUser.id and currentUser.clientId (if available)
-    // For staff: currentUser.id and 'STAFF'
-    const isPilgrim = currentUser.roleId === 'PILGRIM';
-    const recipientIds = new Set<string>();
-    if (currentUser.id) recipientIds.add(currentUser.id);
-    
-    if (isPilgrim) {
-      if (currentUser.clientId) recipientIds.add(currentUser.clientId);
-    } else {
-      recipientIds.add('STAFF');
-    }
+    try {
+      const data = await api.getNotifications();
+      const notifs: AppNotification[] = Array.isArray(data) ? data : [];
 
-    const recipientList = Array.from(recipientIds).slice(0, 10);
-    if (recipientList.length === 0) {
+      let unread = 0;
+      notifs.forEach((n) => {
+        if (!n.isRead) {
+          unread++;
+        }
+      });
+
+      // Sort descending by createdAt
+      notifs.sort((a, b) => {
+        const tA = new Date(a.createdAt || 0).getTime();
+        const tB = new Date(b.createdAt || 0).getTime();
+        return tB - tA;
+      });
+
+      setNotifications(notifs);
+      setUnreadCount(unread);
+    } catch (error) {
+      console.warn('Erreur chargement notifications via API:', error);
+    } finally {
       setLoading(false);
-      return;
     }
+  }, [currentUser]);
 
-    const q = query(
-      collection(db, 'notifications'),
-      where('recipientUserId', 'in', recipientList),
-      limit(100)
-    );
+  useEffect(() => {
+    fetchNotifications();
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const notifs: AppNotification[] = [];
-        let unread = 0;
+    // Polling toutes les 30 secondes pour actualisation fluide
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
-        snapshot.forEach((doc) => {
-          const data = doc.data() as AppNotification;
-          data.id = doc.id;
-          notifs.push(data);
-          if (!data.isRead) {
-            unread++;
-          }
-        });
-
-        // In-memory robust sort descending by createdAt without requiring composite indexes
-        notifs.sort((a, b) => {
-          const getMs = (val: any) => {
-            if (!val) return 0;
-            if (val.toMillis) return val.toMillis();
-            if (val.toDate) return val.toDate().getTime();
-            if (typeof val === 'number') return val;
-            return new Date(val).getTime() || 0;
-          };
-          return getMs(b.createdAt) - getMs(a.createdAt);
-        });
-
-        setNotifications(notifs);
-        setUnreadCount(unread);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error listening to notifications from Firestore:', error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [currentUser?.id, currentUser?.clientId, currentUser?.roleId]);
-
-  return { notifications, unreadCount, loading };
+  return { notifications, unreadCount, loading, refresh: fetchNotifications };
 };

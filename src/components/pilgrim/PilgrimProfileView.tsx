@@ -11,8 +11,7 @@ import {
   Info
 } from 'lucide-react';
 import { Client, User } from '../../types.js';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebase.js';
+import { api } from '../../services/api.js';
 
 interface PilgrimProfileViewProps {
   client: Client;
@@ -52,7 +51,7 @@ export const PilgrimProfileView: React.FC<PilgrimProfileViewProps> = ({
         updatedAt: new Date().toISOString()
       };
 
-      await updateDoc(doc(db, 'clients', client.id), updatePayload);
+      await api.updateClient(client.id, updatePayload);
 
       setSuccess(true);
       if (onClientUpdated) {

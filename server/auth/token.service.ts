@@ -1,6 +1,4 @@
 import crypto from 'crypto';
-import { getApps } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
 
 export function getSessionSecret(): string {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -104,15 +102,3 @@ export function verifySignedSessionToken(token: string): TokenPayload | null {
   }
 }
 
-/**
- * Verifies a Firebase Auth ID token if Firebase Admin is initialized
- */
-export async function verifyFirebaseIdToken(token: string): Promise<{ uid: string; email?: string } | null> {
-  if (!getApps().length) return null;
-  try {
-    const decoded = await getAuth().verifyIdToken(token);
-    return { uid: decoded.uid, email: decoded.email };
-  } catch {
-    return null;
-  }
-}

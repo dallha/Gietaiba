@@ -17,8 +17,12 @@ import {
   AuditLog,
   DashboardStats,
   UserSession,
+  User,
+  Role,
+  AppNotification,
 } from '../types.js';
 import { createNotification } from './notification.service.js';
+
 
 class ApiService {
   private token: string | null = typeof window !== 'undefined' ? localStorage.getItem('taiba_auth_token') : null;
@@ -146,6 +150,66 @@ class ApiService {
 
   async getUsers(): Promise<UserSession[]> {
     return this.request('/api/auth/users');
+  }
+
+  async getFullUsers(): Promise<User[]> {
+    return this.request('/api/users');
+  }
+
+  async createUser(user: Partial<User> & { password?: string }): Promise<User> {
+    return this.request('/api/users', {
+      method: 'POST',
+      body: JSON.stringify(user),
+    });
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User> {
+    return this.request(`/api/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteUser(id: string): Promise<{ success: boolean }> {
+    return this.request(`/api/users/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getRoles(): Promise<Role[]> {
+    return this.request('/api/roles');
+  }
+
+  // Notifications
+  async getNotifications(): Promise<AppNotification[]> {
+    return this.request('/api/notifications');
+  }
+
+  async createNotification(data: any): Promise<{ success: boolean; idempotencyKey: string }> {
+    return this.request('/api/notifications', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async markNotificationAsRead(id: string): Promise<{ success: boolean }> {
+    return this.request(`/api/notifications/${id}/read`, {
+      method: 'PUT',
+    });
+  }
+
+  async markAllNotificationsAsRead(): Promise<{ success: boolean }> {
+    return this.request('/api/notifications/read-all', {
+      method: 'PUT',
+    });
+  }
+
+  // Audit
+  async createAuditLog(log: { action: string; entityType: string; entityId: string; metadata?: any }): Promise<{ success: boolean }> {
+    return this.request('/api/audit-logs', {
+      method: 'POST',
+      body: JSON.stringify(log),
+    });
   }
 
   // Settings

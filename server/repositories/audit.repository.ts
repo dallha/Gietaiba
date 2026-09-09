@@ -10,6 +10,23 @@ export class AuditRepository {
     return res.rows.map(this.mapRowToAudit);
   }
 
+  public async logAction(
+    actorUserId: string,
+    action: string,
+    entityType: string,
+    entityId: string,
+    metadata?: any
+  ): Promise<AuditLog> {
+    return this.logAudit({
+      actorUserId,
+      actorUserName: actorUserId,
+      action,
+      entityType,
+      entityId,
+      metadata,
+    });
+  }
+
   public async logAudit(
     data: {
       actorUserId: string;

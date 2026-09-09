@@ -29,7 +29,6 @@ import { GlobalSearchBar } from './GlobalSearchBar.js';
 import { NotificationBell } from '../notifications/NotificationBell.js';
 
 import { useAuth } from '../../auth/AuthContext.js';
-import { auth } from '../../firebase.js';
 
 interface AppLayoutProps {
   currentUser?: any;
@@ -74,7 +73,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onSelectVoyage,
   onSelectInscription,
 }) => {
-  const { currentUser: authUser, role, hasPermission } = useAuth();
+  const { currentUser: authUser, role, hasPermission, logoutUser } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing'>('synced');
   
@@ -95,7 +94,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   };
   
   const handleLogout = async () => {
-    await auth.signOut();
+    await logoutUser();
     navigate('/login');
   };
 

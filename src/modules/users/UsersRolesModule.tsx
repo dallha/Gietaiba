@@ -1,15 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Role, Client, Inscription } from '../../types.js';
-import { db, auth } from '../../firebase.js';
-import { 
-  collection, 
-  getDocs, 
-  doc, 
-  updateDoc, 
-  setDoc, 
-  deleteDoc, 
-  serverTimestamp 
-} from 'firebase/firestore';
+
 import { 
   Shield, 
   Users, 
@@ -101,15 +92,15 @@ export const UsersRolesModule: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [usersSnap, rolesSnap, clientsData, inscriptionsData] = await Promise.all([
-        getDocs(collection(db, 'users')),
-        getDocs(collection(db, 'roles')),
+      const [usersData, rolesData, clientsData, inscriptionsData] = await Promise.all([
+        api.getFullUsers().catch(() => []),
+        api.getRoles().catch(() => []),
         api.getClients(),
         api.getInscriptions()
       ]);
       
-      setUsers(usersSnap.docs.map(d => ({ ...d.data(), id: d.id } as User)));
-      setRoles(rolesSnap.docs.map(d => ({ ...d.data(), id: d.id } as Role)));
+      setUsers(usersData);
+      setRoles(rolesData);
       setClients(clientsData);
       setInscriptions(inscriptionsData);
     } catch (error) {
@@ -149,10 +140,9 @@ export const UsersRolesModule: React.FC = () => {
     const newStatus = isPilgrim ? (newActive ? 'ACTIF' : 'SUSPENDU') : (newActive ? 'ACTIF' : 'INACTIF');
     
     try {
-      await updateDoc(doc(db, 'users', targetUser.id), {
+      await api.updateUser(targetUser.id, {
         active: newActive,
         status: newStatus,
-        updatedAt: new Date().toISOString()
       });
 
       await logAudit(
@@ -193,7 +183,7 @@ export const UsersRolesModule: React.FC = () => {
 
     try {
       const userUid = `pilgrim_${Date.now()}`;
-      const newPilgrimUser: User = {
+      const newPilgrimUser: Partial<User> = {
         id: userUid,
         authUid: userUid,
         email: newPilgrimEmail.trim().toLowerCase(),
@@ -205,11 +195,9 @@ export const UsersRolesModule: React.FC = () => {
         active: true,
         clientId: newPilgrimClientId,
         allowedInscriptionIds: newPilgrimInscriptionIds,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
       };
 
-      await setDoc(doc(db, 'users', userUid), newPilgrimUser);
+      await api.createUser(newPilgrimUser);
 
       await logAudit(
         currentUser?.id || 'system',
@@ -253,10 +241,9 @@ export const UsersRolesModule: React.FC = () => {
     }
 
     try {
-      await updateDoc(doc(db, 'users', linkingUser.id), {
+      await api.updateUser(linkingUser.id, {
         clientId: selectedClientId,
         allowedInscriptionIds: selectedInscriptionIds,
-        updatedAt: new Date().toISOString()
       });
 
       await logAudit(
@@ -287,10 +274,9 @@ export const UsersRolesModule: React.FC = () => {
     }
 
     try {
-      await updateDoc(doc(db, 'users', targetUser.id), {
-        clientId: null,
+      await api.updateUser(targetUser.id, {
+        clientId: '' as any,
         allowedInscriptionIds: [],
-        updatedAt: new Date().toISOString()
       });
 
       await logAudit(
@@ -358,8 +344,6 @@ export const UsersRolesModule: React.FC = () => {
         permissions: editingRole?.id === 'SUPER_ADMIN' ? ['*'] : roleFormPermissions,
         isSystem: editingRole?.isSystem || false
       };
-
-      await setDoc(doc(db, 'roles', roleId), roleData, { merge: true });
 
       await logAudit(
         currentUser?.id || 'system',

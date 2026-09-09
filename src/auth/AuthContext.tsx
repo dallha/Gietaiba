@@ -1,13 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from '../firebase.js';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Role, UserSession } from '../types.js';
 import { api } from '../services/api.js';
 
 interface AuthContextType {
   currentUser: User | null;
-  firebaseUser: FirebaseUser | null;
+  firebaseUser: any | null; // Compatibility shim
   role: Role | null;
   loading: boolean;
   isPilgrim: boolean;
@@ -52,115 +49,11 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchOrProvisionUser = async (user: FirebaseUser) => {
-    console.log('fetchOrProvisionUser for:', user.uid, user.email);
-    try {
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-      console.log('userDoc exists:', userDoc.exists());
-
-      const isKnownSuperAdmin = 
-        user.email === 'mr.niass@gmail.com' || 
-        user.email === 'admin@taibavoyages.sn';
-
-      if (userDoc.exists()) {
-        const userData = userDoc.data() as User;
-        
-        // Ensure root bootstrap admin retains SUPER_ADMIN & active
-        if (isKnownSuperAdmin && (userData.roleId !== 'SUPER_ADMIN' || !userData.active)) {
-          userData.roleId = 'SUPER_ADMIN';
-          userData.status = 'ACTIF';
-          userData.active = true;
-          // Sync root admin status to Firestore
-          await setDoc(userDocRef, { roleId: 'SUPER_ADMIN', status: 'ACTIF', active: true }, { merge: true }).catch(() => {});
-        }
-        
-        setCurrentUser(userData);
-
-        if (userData.roleId) {
-          try {
-            const roleDocRef = doc(db, 'roles', userData.roleId);
-            const roleDoc = await getDoc(roleDocRef);
-            
-            if (roleDoc.exists()) {
-              setRole(roleDoc.data() as Role);
-            } else if (userData.roleId === 'SUPER_ADMIN') {
-              // Provision the SUPER_ADMIN role in Firestore if it doesn't exist
-              await setDoc(roleDocRef, DEFAULT_SUPER_ADMIN_ROLE);
-              setRole(DEFAULT_SUPER_ADMIN_ROLE);
-            } else if (userData.roleId === 'PILGRIM') {
-              setRole(DEFAULT_PILGRIM_ROLE);
-            } else {
-              setRole({
-                id: userData.roleId,
-                name: userData.roleId,
-                permissions: []
-              });
-            }
-          } catch {
-            setRole(userData.roleId === 'PILGRIM' ? DEFAULT_PILGRIM_ROLE : null);
-          }
-        }
-      } else {
-        // Principle of Least Privilege: New users default to PILGRIM unless root admin
-        const nameParts = (user.displayName || (isKnownSuperAdmin ? 'Super Admin' : 'Nouveau Pèlerin')).split(' ');
-        const initialRoleId = isKnownSuperAdmin ? 'SUPER_ADMIN' : 'PILGRIM';
-        
-        const autoUserData: User = {
-          id: user.uid,
-          authUid: user.uid,
-          email: user.email || '',
-          firstName: nameParts[0] || 'Utilisateur',
-          lastName: nameParts.slice(1).join(' ') || '',
-          roleId: initialRoleId,
-          status: 'ACTIF',
-          active: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-
-        if (user.photoURL) {
-          autoUserData.photoUrl = user.photoURL;
-        }
-
-        setCurrentUser(autoUserData);
-        setRole(isKnownSuperAdmin ? DEFAULT_SUPER_ADMIN_ROLE : DEFAULT_PILGRIM_ROLE);
-
-        // Persist to Firestore
-        try {
-          await setDoc(userDocRef, autoUserData, { merge: true });
-        } catch (saveErr) {
-          console.warn('Initial user profile write note:', saveErr);
-        }
-      }
-    } catch (err) {
-      console.error('Error in fetchOrProvisionUser:', err);
-      if (user) {
-        const isKnownSuperAdmin = user.email === 'mr.niass@gmail.com' || user.email === 'admin@taibavoyages.sn';
-        const fallbackUser: User = {
-          id: user.uid,
-          authUid: user.uid,
-          email: user.email || '',
-          firstName: isKnownSuperAdmin ? 'Super' : 'Pèlerin',
-          lastName: isKnownSuperAdmin ? 'Admin' : 'Invité',
-          roleId: isKnownSuperAdmin ? 'SUPER_ADMIN' : 'PILGRIM',
-          status: 'ACTIF',
-          active: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        setCurrentUser(fallbackUser);
-        setRole(isKnownSuperAdmin ? DEFAULT_SUPER_ADMIN_ROLE : DEFAULT_PILGRIM_ROLE);
-      }
-    }
-  };
-
-  const applySessionUser = (userSession: UserSession) => {
+  const applySessionUser = useCallback((userSession: UserSession) => {
     const nameParts = (userSession.displayName || userSession.email).split(' ');
     const userRole = (userSession.role || 'AGENT').toUpperCase();
     const isPelerin = userRole === 'PELERIN' || userRole === 'PILGRIM';
@@ -181,7 +74,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updatedAt: new Date().toISOString(),
     };
     setCurrentUser(u);
-    setFirebaseUser({ uid: userSession.id, email: userSession.email } as any);
 
     if (roleId === 'SUPER_ADMIN') {
       setRole(DEFAULT_SUPER_ADMIN_ROLE);
@@ -194,39 +86,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         permissions: (userSession as any).permissions || ['*'],
       });
     }
-  };
+  }, []);
 
-  const loginWithSession = (session: UserSession) => {
+  const loginWithSession = useCallback((session: UserSession) => {
     applySessionUser(session);
-  };
+  }, [applySessionUser]);
 
-  const logoutUser = async () => {
+  const logoutUser = useCallback(async () => {
     api.logout();
-    try {
-      await auth.signOut();
-    } catch {}
     setCurrentUser(null);
-    setFirebaseUser(null);
     setRole(null);
-  };
+  }, []);
 
-  const refreshUserData = async () => {
+  const refreshUserData = useCallback(async () => {
     const token = api.getToken();
-    if (token) {
-      try {
-        const u = await api.getCurrentUser();
-        if (u) {
-          applySessionUser(u);
-          return;
-        }
-      } catch {
-        // Fallback to firebase
+    if (!token) return;
+    try {
+      const u = await api.getCurrentUser();
+      if (u) {
+        applySessionUser(u);
       }
+    } catch {
+      api.logout();
+      setCurrentUser(null);
+      setRole(null);
     }
-    if (auth.currentUser) {
-      await fetchOrProvisionUser(auth.currentUser);
-    }
-  };
+  }, [applySessionUser]);
 
   useEffect(() => {
     let active = true;
@@ -242,33 +127,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return;
           }
         } catch (e) {
-          console.warn('[AuthContext] Jeton REST invalide, tentative fallback:', e);
+          console.warn('[AuthContext] Session REST expirée ou invalide:', e);
           api.logout();
         }
       }
 
-      // Fallback on Firebase Auth state
-      const unsubscribe = onAuthStateChanged(auth, async (user) => {
-        if (!active) return;
-        setFirebaseUser(user);
-        if (user) {
-          await fetchOrProvisionUser(user);
-        } else {
-          setCurrentUser(null);
-          setRole(null);
-        }
+      if (active) {
+        setCurrentUser(null);
+        setRole(null);
         setLoading(false);
-      });
-
-      return () => unsubscribe();
+      }
     }
 
-    const unreg = initAuth();
+    initAuth();
 
     const handleUnauthorized = () => {
       if (active) {
+        api.logout();
         setCurrentUser(null);
-        setFirebaseUser(null);
         setRole(null);
       }
     };
@@ -277,13 +153,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       active = false;
       window.removeEventListener('taiba:unauthorized', handleUnauthorized);
-      unreg.then((fn) => fn && fn());
     };
-  }, []);
+  }, [applySessionUser]);
 
   const hasPermission = (permission: string) => {
-    const email = (firebaseUser?.email || currentUser?.email)?.toLowerCase();
-    const isAdminEmail = email === 'mr.niass@gmail.com' || email === 'admin@taibavoyages.sn';
+    const email = currentUser?.email?.toLowerCase();
+    const isAdminEmail = email === 'mr.niass@gmail.com' || email === 'admin@taiba-voyages.sn' || email === 'admin@taibavoyages.sn';
     
     // Absolute God Mode for root owner
     if (isAdminEmail) {
@@ -306,6 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isSuperAdmin = Boolean(
     currentUser?.roleId === 'SUPER_ADMIN' ||
     currentUser?.email === 'mr.niass@gmail.com' ||
+    currentUser?.email === 'admin@taiba-voyages.sn' ||
     currentUser?.email === 'admin@taibavoyages.sn'
   );
 
@@ -327,7 +203,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         currentUser,
-        firebaseUser,
+        firebaseUser: currentUser ? { uid: currentUser.id, email: currentUser.email } : null,
         role,
         loading,
         isPilgrim,
