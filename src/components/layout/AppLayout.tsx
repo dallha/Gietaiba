@@ -179,7 +179,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             <div className="flex items-center gap-3 pl-3 border-l border-slate-800">
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-bold text-white leading-tight">
-                  {effectiveUser.firstName} {effectiveUser.lastName}
+                  {effectiveUser.displayName || `${effectiveUser.firstName} ${effectiveUser.lastName}`.trim() || effectiveUser.email}
                 </p>
                 <p className="text-[10px] text-amber-400 font-medium">
                   {role?.name || effectiveUser.roleId}

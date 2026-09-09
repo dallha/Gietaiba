@@ -54,7 +54,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const applySessionUser = useCallback((userSession: UserSession) => {
-    const nameParts = (userSession.displayName || userSession.email).split(' ');
+    const rawName = (userSession.displayName || '').trim();
+    const nameParts = rawName ? rawName.split(' ') : [];
     const userRole = (userSession.role || 'AGENT').toUpperCase();
     const isPelerin = userRole === 'PELERIN' || userRole === 'PILGRIM';
     const roleId = isPelerin ? 'PILGRIM' : userRole;
@@ -63,7 +64,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: userSession.id,
       authUid: userSession.id,
       email: userSession.email,
-      firstName: userSession.firstName || nameParts[0] || 'Utilisateur',
+      displayName: userSession.displayName,
+      firstName: userSession.firstName || nameParts[0] || (userSession.email ? userSession.email.split('@')[0] : 'Utilisateur'),
       lastName: userSession.lastName || nameParts.slice(1).join(' ') || '',
       roleId: roleId,
       status: 'ACTIF',

@@ -92,7 +92,7 @@ async function migratePhase5CAccounts() {
       `INSERT INTO users (
         id, email, display_name, phone, password_hash, role_id, status, active, client_id, created_at, updated_at
       ) VALUES (
-        $1, $2, 'El Hadj Amadou Niass', '+221770000000', $3, 'SUPER_ADMIN', 'ACTIF', TRUE, NULL, NOW(), NOW()
+        $1, $2, 'El Hadji Abdoulaye Niass', '+221770000000', $3, 'SUPER_ADMIN', 'ACTIF', TRUE, NULL, NOW(), NOW()
       )
       ON CONFLICT (email) DO UPDATE SET
         display_name = EXCLUDED.display_name,

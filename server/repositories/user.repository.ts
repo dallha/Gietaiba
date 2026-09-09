@@ -381,10 +381,14 @@ export class UserRepository {
   }
 
   private mapRowToSession(r: any): UserSession {
+    const rawName = (r.display_name || '').trim();
+    const nameParts = rawName ? rawName.split(' ') : [];
     return {
       id: r.id,
       email: r.email,
-      displayName: r.display_name,
+      displayName: r.display_name || undefined,
+      firstName: nameParts[0] || undefined,
+      lastName: nameParts.slice(1).join(' ') || undefined,
       role: r.role_id,
       phone: r.phone || undefined,
       clientId: r.client_id || undefined,
@@ -394,11 +398,13 @@ export class UserRepository {
   }
 
   private mapRowToUser(r: any): User {
-    const nameParts = (r.display_name || r.email || '').split(' ');
+    const rawName = (r.display_name || '').trim();
+    const nameParts = rawName ? rawName.split(' ') : [];
     return {
       id: r.id,
       authUid: r.id,
-      firstName: nameParts[0] || 'Utilisateur',
+      displayName: r.display_name || undefined,
+      firstName: nameParts[0] || (r.email ? r.email.split('@')[0] : 'Utilisateur'),
       lastName: nameParts.slice(1).join(' ') || '',
       email: r.email,
       phone: r.phone || undefined,

@@ -47,6 +47,7 @@ export interface User {
   authUid: string;
   firstName: string;
   lastName: string;
+  displayName?: string;
   email: string;
   phone?: string;
   photoUrl?: string;
