@@ -1,15 +1,8 @@
 /// <reference types="vite/client" />
 import React, { useState } from 'react';
-import { createAuthClient } from '@neondatabase/auth';
-import { BetterAuthReactAdapter } from '@neondatabase/auth/react/adapters';
+import { neonAuthClient as authClient } from '../auth/neonClient.js';
 
-// URL can be provided via .env, default to window.location.origin if missing, 
-// though Neon Auth usually expects the specific NEON_AUTH_URL
-const authUrl = import.meta.env.VITE_NEON_AUTH_URL || ''; 
-
-const authClient = createAuthClient(authUrl, {
-  adapter: BetterAuthReactAdapter(),
-});
+const authUrl = import.meta.env.VITE_NEON_AUTH_URL || '';
 
 export const NeonAuthTest: React.FC = () => {
   const [result, setResult] = useState<any>(null);
