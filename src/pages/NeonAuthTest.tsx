@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import React, { useState } from 'react';
 import { createAuthClient } from '@neondatabase/auth';
 import { BetterAuthReactAdapter } from '@neondatabase/auth/react/adapters';

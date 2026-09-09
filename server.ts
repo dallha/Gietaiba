@@ -10,6 +10,8 @@ import { authorizationService } from './server/auth/authorization.service.js';
 import { createSignedSessionToken, getSessionSecret, parseCookieHeader, verifySignedSessionToken } from './server/auth/token.service.js';
 import { googleOAuthService } from './server/auth/google-oauth.service.js';
 
+import { requireNeonAuth } from './server/auth/neon-auth.middleware.js';
+
 // Repositories
 import { userRepository } from './server/repositories/user.repository.js';
 import { settingsRepository } from './server/repositories/settings.repository.js';
@@ -174,89 +176,12 @@ app.get('/api/auth/google/status', (req: Request, res: Response) => {
 // Route de test isolée pour valider le flux Neon Auth managé
 // sans affecter la production ni les utilisateurs réels.
 // ========================================================
-app.get('/api/auth/neon-me', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const neonAuthUrl = process.env.NEON_AUTH_URL;
-    if (!neonAuthUrl) {
-      res.status(500).json({ error: "NEON_AUTH_URL manquant." });
-      return;
-    }
-
-    const cookieHeader = req.headers.cookie || '';
-    const authRes = await fetch(`${neonAuthUrl}/api/auth/get-session`, {
-      headers: { cookie: cookieHeader }
-    });
-
-    if (!authRes.ok) {
-      res.status(401).json({ authenticated: false, error: "Pas de session Neon Auth valide" });
-      return;
-    }
-
-    const data = await authRes.json();
-    const neonUser = data.user;
-    if (!neonUser) {
-      res.status(401).json({ authenticated: false, error: "Session Neon Auth vide" });
-      return;
-    }
-
-    // Recherche dans GIE TAIBA selon l'ordre strict:
-    // 1. neon_auth_id exact -> 2. email exact -> 3. liaison (si is_test) -> 4. REFUS
-    let gieUserRow = null;
-    let mappedBy = null;
-
-    const resId = await pool.query(
-      `SELECT id, role_id, is_test FROM users WHERE neon_auth_id = $1 LIMIT 1`,
-      [neonUser.id]
-    );
-
-    if (resId.rows.length > 0) {
-      gieUserRow = resId.rows[0];
-      mappedBy = 'neon_auth_id';
-    } else {
-      const resEmail = await pool.query(
-        `SELECT id, role_id, is_test FROM users WHERE LOWER(email) = $1 LIMIT 1`,
-        [neonUser.email.toLowerCase()]
-      );
-
-      if (resEmail.rows.length > 0) {
-        gieUserRow = resEmail.rows[0];
-        mappedBy = 'email';
-
-        // Scellement uniquement autorisé sur les comptes is_test = TRUE pendant le PoC
-        if (gieUserRow.is_test) {
-          await pool.query(
-            `UPDATE users SET neon_auth_id = $1 WHERE id = $2`, 
-            [neonUser.id, gieUserRow.id]
-          );
-          mappedBy = 'email_and_sealed';
-        }
-      }
-    }
-
-    if (!gieUserRow) {
-      res.status(403).json({
-        authenticated: true,
-        neonAuthId: neonUser.id,
-        email: neonUser.email,
-        error: "Compte GIE TAIBA introuvable. Accès refusé."
-      });
-      return;
-    }
-
-    res.json({
-      authenticated: true,
-      neonAuthId: neonUser.id,
-      email: neonUser.email,
-      mappedBy,
-      gieUser: {
-        id: gieUserRow.id,
-        role: gieUserRow.role_id,
-        isTest: gieUserRow.is_test
-      }
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
+app.get('/api/auth/neon-me', requireNeonAuth, (req: Request, res: Response): void => {
+  // Si le middleware passe, l'utilisateur est authentifié et autorisé
+  res.json({
+    authenticated: true,
+    user: (req as any).user
+  });
 });
 
 app.get('/api/auth/google', (req: Request, res: Response) => {
@@ -465,7 +390,7 @@ app.delete('/api/users/:id/client-access/:clientId', requireAuth, requirePermiss
   }
 });
 
-app.get('/api/roles', requireAuth, async (req: Request, res: Response) => {
+app.get('/api/roles', requireNeonAuth, async (req: Request, res: Response) => {
   try {
     const roles = await userRepository.getRoles();
     res.json(roles);
@@ -475,7 +400,7 @@ app.get('/api/roles', requireAuth, async (req: Request, res: Response) => {
 });
 
 // 2. Settings routes
-app.get('/api/settings', requireAuth, requirePermission('settings.read'), async (req: Request, res: Response) => {
+app.get('/api/settings', requireNeonAuth, requirePermission('settings.read'), async (req: Request, res: Response) => {
   try {
     const settings = await settingsRepository.getSettings();
     res.json(settings);
@@ -494,7 +419,7 @@ app.put('/api/settings', requireAuth, requirePermission('settings.manage'), asyn
 });
 
 // 3. Dashboard stats
-app.get('/api/dashboard/stats', requireAuth, requirePermission('reports.read'), async (req: Request, res: Response) => {
+app.get('/api/dashboard/stats', requireNeonAuth, requirePermission('reports.read'), async (req: Request, res: Response) => {
   try {
     const stats = await dashboardService.getDashboardStats();
     res.json(stats);
@@ -1180,7 +1105,7 @@ app.post('/api/pilgrim/payments', requireAuth, async (req: Request, res: Respons
 });
 
 // 17. Notifications
-app.get('/api/notifications', requireAuth, async (req: Request, res: Response) => {
+app.get('/api/notifications', requireNeonAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user!;
     const notifs = await notificationRepository.getNotifications(user.id, user.clientId);

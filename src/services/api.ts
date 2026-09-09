@@ -107,7 +107,7 @@ class ApiService {
       console.warn(`[ApiService] Réponse HTML inattendue pour l'endpoint ${endpoint} (${contentType}). Contenu:`, rawText.slice(0, 100));
       throw new Error(`Le serveur a renvoyé une page HTML au lieu de données JSON pour ${endpoint}.`);
     }
-    console.log(`[ApiService] Received raw response for ${endpoint}:`, rawText);
+
 
     try {
       return JSON.parse(rawText) as T;

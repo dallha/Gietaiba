@@ -53,9 +53,32 @@ export class InscriptionRepository {
   }
 
   public async getInscriptionById(id: string): Promise<Inscription | null> {
-    const list = await this.getInscriptions({ includeTest: true });
-    const found = list.find((i) => i.id === id);
-    return found || null;
+    const res = await pool.query(
+      `SELECT
+          i.*,
+          c.code as client_code, c.first_name, c.last_name, c.phone as client_phone, c.email as client_email,
+          v.code as campaign_code, v.title as campaign_title, v.type as campaign_type, v.year as campaign_year,
+          p.code as package_code, p.name as package_name, p.category as package_category,
+          COALESCE(pay.total_paid, 0) as total_paid,
+          COALESCE(doc.valid_docs_count, 0) as valid_docs_count
+        FROM inscriptions i
+        LEFT JOIN clients c ON i.client_id = c.id
+        LEFT JOIN campaigns v ON i.campaign_id = v.id
+        LEFT JOIN packages p ON i.package_id = p.id
+        LEFT JOIN (
+          SELECT inscription_id, SUM(amount) as total_paid
+          FROM payments WHERE status = 'VALIDE' GROUP BY inscription_id
+        ) pay ON pay.inscription_id = i.id
+        LEFT JOIN (
+          SELECT inscription_id, COUNT(*) as valid_docs_count
+          FROM documents WHERE status = 'VALIDE' GROUP BY inscription_id
+        ) doc ON doc.inscription_id = i.id
+        WHERE i.id = $1
+        LIMIT 1`,
+      [id]
+    );
+    if (res.rows.length === 0) return null;
+    return this.mapRowToInscription(res.rows[0]);
   }
 
   public async getNextInscriptionCode(year: number = 2027, campaignTypeOrClient?: string | any, client?: any): Promise<string> {

@@ -47,8 +47,12 @@ export const useNotifications = () => {
   useEffect(() => {
     fetchNotifications();
 
-    // Polling toutes les 30 secondes pour actualisation fluide
-    const interval = setInterval(fetchNotifications, 30000);
+    // Polling toutes les 30 secondes, suspendu quand l'onglet est en arrière-plan
+    const interval = setInterval(() => {
+      if (document.visibilityState !== 'hidden') {
+        fetchNotifications();
+      }
+    }, 30000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
