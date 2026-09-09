@@ -158,7 +158,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       >
         <Bell className="w-5 h-5" />
 
-        {/* Real-time Badge Counter from Firestore */}
+        {/* Real-time Badge Counter */}
         {unreadCount > 0 && (
           <span
             id="notification-badge-counter"
@@ -184,7 +184,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
               <div>
                 <h3 className="text-xs font-black tracking-wide uppercase">Centre de Notifications</h3>
                 <p className="text-[10px] text-slate-400">
-                  {unreadCount > 0 ? `${unreadCount} alerte(s) Firestore non lue(s)` : 'Toutes les alertes sont traitées'}
+                  {unreadCount > 0 ? `${unreadCount} alerte(s) non lue(s)` : 'Toutes les alertes sont traitées'}
                 </p>
               </div>
             </div>
@@ -194,7 +194,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
                 <button
                   onClick={handleMarkAllAsRead}
                   className="text-[10px] text-amber-300 hover:text-amber-200 font-semibold px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
-                  title="Marquer tout comme lu dans Firestore"
+                  title="Marquer tout comme lu"
                 >
                   <CheckCheck className="w-3 h-3" />
                   <span>Tout lire</span>
@@ -299,7 +299,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 
           {/* Footer */}
           <div className="p-2.5 bg-slate-50 border-t border-slate-200 text-center text-[10px] text-slate-500 font-medium">
-            Source de vérité : Firestore • Synchronisation temps réel
+            Notifications sécurisées • Synchronisation temps réel
           </div>
         </div>
       )}

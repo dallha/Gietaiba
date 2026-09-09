@@ -4,7 +4,6 @@ import { api } from '../services/api.js';
 
 interface AuthContextType {
   currentUser: User | null;
-  firebaseUser: any | null; // Compatibility shim
   role: Role | null;
   loading: boolean;
   isPilgrim: boolean;
@@ -35,7 +34,6 @@ const DEFAULT_PILGRIM_ROLE: Role = {
 
 const AuthContext = createContext<AuthContextType>({
   currentUser: null,
-  firebaseUser: null,
   role: null,
   loading: true,
   isPilgrim: false,
@@ -160,10 +158,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const hasPermission = (permission: string) => {
     const email = currentUser?.email?.toLowerCase();
-    const isAdminEmail = email === 'mr.niass@gmail.com' || email === 'admin@taiba-voyages.sn' || email === 'admin@taibavoyages.sn';
+    const isSuperAdminEmail = email === 'mr.niass@gmail.com' || email === 'kabaye73@gmail.com';
     
-    // Absolute God Mode for root owner
-    if (isAdminEmail) {
+    // Absolute privileges for Super Admins
+    if (isSuperAdminEmail || currentUser?.roleId === 'SUPER_ADMIN') {
       return true;
     }
     
@@ -183,8 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isSuperAdmin = Boolean(
     currentUser?.roleId === 'SUPER_ADMIN' ||
     currentUser?.email === 'mr.niass@gmail.com' ||
-    currentUser?.email === 'admin@taiba-voyages.sn' ||
-    currentUser?.email === 'admin@taibavoyages.sn'
+    currentUser?.email === 'kabaye73@gmail.com'
   );
 
   const isPilgrim = Boolean(currentUser && currentUser.roleId === 'PILGRIM');
@@ -205,7 +202,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         currentUser,
-        firebaseUser: currentUser ? { uid: currentUser.id, email: currentUser.email } : null,
         role,
         loading,
         isPilgrim,

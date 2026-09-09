@@ -308,7 +308,7 @@ export const RapportsModule: React.FC<RapportsModuleProps> = ({
             <span className="text-xs font-bold text-slate-800">{formatDate(new Date().toISOString())}</span>
             <div className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded mt-1">
               <CheckCircle className="w-3 h-3 text-emerald-600" />
-              <span>Certifié Conforme ERP V4</span>
+              <span>Document Officiel Conforme</span>
             </div>
           </div>
         </div>

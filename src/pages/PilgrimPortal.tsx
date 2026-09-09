@@ -38,6 +38,7 @@ import { PilgrimFinancesView } from '../components/pilgrim/PilgrimFinancesView.j
 import { PilgrimDocumentsView } from '../components/pilgrim/PilgrimDocumentsView.js';
 import { PilgrimBadgeView } from '../components/pilgrim/PilgrimBadgeView.js';
 import { PilgrimProfileView } from '../components/pilgrim/PilgrimProfileView.js';
+import { TaibaLogo } from '../components/brand/TaibaLogo.js';
 import { PilgrimLogisticsView } from '../components/pilgrim/PilgrimLogisticsView.js';
 import { PilgrimNotificationsView } from '../components/pilgrim/PilgrimNotificationsView.js';
 import { AddBeneficiaryModal } from '../components/pilgrim/AddBeneficiaryModal.js';
@@ -346,18 +347,23 @@ export const PilgrimPortal: React.FC = () => {
     };
   }, [activeInscription, payments, documents, activeVisa, activeFlight, hotelMakkah]);
 
-  // Real Events & Notifications (Firestore synced)
+  // Real Events & Notifications
   const { notifications: portalNotifications, unreadCount } = useNotifications();
 
 
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="text-center text-white space-y-4">
-          <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto shadow-lg" />
-          <p className="text-sm font-bold text-slate-200">Connexion sécurisée à votre Espace Pèlerin...</p>
-          <p className="text-xs text-slate-400">GIE TAIBA VOYAGES • Chiffrement & Contrôle d'Accès</p>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+        <div className="text-center text-white space-y-5">
+          <TaibaLogo size="xl" withContainer />
+          <div className="w-8 h-8 border-3 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto" />
+          <div>
+            <h2 className="text-base font-black tracking-wider uppercase font-serif text-white">GIE TAIBA VOYAGES</h2>
+            <p className="text-xs font-medium text-amber-300/90 tracking-widest mt-1 uppercase">
+              Votre voyage spirituel, notre engagement.
+            </p>
+          </div>
         </div>
       </div>
     );

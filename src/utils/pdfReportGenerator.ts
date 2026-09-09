@@ -125,7 +125,7 @@ function drawAgencyHeader(
   doc.setTextColor(4, 120, 87);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(6.5);
-  doc.text('CERTIFIÉ CONFORME ERP V4', metaRightX - 22, currentY + 18.5, { align: 'center' });
+  doc.text('DOCUMENT OFFICIEL GIE TAIBA', metaRightX - 22, currentY + 18.5, { align: 'center' });
 
   currentY += 28;
 

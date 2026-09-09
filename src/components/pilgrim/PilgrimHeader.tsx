@@ -12,6 +12,7 @@ import {
 import { Client, Inscription } from '../../types.js';
 import { PilgrimTab } from './PilgrimTypes.js';
 import { BeneficiarySelector, AccessibleBeneficiary } from './BeneficiarySelector.js';
+import { TaibaLogo } from '../brand/TaibaLogo.js';
 
 interface PilgrimHeaderProps {
   client: Client | null;
@@ -48,8 +49,8 @@ export const PilgrimHeader: React.FC<PilgrimHeaderProps> = ({
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3">
         {/* Brand & Agency */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-md shadow-amber-600/30 shrink-0">
-            <Building2 className="w-5 h-5 text-white" />
+          <div className="bg-white p-1 rounded-xl shadow-xs border border-amber-400/30 flex items-center justify-center shrink-0">
+            <TaibaLogo size="xs" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -59,7 +60,7 @@ export const PilgrimHeader: React.FC<PilgrimHeaderProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-emerald-200/90 font-medium">
-              Espace Personnel Sécurisé • Hajj & Oumrah
+              Votre voyage spirituel, notre engagement.
             </p>
           </div>
         </div>

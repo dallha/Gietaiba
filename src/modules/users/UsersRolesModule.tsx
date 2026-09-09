@@ -389,7 +389,7 @@ export const UsersRolesModule: React.FC = () => {
             <span>Sécurité, Utilisateurs & RBAC</span>
           </h1>
           <p className="text-slate-500 text-xs sm:text-sm mt-1">
-            Gouvernance stricte des accès, matrice de permissions Firestore et affectation sécurisée Pèlerin ↔ Dossier
+            Gouvernance stricte des accès, matrice de permissions RBAC et affectation sécurisée Pèlerin ↔ Dossier
           </p>
         </div>
 
@@ -542,7 +542,7 @@ export const UsersRolesModule: React.FC = () => {
               <div>
                 <p className="font-bold">Affectation & Chaîne de Sécurité Pèlerin</p>
                 <p className="mt-0.5 text-emerald-700 leading-relaxed font-mono text-[11px]">
-                  Compte Firebase Auth ↓ Utilisateur ERP (/users) ↓ Client (/clients) ↓ Dossiers Autorisés (/inscriptions)
+                  Session Sécurisée ↓ Utilisateur (/users) ↓ Client (/clients) ↓ Dossiers Autorisés (/inscriptions)
                 </p>
               </div>
             </div>
@@ -1025,7 +1025,7 @@ export const UsersRolesModule: React.FC = () => {
                   <span>{isCreatingRole ? 'Créer un Nouveau Rôle' : `Éditer les Permissions : ${editingRole?.name}`}</span>
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  Matrice de contrôle d'accès basée sur les rôles (RBAC) synchronisée avec Firestore
+                  Matrice de contrôle d'accès basée sur les rôles (RBAC) synchronisée en temps réel
                 </p>
               </div>
               {editingRole?.id === 'SUPER_ADMIN' && (

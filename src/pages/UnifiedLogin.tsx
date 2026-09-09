@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext.js';
 import { api } from '../services/api.js';
+import { TaibaLogo } from '../components/brand/TaibaLogo.js';
 
 // Compatibility stub for Workspace APIs
 export const getWorkspaceAccessToken = () => null;
@@ -102,8 +103,8 @@ export const UnifiedLogin: React.FC = () => {
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-600 to-amber-800 flex items-center justify-center text-slate-950 font-serif font-black text-2xl shadow-2xl shadow-amber-600/30 border border-amber-300/40 mb-4 tracking-tight">
-            TV
+          <div className="mb-4">
+            <TaibaLogo size="xl" withContainer />
           </div>
           <h1 className="text-2xl font-black text-white tracking-wider uppercase font-serif">
             GIE TAIBA VOYAGES
@@ -179,7 +180,7 @@ export const UnifiedLogin: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-slate-900 text-xs font-medium bg-slate-50 transition"
-                    placeholder="direction@taiba-voyages.sn"
+                    placeholder="votre.email@exemple.com"
                   />
                 </div>
               </div>
@@ -278,7 +279,7 @@ export const UnifiedLogin: React.FC = () => {
               Assistance & renseignements pèlerins :
             </p>
             <p className="text-xs font-bold text-slate-700 mt-0.5">
-              direction@taiba-voyages.sn • +221 33 824 00 00
+              kabaye73@gmail.com • +221 77 292 77 77
             </p>
           </div>
         </div>

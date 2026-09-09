@@ -1,6 +1,6 @@
 {
-  "name": "GIE VOYAGE ERP V4 EXECUTIVE PREMIUM",
-  "description": "Solution de gestion intégrée Hajj & Oumrah pour GIE TAIBA VOYAGES",
+  "name": "GIE TAIBA VOYAGES",
+  "description": "Plateforme officielle de gestion Hajj & Oumrah — GIE TAIBA VOYAGES",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

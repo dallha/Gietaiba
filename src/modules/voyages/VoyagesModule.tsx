@@ -701,10 +701,10 @@ export const VoyagesModule: React.FC<VoyagesModuleProps> = ({
                         <span>Chef de Mission / Responsable</span>
                       </div>
                       <div className="text-[11px] text-slate-900 font-bold truncate">
-                        {voyage.responsable || 'El Hadj Amadou Niang'}
+                        {voyage.responsable || 'Cheikh Ibrahima Ka'}
                       </div>
                       <div className="text-[11px] text-slate-500 font-mono">
-                        {voyage.responsablePhone || '+221 77 600 00 01'}
+                        {voyage.responsablePhone || '+221 77 292 77 77'}
                       </div>
                     </div>
 
@@ -965,7 +965,7 @@ export const VoyagesModule: React.FC<VoyagesModuleProps> = ({
                     type="text"
                     value={newVoyage.responsable || ''}
                     onChange={(e) => setNewVoyage({ ...newVoyage, responsable: e.target.value })}
-                    placeholder="El Hadj Amadou Niang"
+                    placeholder="Cheikh Ibrahima Ka"
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2"
                   />
                 </div>

@@ -23,7 +23,11 @@ import {
   Menu,
   X,
   Compass,
+  ChevronRight,
+  Building2,
+  CalendarDays
 } from 'lucide-react';
+import { TaibaLogo } from '../brand/TaibaLogo.js';
 import { UserSession, AgencySettings, Client, Voyage, Inscription, Payment, PilgrimDocument } from '../../types.js';
 import { GlobalSearchBar } from './GlobalSearchBar.js';
 import { NotificationBell } from '../notifications/NotificationBell.js';
@@ -139,19 +143,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
 
-            <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('dashboard')}>
-              <div className="w-9 h-9 rounded-lg bg-linear-to-br from-amber-500 to-amber-700 text-slate-950 font-serif font-black flex items-center justify-center text-lg shadow-sm border border-amber-300/40">
-                TV
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('dashboard')}>
+              <div className="bg-white p-1 rounded-xl shadow-xs border border-amber-400/30 flex items-center justify-center">
+                <TaibaLogo size="sm" />
               </div>
               <div className="hidden sm:block">
-                <div className="text-sm font-black tracking-tight text-white uppercase flex items-center gap-2">
-                  <span>{settings?.agencyName || 'GIE TAIBA VOYAGES'}</span>
-                  <span className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded">
-                    ERP V4 EXECUTIVE
-                  </span>
+                <div className="text-sm font-black tracking-tight text-white uppercase">
+                  {settings?.agencyName || 'GIE TAIBA VOYAGES'}
                 </div>
                 <div className="text-[11px] text-slate-400 font-medium truncate max-w-xs">
-                  Organisation Agréée Hajj & Oumrah
+                  Votre voyage spirituel, notre engagement.
                 </div>
               </div>
             </div>
@@ -295,7 +296,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       {/* Simple Institutional Footer */}
       <footer className="bg-white border-t border-slate-200 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-          <p>© {new Date().getFullYear()} {settings?.agencyName || 'GIE TAIBA VOYAGES'}. Solution ERP V4 Executive — Hajj & Oumrah.</p>
+          <p>© {new Date().getFullYear()} {settings?.agencyName || 'GIE TAIBA VOYAGES'}. Organisation Agréée Hajj & Oumrah. Tous droits réservés.</p>
           <div className="flex items-center gap-4">
             <span className={`font-medium flex items-center gap-1 ${syncStatus === 'syncing' ? 'text-amber-600' : 'text-emerald-700'}`}>
                {syncStatus === 'syncing' ? '● Synchronisation...' : '● Base de données synchronisée'}

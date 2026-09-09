@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { eventBus } from './utils/eventBus.js';
 import { migrateData } from './utils/idMigration.js';
 import { AppLayout } from './components/layout/AppLayout.js';
+import { TaibaLogo } from './components/brand/TaibaLogo.js';
 import { ReceiptModal } from './components/receipt/ReceiptModal.js';
 import { DashboardModule } from './modules/dashboard/DashboardModule.js';
 import { ClientsModule } from './modules/clients/ClientsModule.js';
@@ -258,12 +259,13 @@ export default function ErpApp() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white space-y-4">
-        <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white space-y-6">
+        <TaibaLogo size="xl" withContainer />
+        <div className="w-8 h-8 border-3 border-amber-400 border-t-transparent rounded-full animate-spin" />
         <div className="text-center">
-          <h2 className="text-lg font-black tracking-tight">GIE TAIBA VOYAGES ERP V4</h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Chargement de la base de données intégrée Hajj & Oumrah...
+          <h2 className="text-xl font-black tracking-wider uppercase font-serif text-white">GIE TAIBA VOYAGES</h2>
+          <p className="text-xs font-medium text-amber-300/90 tracking-widest mt-1.5 uppercase">
+            Votre voyage spirituel, notre engagement.
           </p>
         </div>
       </div>
@@ -278,7 +280,7 @@ export default function ErpApp() {
             <AlertTriangle className="w-7 h-7" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-white tracking-tight uppercase">Connexion au serveur ERP</h2>
+            <h2 className="text-lg font-black text-white tracking-tight uppercase">Connexion au serveur sécurisé</h2>
             <p className="text-xs text-slate-400 mt-2 leading-relaxed">
               {loadError}
             </p>

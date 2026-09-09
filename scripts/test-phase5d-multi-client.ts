@@ -55,22 +55,30 @@ async function runTests() {
     assert(idorBlocked, 'IDOR bloqué : saidou.sow ne peut PAS accéder au dossier cli-002');
 
     // -------------------------------------------------------------
-    // TEST 3: Compte de Test Niass (mrniass1987@gmail.com)
+    // TEST 3: Éradication des comptes fictifs (mrniass1987@gmail.com)
     // -------------------------------------------------------------
-    console.log('\n--- TEST 3: Compte Pèlerin Test (mrniass1987@gmail.com) ---');
+    console.log('\n--- TEST 3: Éradication du compte fictif Amadou Niass ---');
     const niassUser = await userRepository.authenticate('mrniass1987@gmail.com', 'Pelerin2027!');
-    assert(niassUser !== null, 'Authentification mrniass1987 réussie');
-    assert(niassUser?.clientId === 'cli-test-niass', 'Lié à cli-test-niass');
+    assert(niassUser === null, 'Compte fictif mrniass1987 absent de la base Neon');
+    const niassDb = await pool.query(`SELECT id FROM users WHERE id = 'usr-pelerin-niass' OR email = 'mrniass1987@gmail.com'`);
+    assert(niassDb.rows.length === 0, 'usr-pelerin-niass totalement supprimé de la table users');
 
+    const fakeSession: UserSession = {
+      id: 'usr-unauthorized-test',
+      email: 'unauth@test.sn',
+      role: 'PELERIN',
+      clientId: 'cli-nonexistent',
+      active: true,
+    };
     let niassIdorBlocked = false;
     try {
-      await pilgrimService.getPilgrimDossier('cli-001', niassUser!);
+      await pilgrimService.getPilgrimDossier('cli-001', fakeSession);
     } catch (err: any) {
       if (err.message === 'ACCES_REFUSE_PELERIN_ISOLATION') {
         niassIdorBlocked = true;
       }
     }
-    assert(niassIdorBlocked, 'IDOR bloqué : mrniass1987 ne peut PAS accéder au dossier réel cli-001');
+    assert(niassIdorBlocked, 'IDOR bloqué : utilisateur non-autorisé ne peut PAS accéder au dossier réel cli-001');
 
     // -------------------------------------------------------------
     // TEST 4: Modèle Tuteur Multi-Clients (1 Compte -> N Clients)

@@ -43,7 +43,7 @@ export interface Role {
 }
 
 export interface User {
-  id: string; // The Firestore document ID (same as authUid)
+  id: string; // Unique user ID
   authUid: string;
   firstName: string;
   lastName: string;
@@ -141,7 +141,7 @@ export interface Voyage {
   endDate?: string;
   capacity: number; // Capacité totale
   status: 'PLANIFIE' | 'OUVERT' | 'EN_COURS' | 'CLOTURE' | 'ARCHIVE';
-  responsable?: string; // Responsable / Chef de mission (ex. El Hadj Amadou Niang)
+  responsable?: string; // Responsable / Chef de mission (ex. Cheikh Ibrahima Ka)
   responsablePhone?: string;
   hotelsSummary?: string; // e.g. "Pullman Zamzam 5★ (Makkah) + Anwar Al Madinah 5★"
   volsSummary?: string; // e.g. "Air Sénégal / Saudia (Vols Directs AIBD - JED/MED)"

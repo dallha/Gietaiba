@@ -91,7 +91,7 @@ export const InscriptionsModule: React.FC<InscriptionsModuleProps> = ({
     try {
       await api.updateInscriptionPrice(editingPriceInscription.id, priceNum, priceChangeReason.trim());
       
-      // Also log audit event in Firestore
+      // Also log audit event
       if (currentUser) {
         const clientName = `${editingPriceInscription.client?.firstName || ''} ${editingPriceInscription.client?.lastName || ''}`.trim();
         await logPriceModificationAudit(

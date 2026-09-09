@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 520" width="100%" height="100%" fill="none">
+  <!-- Kaaba Base Cube -->
+  <g id="kaaba">
+    <!-- Left face of Kaaba -->
+    <path d="M 120 180 L 195 160 L 195 240 L 120 252 Z" fill="#18181b" />
+    <!-- Right face of Kaaba -->
+    <path d="M 195 160 L 260 178 L 260 250 L 195 240 Z" fill="#09090b" />
+    <!-- Top Roof of Kaaba -->
+    <polygon points="120,180 175,150 240,165 195,160" fill="#27272a" />
+    <!-- Gold Trim / Hizam on Kaaba -->
+    <path d="M 120 195 L 195 178 L 260 192" stroke="#EAA824" stroke-width="4" fill="none" stroke-linejoin="round" />
+    <!-- White Calligraphy / Curtain motifs on lower Kaaba -->
+    <path d="M 126 230 C 135 220, 142 240, 152 225 C 160 215, 170 235, 180 220 C 188 230, 192 225, 195 230" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M 130 242 C 140 232, 148 248, 160 235 C 170 225, 180 245, 192 232" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M 198 228 C 210 220, 225 235, 238 224 C 248 218, 255 228, 258 225" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" />
+    <polygon points="145,215 152,205 160,215 152,220" fill="#FFFFFF" opacity="0.9" />
+    <polygon points="170,212 176,204 183,212 176,216" fill="#FFFFFF" opacity="0.9" />
+  </g>
+
+  <!-- Golden Orbit Swoop & Airplane -->
+  <g id="flight-path-and-plane">
+    <!-- Curved Orbit Path swooping under Kaaba -->
+    <path d="M 25 245 C 50 300, 150 280, 260 210 C 310 178, 360 145, 415 105" fill="none" stroke="#EAA824" stroke-width="8" stroke-linecap="round" />
+    <!-- Trailing Contrail Lines -->
+    <path d="M 330 185 L 360 170" stroke="#EAA824" stroke-width="4" stroke-linecap="round" />
+    <path d="M 345 200 L 385 180" stroke="#EAA824" stroke-width="3" stroke-linecap="round" />
+    <!-- Arrowhead accent on orbit path -->
+    <polygon points="305,188 322,185 315,198" fill="#EAA824" />
+
+    <!-- Ascending Airplane Silhouette (Gold) -->
+    <g transform="translate(390, 115) rotate(-35) scale(1.1)">
+      <!-- Fuselage -->
+      <path d="M 0 -70 C 5 -60, 9 -30, 9 20 L 7 60 C 6 68, -6 68, -7 60 L -9 20 C -9 -30, -5 -60, 0 -70 Z" fill="#EAA824" />
+      <!-- Main Wings -->
+      <path d="M 0 -15 L 75 15 L 70 25 L 0 5 L -70 25 L -75 15 Z" fill="#EAA824" />
+      <!-- Jet Engines -->
+      <rect x="25" y="8" width="6" height="14" rx="3" fill="#D99415" />
+      <rect x="45" y="14" width="5" height="12" rx="2.5" fill="#D99415" />
+      <rect x="-31" y="8" width="6" height="14" rx="3" fill="#D99415" />
+      <rect x="-50" y="14" width="5" height="12" rx="2.5" fill="#D99415" />
+      <!-- Tail Wing / Stabilizers -->
+      <path d="M 0 45 L 32 62 L 28 69 L 0 56 L -28 69 L -32 62 Z" fill="#EAA824" />
+      <!-- Vertical Fin -->
+      <polygon points="0,32 0,58 3,56 2,34" fill="#D99415" />
+    </g>
+  </g>
+
+  <!-- Typography -->
+  <!-- "GIE TAIBA" in Golden Bold Uppercase Sans-Serif -->
+  <text x="250" y="380" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="64" letter-spacing="3" fill="#EAA824">GIE TAIBA</text>
+
+  <!-- "Voyages" in Crisp Black Sans-Serif -->
+  <text x="250" y="455" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="60" letter-spacing="4" fill="#18181b">Voyages</text>
+</svg>
