@@ -429,7 +429,7 @@ app.get('/api/dashboard/stats', requireNeonAuth, requirePermission('reports.read
 });
 
 // 4. Clients routes
-app.get('/api/clients', requireAuth, requirePermission('clients.read'), async (req: Request, res: Response) => {
+app.get('/api/clients', requireNeonAuth, requirePermission('clients.read'), async (req: Request, res: Response) => {
   try {
     const { search, status } = req.query as { search?: string; status?: string };
     const clients = await clientService.getClients({ search, status });
@@ -439,7 +439,7 @@ app.get('/api/clients', requireAuth, requirePermission('clients.read'), async (r
   }
 });
 
-app.get('/api/clients/:id', requireAuth, async (req: Request, res: Response) => {
+app.get('/api/clients/:id', requireNeonAuth, async (req: Request, res: Response) => {
   const user = req.user!;
   if (user.role === 'PELERIN') {
     if (user.clientId !== req.params.id) {
@@ -460,7 +460,7 @@ app.get('/api/clients/:id', requireAuth, async (req: Request, res: Response) => 
   }
 });
 
-app.post('/api/clients', requireAuth, requirePermission('clients.create'), async (req: Request, res: Response) => {
+app.post('/api/clients', requireNeonAuth, requirePermission('clients.create'), async (req: Request, res: Response) => {
   try {
     const client = await clientService.createClient(req.body, req.user!);
     res.status(201).json(client);
@@ -469,7 +469,7 @@ app.post('/api/clients', requireAuth, requirePermission('clients.create'), async
   }
 });
 
-app.put('/api/clients/:id', requireAuth, requirePermission('clients.update'), async (req: Request, res: Response) => {
+app.put('/api/clients/:id', requireNeonAuth, requirePermission('clients.update'), async (req: Request, res: Response) => {
   try {
     const updated = await clientService.updateClient(req.params.id, req.body, req.user!);
     res.json(updated);
@@ -478,7 +478,7 @@ app.put('/api/clients/:id', requireAuth, requirePermission('clients.update'), as
   }
 });
 
-app.get('/api/clients/:id/dependencies', requireAuth, requirePermission('clients.read'), async (req: Request, res: Response) => {
+app.get('/api/clients/:id/dependencies', requireNeonAuth, requirePermission('clients.read'), async (req: Request, res: Response) => {
   try {
     const deps = await clientService.getClientDependencies(req.params.id);
     res.json(deps);
@@ -487,7 +487,7 @@ app.get('/api/clients/:id/dependencies', requireAuth, requirePermission('clients
   }
 });
 
-app.post('/api/clients/:id/archive', requireAuth, requirePermission('clients.update'), async (req: Request, res: Response) => {
+app.post('/api/clients/:id/archive', requireNeonAuth, requirePermission('clients.update'), async (req: Request, res: Response) => {
   try {
     const { reason } = req.body;
     const archived = await clientService.archiveClient(req.params.id, reason, req.user!);
@@ -497,7 +497,7 @@ app.post('/api/clients/:id/archive', requireAuth, requirePermission('clients.upd
   }
 });
 
-app.delete('/api/clients/:id', requireAuth, requirePermission('clients.delete'), async (req: Request, res: Response) => {
+app.delete('/api/clients/:id', requireNeonAuth, requirePermission('clients.delete'), async (req: Request, res: Response) => {
   try {
     const result = await clientService.deleteClient(req.params.id, req.user!);
     res.json(result);
