@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Role, UserSession } from '../types.js';
 import { api } from '../services/api.js';
+import { neonAuthClient } from './neonClient.js';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -93,6 +94,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [applySessionUser]);
 
   const logoutUser = useCallback(async () => {
+    try {
+      await neonAuthClient.signOut();
+    } catch (e) {
+      console.warn('Neon Auth signOut error', e);
+    }
     await api.logout();
     setCurrentUser(null);
     setRole(null);

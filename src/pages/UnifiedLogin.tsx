@@ -15,6 +15,7 @@ import {
   Building2
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext.js';
+import { neonAuthClient } from '../auth/neonClient.js';
 import { api } from '../services/api.js';
 import { TaibaLogo } from '../components/brand/TaibaLogo.js';
 
@@ -34,6 +35,16 @@ export const UnifiedLogin: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const handleNeonLogin = async () => {
+    try {
+      setError(null);
+      await neonAuthClient.signIn.social({ provider: "google" });
+      // Neon Auth redirigera automatiquement après le succès
+    } catch (e: any) {
+      setError(e.message || "Erreur de connexion Neon Auth");
+    }
+  };
 
   // Auto-redirect if already authenticated & capture OAuth errors
   useEffect(() => {
@@ -289,7 +300,17 @@ export const UnifiedLogin: React.FC = () => {
 
           {/* Séparateur & Bouton Google OAuth */}
           <div className="mt-5 pt-4 border-t border-slate-100">
-            <div className="relative mb-4 text-center">
+            <button
+      type="button"
+      onClick={handleNeonLogin}
+      className="w-full mb-3 py-2.5 px-4 border-2 border-indigo-500 hover:bg-indigo-50 text-indigo-700 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-3 cursor-pointer group"
+    >
+      <svg className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+      <span>Connexion Neon Auth (Beta)</span>
+    </button>
+    <div className="relative mb-4 text-center">
               <span className="bg-white px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                 Ou authentification directe
               </span>
