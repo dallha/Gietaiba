@@ -669,7 +669,7 @@ class ApiService {
     return this.request('/api/audit-logs');
   }
 
-  // Espace Pèlerin (Dedicated Dossier)
+  // Espace Pèlerin (Dedicated Dossier & Multi-Client 5D)
   async getPilgrimDossier(clientId: string) {
     return this.request<{
       client: Partial<Client>;
@@ -683,6 +683,69 @@ class ApiService {
       rooms: { hotelName?: string; city?: string; roomNumber?: string; roomType?: string }[];
       group?: { name: string; guideName?: string; busNumber?: string } | null;
     }>(`/api/pilgrim/dossier?clientId=${clientId}`);
+  }
+
+  async getPilgrimBeneficiaries() {
+    return this.request<Array<{
+      id: string;
+      code: string;
+      firstName: string;
+      lastName: string;
+      gender: string;
+      phone: string;
+      email: string;
+      photoUrl?: string;
+      passportNumber?: string;
+      relationshipType: 'TITULAIRE' | 'TUTEUR_FAMILLE' | 'PAYEUR_TIERS' | 'GESTIONNAIRE';
+      canView: boolean;
+      canPay: boolean;
+      canUploadDocs: boolean;
+      isTest: boolean;
+    }>>('/api/pilgrim/beneficiaries');
+  }
+
+  async addPilgrimBeneficiary(data: {
+    firstName: string;
+    lastName: string;
+    gender: 'M' | 'F';
+    phone: string;
+    birthDate?: string;
+    passportNumber?: string;
+    relationshipType?: string;
+    campaignId?: string;
+    packageId?: string;
+  }) {
+    return this.request<{ client: any; inscription?: any; relationshipType: string }>('/api/pilgrim/beneficiaries', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async uploadPilgrimDocument(data: {
+    clientId: string;
+    inscriptionId?: string;
+    type: string;
+    fileName?: string;
+    fileUrl?: string;
+  }) {
+    return this.request('/api/pilgrim/documents', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async recordPilgrimPayment(data: {
+    clientId: string;
+    inscriptionId: string;
+    amount: number;
+    paymentMethod?: string;
+    reference?: string;
+    comment?: string;
+  }) {
+    return this.request('/api/pilgrim/payments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   // Reset demo seed

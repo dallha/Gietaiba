@@ -40,6 +40,8 @@ import { PilgrimBadgeView } from '../components/pilgrim/PilgrimBadgeView.js';
 import { PilgrimProfileView } from '../components/pilgrim/PilgrimProfileView.js';
 import { PilgrimLogisticsView } from '../components/pilgrim/PilgrimLogisticsView.js';
 import { PilgrimNotificationsView } from '../components/pilgrim/PilgrimNotificationsView.js';
+import { AddBeneficiaryModal } from '../components/pilgrim/AddBeneficiaryModal.js';
+import { AccessibleBeneficiary } from '../components/pilgrim/BeneficiarySelector.js';
 
 export const PilgrimPortal: React.FC = () => {
   const navigate = useNavigate();
@@ -62,6 +64,11 @@ export const PilgrimPortal: React.FC = () => {
   const [group, setGroup] = useState<Group | null>(null);
   const [agencySettings, setAgencySettings] = useState<AgencySettings | undefined>(undefined);
   const [isDeniedDossier, setIsDeniedDossier] = useState(false);
+
+  // 5D Multi-Clients & Tuteurs
+  const [beneficiaries, setBeneficiaries] = useState<AccessibleBeneficiary[]>([]);
+  const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Sync URL route with active tab and inscription ID (Requirement 6: Secure Routing)
   useEffect(() => {
@@ -152,20 +159,30 @@ export const PilgrimPortal: React.FC = () => {
     navigate('/login');
   };
 
-  // Main Data Loader
+  // Main Data Loader with Multi-Beneficiary Resolution
   useEffect(() => {
     async function loadPilgrimData() {
-      if (!currentUser?.clientId) {
-        setLoading(false);
-        return;
-      }
-
       setLoading(true);
       setError(null);
 
       try {
+        // 1. Charger la liste des bénéficiaires accessibles
+        const benefList = (await api.getPilgrimBeneficiaries().catch(() => [])) as AccessibleBeneficiary[];
+        setBeneficiaries(benefList);
+
+        const targetClientId = selectedBeneficiaryId || benefList[0]?.id || currentUser?.clientId;
+
+        if (!targetClientId) {
+          setLoading(false);
+          return;
+        }
+
+        if (!selectedBeneficiaryId) {
+          setSelectedBeneficiaryId(targetClientId);
+        }
+
         const [dossier, hotelList, settings] = await Promise.all([
-          api.getPilgrimDossier(currentUser.clientId),
+          api.getPilgrimDossier(targetClientId),
           api.getHotels().catch(() => []),
           api.getSettings().catch(() => undefined),
         ]);
@@ -175,13 +192,15 @@ export const PilgrimPortal: React.FC = () => {
         }
 
         let insList: Inscription[] = (dossier as any).inscriptions || (dossier.inscription ? [dossier.inscription] : []);
-        if (currentUser.allowedInscriptionIds && currentUser.allowedInscriptionIds.length > 0) {
+        if (currentUser?.allowedInscriptionIds && currentUser.allowedInscriptionIds.length > 0) {
           insList = insList.filter(ins => currentUser.allowedInscriptionIds?.includes(ins.id));
         }
 
         setInscriptions(insList);
         if (insList.length > 0) {
           setSelectedInscriptionId((prev) => prev || insList[0].id);
+        } else {
+          setSelectedInscriptionId(null);
         }
 
         setPayments(dossier.payments || []);
@@ -202,6 +221,51 @@ export const PilgrimPortal: React.FC = () => {
 
     loadPilgrimData();
   }, [currentUser]);
+
+  // Changement de bénéficiaire (Jalon 5D-4)
+  const handleSelectBeneficiary = async (clientId: string) => {
+    setSelectedBeneficiaryId(clientId);
+    setLoading(true);
+    try {
+      const [dossier, hotelList] = await Promise.all([
+        api.getPilgrimDossier(clientId),
+        api.getHotels().catch(() => []),
+      ]);
+
+      if (dossier.client) {
+        setClientData(dossier.client as Client);
+      }
+
+      let insList: Inscription[] = (dossier as any).inscriptions || (dossier.inscription ? [dossier.inscription] : []);
+      if (currentUser?.allowedInscriptionIds && currentUser.allowedInscriptionIds.length > 0) {
+        insList = insList.filter(ins => currentUser.allowedInscriptionIds?.includes(ins.id));
+      }
+
+      setInscriptions(insList);
+      setSelectedInscriptionId(insList[0]?.id || null);
+      setPayments(dossier.payments || []);
+      setDocuments(dossier.documents || []);
+      setVisas(dossier.visa ? [dossier.visa] : []);
+      setFlights(dossier.flights || []);
+      setHotels(hotelList || []);
+    } catch (err: any) {
+      console.error('Erreur bascule bénéficiaire :', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBeneficiaryAdded = async (newClient: any) => {
+    try {
+      const benefList = (await api.getPilgrimBeneficiaries().catch(() => [])) as AccessibleBeneficiary[];
+      setBeneficiaries(benefList);
+      if (newClient?.id) {
+        await handleSelectBeneficiary(newClient.id);
+      }
+    } catch (err) {
+      console.error('Erreur rafraîchissement après ajout bénéficiaire :', err);
+    }
+  };
 
   // Active Inscription Resolution
   const activeInscription = useMemo(() => {
@@ -300,7 +364,7 @@ export const PilgrimPortal: React.FC = () => {
   }
 
   // Waiting screen if user is authenticated but not yet linked to an ERP client (Requirement 17)
-  if (!currentUser?.clientId || inscriptions.length === 0) {
+  if (!currentUser?.clientId && beneficiaries.length === 0 && !clientData) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between">
         {/* Top bar */}
@@ -385,6 +449,10 @@ export const PilgrimPortal: React.FC = () => {
         onSelectTab={handleSelectTab}
         unreadNotificationsCount={unreadCount}
         onLogout={handleLogout}
+        beneficiaries={beneficiaries}
+        selectedBeneficiaryId={selectedBeneficiaryId}
+        onSelectBeneficiary={handleSelectBeneficiary}
+        onOpenAddBeneficiary={() => setIsAddModalOpen(true)}
       />
 
       {/* 2. Navigation Tabs (Desktop Strip + Mobile Touch Bar) */}
@@ -513,6 +581,13 @@ export const PilgrimPortal: React.FC = () => {
           Espace Pèlerin Certifié Conforme • Toutes les données financières et documents sont horodatés et authentifiés.
         </p>
       </footer>
+
+      {/* Modal Ajout de Proche / Bénéficiaire (Jalon 5D-5) */}
+      <AddBeneficiaryModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={handleBeneficiaryAdded}
+      />
     </div>
   );
 };

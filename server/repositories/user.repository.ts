@@ -1,5 +1,5 @@
 import { pool } from '../db/neon.js';
-import { UserSession, User, Role } from '../../src/types.js';
+import { UserSession, User, Role, UserClientAccess, Client } from '../../src/types.js';
 
 export class UserRepository {
   public async getUsers(): Promise<UserSession[]> {
@@ -77,7 +77,9 @@ export class UserRepository {
     // Update last_login_at
     await pool.query(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [userRow.id]);
 
-    return this.mapRowToSession(userRow);
+    const session = this.mapRowToSession(userRow);
+    session.accessibleClientIds = await this.getAccessibleClientIds(userRow.id);
+    return session;
   }
 
   public async authenticatePilgrim(identifier: string): Promise<{ user: UserSession; client: any } | null> {
@@ -128,6 +130,8 @@ export class UserRepository {
       );
       session = this.mapRowToSession(insertRes.rows[0]);
     }
+
+    session.accessibleClientIds = await this.getAccessibleClientIds(session.id);
 
     return {
       user: session,
@@ -256,6 +260,124 @@ export class UserRepository {
       isSystem: r.is_system,
       permissions: permMap[r.id] || (r.id === 'SUPER_ADMIN' || r.id === 'ADMIN' ? ['*'] : []),
     }));
+  }
+
+  public async getAccessibleClientIds(userId: string): Promise<string[]> {
+    const res = await pool.query(
+      `SELECT client_id FROM user_client_access WHERE user_id = $1 AND is_active = TRUE`,
+      [userId]
+    );
+    const ids: string[] = res.rows.map((r) => r.client_id);
+    const userRes = await pool.query(`SELECT client_id FROM users WHERE id = $1`, [userId]);
+    const directClientId = userRes.rows[0]?.client_id;
+    if (directClientId && !ids.includes(directClientId)) {
+      ids.push(directClientId);
+    }
+    return ids;
+  }
+
+  public async getUserAccessibleClients(userId: string): Promise<Array<any>> {
+    const res = await pool.query(
+      `SELECT c.id, c.code, c.first_name as "firstName", c.last_name as "lastName", c.gender,
+              c.phone, c.email, c.photo_url as "photoUrl", c.passport_number as "passportNumber",
+              c.status, c.is_test as "isTest",
+              uca.relationship_type as "relationshipType", uca.can_view as "canView",
+              uca.can_pay as "canPay", uca.can_upload_docs as "canUploadDocs", uca.created_at as "linkedAt"
+       FROM user_client_access uca
+       JOIN clients c ON uca.client_id = c.id
+       WHERE uca.user_id = $1 AND uca.is_active = TRUE
+       ORDER BY uca.created_at ASC`,
+      [userId]
+    );
+
+    // Fallback: Si un client_id est défini sur l'utilisateur mais pas encore dans la table de liaison
+    const userRes = await pool.query(`SELECT client_id FROM users WHERE id = $1`, [userId]);
+    const directClientId = userRes.rows[0]?.client_id;
+    if (directClientId && !res.rows.some((r) => r.id === directClientId)) {
+      const clientRes = await pool.query(
+        `SELECT id, code, first_name as "firstName", last_name as "lastName", gender,
+                phone, email, photo_url as "photoUrl", passport_number as "passportNumber",
+                status, is_test as "isTest"
+         FROM clients WHERE id = $1`,
+        [directClientId]
+      );
+      if (clientRes.rows.length > 0) {
+        res.rows.unshift({
+          ...clientRes.rows[0],
+          relationshipType: 'TITULAIRE',
+          canView: true,
+          canPay: true,
+          canUploadDocs: true,
+          linkedAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    return res.rows;
+  }
+
+  public async hasAccessToClient(
+    userId: string,
+    clientId: string,
+    requiredPermission?: 'canView' | 'canPay' | 'canUploadDocs'
+  ): Promise<boolean> {
+    const res = await pool.query(
+      `SELECT can_view, can_pay, can_upload_docs 
+       FROM user_client_access 
+       WHERE user_id = $1 AND client_id = $2 AND is_active = TRUE`,
+      [userId, clientId]
+    );
+
+    if (res.rows.length > 0) {
+      if (!requiredPermission) return true;
+      if (requiredPermission === 'canView') return res.rows[0].can_view === true;
+      if (requiredPermission === 'canPay') return res.rows[0].can_pay === true;
+      if (requiredPermission === 'canUploadDocs') return res.rows[0].can_upload_docs === true;
+      return true;
+    }
+
+    const userRes = await pool.query(`SELECT client_id FROM users WHERE id = $1`, [userId]);
+    return userRes.rows[0]?.client_id === clientId;
+  }
+
+  public async grantClientAccess(data: {
+    userId: string;
+    clientId: string;
+    relationshipType?: string;
+    canView?: boolean;
+    canPay?: boolean;
+    canUploadDocs?: boolean;
+  }): Promise<void> {
+    const id = `uca-${data.userId}-${data.clientId}`;
+    await pool.query(
+      `INSERT INTO user_client_access (
+        id, user_id, client_id, relationship_type, can_view, can_pay, can_upload_docs, is_active, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, NOW(), NOW())
+      ON CONFLICT (user_id, client_id) DO UPDATE SET
+        relationship_type = EXCLUDED.relationship_type,
+        can_view = EXCLUDED.can_view,
+        can_pay = EXCLUDED.can_pay,
+        can_upload_docs = EXCLUDED.can_upload_docs,
+        is_active = TRUE,
+        updated_at = NOW()`,
+      [
+        id,
+        data.userId,
+        data.clientId,
+        data.relationshipType || 'TUTEUR_FAMILLE',
+        data.canView !== false,
+        data.canPay !== false,
+        data.canUploadDocs !== false,
+      ]
+    );
+  }
+
+  public async revokeClientAccess(userId: string, clientId: string): Promise<boolean> {
+    const res = await pool.query(
+      `UPDATE user_client_access SET is_active = FALSE, updated_at = NOW() WHERE user_id = $1 AND client_id = $2`,
+      [userId, clientId]
+    );
+    return (res.rowCount ?? 0) > 0;
   }
 
   private mapRowToSession(r: any): UserSession {

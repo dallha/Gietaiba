@@ -5,16 +5,18 @@ import { paymentRepository } from '../repositories/payment.repository.js';
 import { documentRepository } from '../repositories/document.repository.js';
 import { visaRepository } from '../repositories/visa.repository.js';
 import { logisticsRepository } from '../repositories/logistics.repository.js';
+import { userRepository } from '../repositories/user.repository.js';
 import { UserSession } from '../../src/types.js';
 
 export class PilgrimService {
   /**
-   * Retreives the full Dossier for a Pilgrim with strict data boundary isolation (Rule 10)
+   * Retreives the full Dossier for a Pilgrim with strict data boundary isolation (Rule 10 & 5D Multi-Client)
    */
   public async getPilgrimDossier(clientId: string, caller: UserSession) {
-    // 1. Isolation PELERIN stricte
+    // 1. Isolation PELERIN stricte multi-clients
     if (caller.role === 'PELERIN') {
-      if (!caller.clientId || caller.clientId !== clientId) {
+      const hasAccess = await userRepository.hasAccessToClient(caller.id, clientId, 'canView');
+      if (!hasAccess) {
         throw new Error('ACCES_REFUSE_PELERIN_ISOLATION');
       }
     }
@@ -104,6 +106,76 @@ export class PilgrimService {
       flights,
       roomAssignments,
       group: groupInfo,
+    };
+  }
+
+  /**
+   * Retourne tous les bénéficiaires / pèlerins sous tutelle accessibles par l'utilisateur
+   */
+  public async getAccessiblePilgrims(caller: UserSession) {
+    if (caller.role === 'PELERIN') {
+      return await userRepository.getUserAccessibleClients(caller.id);
+    }
+    return [];
+  }
+
+  /**
+   * Ajout d'un membre de la famille / bénéficiaire sous tutelle (Jalon 5D-5)
+   */
+  public async addBeneficiary(
+    caller: UserSession,
+    beneficiaryData: {
+      firstName: string;
+      lastName: string;
+      gender: 'M' | 'F';
+      phone: string;
+      birthDate?: string;
+      passportNumber?: string;
+      relationshipType?: 'TUTEUR_FAMILLE' | 'PAYEUR_TIERS' | 'TITULAIRE' | 'GESTIONNAIRE';
+      campaignId?: string;
+      packageId?: string;
+    }
+  ) {
+    // 1. Création de la fiche client
+    const client = await clientRepository.createClient({
+      firstName: beneficiaryData.firstName.trim().toUpperCase(),
+      lastName: beneficiaryData.lastName.trim().toUpperCase(),
+      gender: beneficiaryData.gender,
+      nationality: 'Sénégalaise',
+      status: 'ACTIF',
+      phone: beneficiaryData.phone.trim(),
+      birthDate: beneficiaryData.birthDate,
+      passportNumber: beneficiaryData.passportNumber?.trim() || undefined,
+      contactPerson: caller.displayName || caller.email,
+      contactPhone: caller.phone || '',
+    });
+
+    // 2. Rattachement atomique dans user_client_access
+    await userRepository.grantClientAccess({
+      userId: caller.id,
+      clientId: client.id,
+      relationshipType: beneficiaryData.relationshipType || 'TUTEUR_FAMILLE',
+      canView: true,
+      canPay: true,
+      canUploadDocs: true,
+    });
+
+    // 3. Optionnel : Inscription automatique si campaignId et packageId fournis
+    let inscription = null;
+    if (beneficiaryData.campaignId && beneficiaryData.packageId) {
+      inscription = await inscriptionRepository.createInscription({
+        clientId: client.id,
+        campaignId: beneficiaryData.campaignId,
+        packageId: beneficiaryData.packageId,
+        status: 'CONFIRMEE',
+        agentName: caller.displayName || caller.email,
+      });
+    }
+
+    return {
+      client,
+      inscription,
+      relationshipType: beneficiaryData.relationshipType || 'TUTEUR_FAMILLE',
     };
   }
 }

@@ -573,3 +573,24 @@ CREATE INDEX IF NOT EXISTS idx_idempotency_expires ON idempotency_keys(expires_a
 -- Support de rejet avec motif sur documents
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
 
+-- =====================================================================
+-- 22. PHASE 5D : HABILITATION MULTI-CLIENT (TUTEURS & GROUPES FAMILIAUX)
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS user_client_access (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  relationship_type TEXT NOT NULL DEFAULT 'TITULAIRE' 
+    CHECK (relationship_type IN ('TITULAIRE', 'TUTEUR_FAMILLE', 'PAYEUR_TIERS', 'GESTIONNAIRE')),
+  can_view BOOLEAN NOT NULL DEFAULT TRUE,
+  can_pay BOOLEAN NOT NULL DEFAULT TRUE,
+  can_upload_docs BOOLEAN NOT NULL DEFAULT TRUE,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT uq_user_client UNIQUE (user_id, client_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_uca_user ON user_client_access(user_id);
+CREATE INDEX IF NOT EXISTS idx_uca_client ON user_client_access(client_id);
+

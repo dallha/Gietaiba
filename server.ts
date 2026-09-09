@@ -758,9 +758,24 @@ app.post('/api/audit-logs', requireAuth, async (req: Request, res: Response) => 
   }
 });
 
-// 16. Espace Pèlerin (Strict Isolation)
+// 16. Espace Pèlerin (Strict Isolation & 5D Multi-Clients)
+app.get('/api/pilgrim/beneficiaries', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const list = await pilgrimService.getAccessiblePilgrims(req.user!);
+    res.json(list);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/pilgrim/dossier', requireAuth, async (req: Request, res: Response) => {
-  const clientId = (req.query.clientId as string) || (req.headers['x-client-id'] as string) || req.user!.clientId;
+  let clientId = (req.query.clientId as string) || (req.headers['x-client-id'] as string);
+  
+  if (!clientId) {
+    const accessible = await userRepository.getUserAccessibleClients(req.user!.id);
+    clientId = accessible[0]?.id || req.user!.clientId;
+  }
+
   if (!clientId) {
     return res.status(400).json({ error: 'Identifiant pèlerin requis' });
   }
@@ -772,6 +787,74 @@ app.get('/api/pilgrim/dossier', requireAuth, async (req: Request, res: Response)
       return res.status(403).json({ error: 'Accès strictement interdit au dossier d\'un autre pèlerin.' });
     }
     res.status(404).json({ error: err.message });
+  }
+});
+
+app.post('/api/pilgrim/beneficiaries', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const result = await pilgrimService.addBeneficiary(req.user!, req.body);
+    res.status(201).json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/pilgrim/documents', requireAuth, async (req: Request, res: Response) => {
+  const { clientId, inscriptionId, type, fileName, fileUrl } = req.body;
+  if (!clientId || !type) {
+    return res.status(400).json({ error: 'Client et Type de document requis' });
+  }
+
+  try {
+    const hasUpload = await userRepository.hasAccessToClient(req.user!.id, clientId, 'canUploadDocs');
+    if (!hasUpload && req.user!.role === 'PELERIN') {
+      return res.status(403).json({ error: 'Dépôt de documents non autorisé pour ce bénéficiaire' });
+    }
+
+    const doc = await documentService.createDocument(
+      {
+        clientId,
+        inscriptionId,
+        type,
+        fileName: fileName || `${type}.pdf`,
+        fileUrl: fileUrl || 'https://storage.taiba.sn/docs/pending.pdf',
+        status: 'RECU',
+        isClientVisible: true,
+      },
+      req.user!
+    );
+    res.status(201).json(doc);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/pilgrim/payments', requireAuth, async (req: Request, res: Response) => {
+  const { clientId, inscriptionId, amount, paymentMethod, reference, comment } = req.body;
+  if (!clientId || !inscriptionId || !amount) {
+    return res.status(400).json({ error: 'Client, Inscription et Montant requis' });
+  }
+
+  try {
+    const hasPay = await userRepository.hasAccessToClient(req.user!.id, clientId, 'canPay');
+    if (!hasPay && req.user!.role === 'PELERIN') {
+      return res.status(403).json({ error: 'Paiement non autorisé pour ce bénéficiaire' });
+    }
+
+    const payment = await paymentService.createPayment(
+      {
+        clientId,
+        inscriptionId,
+        amount: Number(amount),
+        paymentMethod: paymentMethod || 'WAVE',
+        reference: reference || `ONLINE-${Date.now()}`,
+        comment: comment || `Paiement en ligne par ${req.user!.displayName || req.user!.email}`,
+      },
+      req.user!
+    );
+    res.status(201).json(payment);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
   }
 });
 

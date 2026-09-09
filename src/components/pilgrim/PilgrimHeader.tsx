@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Client, Inscription } from '../../types.js';
 import { PilgrimTab } from './PilgrimTypes.js';
+import { BeneficiarySelector, AccessibleBeneficiary } from './BeneficiarySelector.js';
 
 interface PilgrimHeaderProps {
   client: Client | null;
@@ -21,6 +22,10 @@ interface PilgrimHeaderProps {
   onSelectTab: (tab: PilgrimTab) => void;
   unreadNotificationsCount: number;
   onLogout: () => void;
+  beneficiaries?: AccessibleBeneficiary[];
+  selectedBeneficiaryId?: string | null;
+  onSelectBeneficiary?: (id: string) => void;
+  onOpenAddBeneficiary?: () => void;
 }
 
 export const PilgrimHeader: React.FC<PilgrimHeaderProps> = ({
@@ -32,6 +37,10 @@ export const PilgrimHeader: React.FC<PilgrimHeaderProps> = ({
   onSelectTab,
   unreadNotificationsCount,
   onLogout,
+  beneficiaries,
+  selectedBeneficiaryId,
+  onSelectBeneficiary,
+  onOpenAddBeneficiary,
 }) => {
   return (
     <header className="bg-emerald-900 text-white shadow-md sticky top-0 z-30">
@@ -57,27 +66,36 @@ export const PilgrimHeader: React.FC<PilgrimHeaderProps> = ({
 
         {/* User Badge & Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Pilgrim Identity Pill */}
-          <button
-            onClick={() => onSelectTab('profil')}
-            className={`hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl border transition cursor-pointer ${
-              activeTab === 'profil'
-                ? 'bg-white text-emerald-950 border-white'
-                : 'bg-emerald-800/80 hover:bg-emerald-800 text-white border-emerald-700/60'
-            }`}
-          >
-            <div className="w-7 h-7 rounded-lg bg-emerald-700 text-amber-300 flex items-center justify-center font-bold text-xs">
-              {client?.firstName ? client.firstName[0] : 'P'}
-            </div>
-            <div className="text-left">
-              <p className="text-xs font-bold leading-tight line-clamp-1">
-                {client?.firstName} {client?.lastName}
-              </p>
-              <p className="text-[10px] text-emerald-200 font-mono">
-                {client?.code || 'PÈLERIN'}
-              </p>
-            </div>
-          </button>
+          {/* Pilgrim Identity / Multi-Client Selector */}
+          {beneficiaries && beneficiaries.length > 0 && onSelectBeneficiary && onOpenAddBeneficiary ? (
+            <BeneficiarySelector
+              beneficiaries={beneficiaries}
+              selectedBeneficiaryId={selectedBeneficiaryId || null}
+              onSelectBeneficiary={onSelectBeneficiary}
+              onOpenAddModal={onOpenAddBeneficiary}
+            />
+          ) : (
+            <button
+              onClick={() => onSelectTab('profil')}
+              className={`hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl border transition cursor-pointer ${
+                activeTab === 'profil'
+                  ? 'bg-white text-emerald-950 border-white'
+                  : 'bg-emerald-800/80 hover:bg-emerald-800 text-white border-emerald-700/60'
+              }`}
+            >
+              <div className="w-7 h-7 rounded-lg bg-emerald-700 text-amber-300 flex items-center justify-center font-bold text-xs">
+                {client?.firstName ? client.firstName[0] : 'P'}
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-bold leading-tight line-clamp-1">
+                  {client?.firstName} {client?.lastName}
+                </p>
+                <p className="text-[10px] text-emerald-200 font-mono">
+                  {client?.code || 'PÈLERIN'}
+                </p>
+              </div>
+            </button>
+          )}
 
           {/* Notifications Shortcut */}
           <button

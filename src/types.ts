@@ -11,6 +11,21 @@ export interface UserSession {
   active?: boolean;
   permissions?: string[];
   roles?: string[];
+  accessibleClientIds?: string[];
+}
+
+export interface UserClientAccess {
+  id: string;
+  userId: string;
+  clientId: string;
+  relationshipType: 'TITULAIRE' | 'TUTEUR_FAMILLE' | 'PAYEUR_TIERS' | 'GESTIONNAIRE';
+  canView: boolean;
+  canPay: boolean;
+  canUploadDocs: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  client?: Client;
 }
 
 export interface SystemConfig {
