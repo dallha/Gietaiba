@@ -301,7 +301,7 @@ app.post('/api/auth/logout', async (req: Request, res: Response) => {
   res.json({ success: true, message: 'Déconnexion réussie.' });
 });
 
-app.get('/api/auth/me', requireAuth, async (req: Request, res: Response) => {
+app.get('/api/auth/me', requireNeonAuth, async (req: Request, res: Response) => {
   res.json({ user: (req as any).user });
 });
 
