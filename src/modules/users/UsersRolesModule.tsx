@@ -135,7 +135,7 @@ export const UsersRolesModule: React.FC = () => {
       }
     }
 
-    const isPilgrim = targetUser.roleId === 'PILGRIM';
+    const isPilgrim = targetUser.roleId === 'PELERIN' || targetUser.roleId === 'PILGRIM';
     const newActive = !targetUser.active;
     const newStatus = isPilgrim ? (newActive ? 'ACTIF' : 'SUSPENDU') : (newActive ? 'ACTIF' : 'INACTIF');
     
@@ -190,7 +190,7 @@ export const UsersRolesModule: React.FC = () => {
         firstName: newPilgrimFirstName.trim() || 'Pèlerin',
         lastName: newPilgrimLastName.trim() || '',
         phone: newPilgrimPhone.trim() || undefined,
-        roleId: 'PILGRIM',
+        roleId: 'PELERIN',
         status: 'ACTIF',
         active: true,
         clientId: newPilgrimClientId,
@@ -372,8 +372,8 @@ export const UsersRolesModule: React.FC = () => {
     );
   }
 
-  const staffUsers = users.filter(u => u.roleId !== 'PILGRIM');
-  const pilgrimUsers = users.filter(u => u.roleId === 'PILGRIM');
+  const staffUsers = users.filter(u => u.roleId !== 'PELERIN' && u.roleId !== 'PILGRIM');
+  const pilgrimUsers = users.filter(u => u.roleId === 'PELERIN' || u.roleId === 'PILGRIM');
 
   const filteredUsers = (activeTab === 'pilgrims' ? pilgrimUsers : staffUsers).filter(u => 
     `${u.firstName} ${u.lastName} ${u.email} ${u.roleId}`.toLowerCase().includes(searchQuery.toLowerCase())

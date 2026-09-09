@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { eventBus } from './utils/eventBus.js';
-import { migrateData } from './utils/idMigration.js';
 import { AppLayout } from './components/layout/AppLayout.js';
 import { TaibaLogo } from './components/brand/TaibaLogo.js';
 import { ReceiptModal } from './components/receipt/ReceiptModal.js';
@@ -205,12 +204,12 @@ export default function ErpApp() {
       if (statsData) setDashboardStats(statsData);
       if (usersData && usersData.length > 0) setUsers(usersData);
       if (clientsData) {
-        setClients(migrateData(clientsData));
+        setClients(clientsData);
       }
       if (voyagesData) setVoyages(voyagesData);
       if (packagesData) setPackages(packagesData);
       if (inscriptionsData) {
-        setInscriptions(migrateData(inscriptionsData));
+        setInscriptions(inscriptionsData);
       }
       if (paymentsData) setPayments(paymentsData);
       if (documentsData) setDocuments(documentsData);

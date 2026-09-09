@@ -25,7 +25,7 @@ const DEFAULT_SUPER_ADMIN_ROLE: Role = {
 };
 
 const DEFAULT_PILGRIM_ROLE: Role = {
-  id: 'PILGRIM',
+  id: 'PELERIN',
   name: 'Pèlerin',
   permissions: [],
   description: 'Accès strictement restreint à son dossier pèlerin personnel',
@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const nameParts = rawName ? rawName.split(' ') : [];
     const userRole = (userSession.role || 'AGENT').toUpperCase();
     const isPelerin = userRole === 'PELERIN' || userRole === 'PILGRIM';
-    const roleId = isPelerin ? 'PILGRIM' : userRole;
+    const roleId = isPelerin ? 'PELERIN' : userRole;
 
     const u: User = {
       id: userSession.id,
@@ -184,15 +184,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     currentUser?.email === 'kabaye73@gmail.com'
   );
 
-  const isPilgrim = Boolean(currentUser && currentUser.roleId === 'PILGRIM');
+  const isPilgrim = Boolean(currentUser && (currentUser.roleId === 'PELERIN' || currentUser.roleId === 'PILGRIM'));
 
-  const isStaff = Boolean(currentUser && currentUser.roleId !== 'PILGRIM');
+  const isStaff = Boolean(currentUser && currentUser.roleId !== 'PELERIN' && currentUser.roleId !== 'PILGRIM');
 
   const getAuthorizedPath = (): string => {
     if (!currentUser || !currentUser.active || currentUser.status !== 'ACTIF') {
       return '/login';
     }
-    if (currentUser.roleId === 'PILGRIM') {
+    if (currentUser.roleId === 'PELERIN' || currentUser.roleId === 'PILGRIM') {
       return '/portail';
     }
     return '/erp';

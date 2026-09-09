@@ -69,8 +69,8 @@ export const ErpGuard: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Strict RBAC Separation: PILGRIM -> ERP = DENIED
-  if (currentUser && currentUser.roleId === 'PILGRIM') {
+  // Strict RBAC Separation: PELERIN -> ERP = DENIED
+  if (currentUser && (currentUser.roleId === 'PELERIN' || currentUser.roleId === 'PILGRIM')) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
         <div className="bg-slate-900 border border-red-500/40 p-8 rounded-2xl shadow-2xl max-w-md text-center">
@@ -82,7 +82,7 @@ export const ErpGuard: React.FC = () => {
           </div>
           <h2 className="text-xl font-black text-white uppercase tracking-tight mb-2">Espace ERP Non Autorisé</h2>
           <p className="text-slate-400 text-xs leading-relaxed mb-6">
-            Votre profil d'authentification est <strong className="text-emerald-400">Pèlerin (PILGRIM)</strong>. Conformément aux règles de sécurité RBAC de l'agence, l'Espace Équipe / ERP est strictement réservé aux collaborateurs de l'agence. Le changement d'espace par modification d'URL est bloqué.
+            Votre profil d'authentification est <strong className="text-emerald-400">Pèlerin</strong>. Conformément aux règles de sécurité RBAC de l'agence, l'Espace Équipe / ERP est strictement réservé aux collaborateurs de l'agence. Le changement d'espace par modification d'URL est bloqué.
           </p>
           <div className="space-y-2.5">
             <button
@@ -127,7 +127,7 @@ export const PilgrimGuard: React.FC = () => {
   }
 
   // Strict RBAC Separation: STAFF -> portail PILGRIM = DENIED
-  if (currentUser && currentUser.roleId !== 'PILGRIM') {
+  if (currentUser && currentUser.roleId !== 'PELERIN' && currentUser.roleId !== 'PILGRIM') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
         <div className="bg-slate-900 border border-amber-500/40 p-8 rounded-2xl shadow-2xl max-w-md text-center">

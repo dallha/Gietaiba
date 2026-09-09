@@ -54,7 +54,7 @@ export interface User {
   roleId: string; // Matches Role.id
   status: 'ACTIF' | 'INACTIF' | 'SUSPENDU' | 'ARCHIVE';
   active: boolean;
-  clientId?: string; // Only if roleId is 'PILGRIM'
+  clientId?: string; // Only if roleId is 'PELERIN'
   allowedInscriptionIds?: string[]; // Specific inscriptions allowed for multi-dossier control
   isTest?: boolean;
   createdAt: string;
