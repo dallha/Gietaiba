@@ -603,7 +603,7 @@ app.post('/api/packages/:id/new-price-version', requireNeonAuth, requirePermissi
 });
 
 // 7. Inscriptions routes
-app.get('/api/inscriptions', requireAuth, requirePermission('inscriptions.read'), async (req: Request, res: Response) => {
+app.get('/api/inscriptions', requireNeonAuth, requirePermission('inscriptions.read'), async (req: Request, res: Response) => {
   const user = req.user!;
   const { voyageId, clientId } = req.query as { voyageId?: string; clientId?: string };
   try {
@@ -618,7 +618,7 @@ app.get('/api/inscriptions', requireAuth, requirePermission('inscriptions.read')
   }
 });
 
-app.post('/api/inscriptions', requireAuth, requirePermission('inscriptions.create'), async (req: Request, res: Response) => {
+app.post('/api/inscriptions', requireNeonAuth, requirePermission('inscriptions.create'), async (req: Request, res: Response) => {
   try {
     const idempotencyKey = (req.headers['idempotency-key'] as string) || req.body.idempotencyKey;
     const ins = await inscriptionWorkflowService.createInscription({
@@ -638,7 +638,7 @@ app.post('/api/inscriptions', requireAuth, requirePermission('inscriptions.creat
   }
 });
 
-app.patch('/api/inscriptions/:id/price', requireAuth, requirePermission('inscriptions.update'), async (req: Request, res: Response) => {
+app.patch('/api/inscriptions/:id/price', requireNeonAuth, requirePermission('inscriptions.update'), async (req: Request, res: Response) => {
   const { newPrice, reason } = req.body;
   if (!newPrice || Number(newPrice) <= 0) {
     return res.status(400).json({ error: 'Le montant convenu doit être supérieur à 0' });
@@ -655,7 +655,7 @@ app.patch('/api/inscriptions/:id/price', requireAuth, requirePermission('inscrip
   }
 });
 
-app.put('/api/inscriptions/:id/status', requireAuth, requirePermission('inscriptions.update'), async (req: Request, res: Response) => {
+app.put('/api/inscriptions/:id/status', requireNeonAuth, requirePermission('inscriptions.update'), async (req: Request, res: Response) => {
   const { status } = req.body;
   try {
     const updated = await inscriptionService.updateInscriptionStatus(req.params.id, status, req.user!);
@@ -666,7 +666,7 @@ app.put('/api/inscriptions/:id/status', requireAuth, requirePermission('inscript
   }
 });
 
-app.delete('/api/inscriptions/:id', requireAuth, requirePermission('inscriptions.cancel'), async (req: Request, res: Response) => {
+app.delete('/api/inscriptions/:id', requireNeonAuth, requirePermission('inscriptions.cancel'), async (req: Request, res: Response) => {
   try {
     const reason = (req.body?.reason as string) || 'Annulation du dossier par le conseiller';
     const result = await inscriptionService.cancelInscription(req.params.id, reason, req.user!);
