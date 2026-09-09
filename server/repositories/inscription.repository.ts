@@ -4,7 +4,7 @@ import { Inscription, Client, Voyage, VoyagePackage, PaymentSchedule } from '../
 import { formatInscriptionCode } from '../utils/business-format.js';
 
 export class InscriptionRepository {
-  public async getInscriptions(query?: { campaignId?: string; clientId?: string }): Promise<Inscription[]> {
+  public async getInscriptions(query?: { campaignId?: string; clientId?: string; includeTest?: boolean }): Promise<Inscription[]> {
     let sql = `
       SELECT 
         i.*,
@@ -33,6 +33,10 @@ export class InscriptionRepository {
     `;
     const params: any[] = [];
 
+    if (!query?.includeTest && !query?.clientId) {
+      sql += ` AND i.is_test = FALSE AND (c.is_test IS NULL OR c.is_test = FALSE)`;
+    }
+
     if (query?.campaignId) {
       params.push(query.campaignId);
       sql += ` AND i.campaign_id = $${params.length}`;
@@ -49,7 +53,7 @@ export class InscriptionRepository {
   }
 
   public async getInscriptionById(id: string): Promise<Inscription | null> {
-    const list = await this.getInscriptions();
+    const list = await this.getInscriptions({ includeTest: true });
     const found = list.find((i) => i.id === id);
     return found || null;
   }
@@ -235,6 +239,7 @@ export class InscriptionRepository {
       status: r.status,
       agentId: r.agent_id || '',
       agentName: r.agent_name || '',
+      isTest: Boolean(r.is_test),
       totalPaid,
       balance,
       paymentRate,

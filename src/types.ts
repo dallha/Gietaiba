@@ -40,6 +40,7 @@ export interface User {
   active: boolean;
   clientId?: string; // Only if roleId is 'PILGRIM'
   allowedInscriptionIds?: string[]; // Specific inscriptions allowed for multi-dossier control
+  isTest?: boolean;
   createdAt: string;
   updatedAt: string;
   lastLoginAt?: string;
@@ -107,6 +108,7 @@ export interface Client {
   internalNotes?: string;
   photoUrl?: string;
   status: 'ACTIF' | 'EN_ATTENTE' | 'ARCHIVE';
+  isTest?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -195,6 +197,7 @@ export interface Inscription {
   status: 'CONFIRMEE' | 'EN_ATTENTE' | 'ANNULEE';
   agentId: string;
   agentName: string;
+  isTest?: boolean;
   registrationDate?: string;
   createdAt: string;
   updatedAt: string;
@@ -224,6 +227,7 @@ export interface Payment {
   agentId: string;
   agentName: string;
   paymentDate: string;
+  isTest?: boolean;
   createdAt: string;
   // Joined fields
   clientName?: string;

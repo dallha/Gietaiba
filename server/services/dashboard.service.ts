@@ -9,9 +9,9 @@ import { settingsRepository } from '../repositories/settings.repository.js';
 export class DashboardService {
   public async getDashboardStats(): Promise<DashboardStats> {
     const [inscriptions, campaigns, clients, expenses, settings] = await Promise.all([
-      inscriptionRepository.getInscriptions(),
+      inscriptionRepository.getInscriptions({ includeTest: false }),
       campaignRepository.getCampaigns(),
-      clientRepository.getClients(),
+      clientRepository.getClients({ includeTest: false }),
       expenseRepository.getExpenses(),
       settingsRepository.getSettings(),
     ]);
@@ -62,19 +62,28 @@ export class DashboardService {
     const completeCount = activeInscriptions.filter((i) => (i.documentCompletenessRate || 0) >= 100).length;
     const incompleteCount = activeInscriptions.filter((i) => (i.documentCompletenessRate || 0) < 100).length;
 
-    // Documents spécifiques
+    // Documents spécifiques (exclure les entités de test)
     const validPassportRes = await pool.query(
-      `SELECT COUNT(DISTINCT client_id) as cnt FROM documents WHERE type = 'Passeport' AND status = 'VALIDE'`
+      `SELECT COUNT(DISTINCT d.client_id) as cnt
+       FROM documents d
+       JOIN clients c ON d.client_id = c.id
+       WHERE d.type = 'Passeport' AND d.status = 'VALIDE' AND c.is_test = FALSE`
     );
     const validPassports = parseInt(validPassportRes.rows[0].cnt, 10);
 
     const approvedVisaRes = await pool.query(
-      `SELECT COUNT(*) as cnt FROM visas WHERE status IN ('APPROUVE', 'VALIDE', 'EMIS')`
+      `SELECT COUNT(*) as cnt
+       FROM visas v
+       JOIN inscriptions i ON v.inscription_id = i.id
+       WHERE v.status IN ('APPROUVE', 'VALIDE', 'EMIS') AND i.is_test = FALSE`
     );
     const approvedVisas = parseInt(approvedVisaRes.rows[0].cnt, 10);
 
     const issuedTicketRes = await pool.query(
-      `SELECT COUNT(*) as cnt FROM tickets WHERE status = 'EMIS'`
+      `SELECT COUNT(*) as cnt
+       FROM tickets t
+       JOIN inscriptions i ON t.inscription_id = i.id
+       WHERE t.status = 'EMIS' AND i.is_test = FALSE`
     );
     const issuedTickets = parseInt(issuedTicketRes.rows[0].cnt, 10);
 

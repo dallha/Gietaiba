@@ -8,9 +8,14 @@ export class PaymentRepository {
     clientId?: string;
     inscriptionId?: string;
     campaignId?: string;
+    includeTest?: boolean;
   }): Promise<Payment[]> {
     let sql = `SELECT * FROM payments WHERE 1=1`;
     const params: any[] = [];
+
+    if (!query?.includeTest && !query?.clientId && !query?.inscriptionId) {
+      sql += ` AND is_test = FALSE`;
+    }
 
     if (query?.clientId) {
       params.push(query.clientId);
@@ -84,12 +89,13 @@ export class PaymentRepository {
       const receiptNumber = await this.getNextReceiptNumber(year, client);
       const id = randomUUID();
 
+      const isTestPayment = Boolean(ins.is_test);
       const insertRes = await client.query(
         `INSERT INTO payments (
           id, receipt_number, inscription_id, client_id, campaign_id, amount, currency,
           payment_method, reference, comment, status, agent_id, agent_name, client_name,
-          campaign_code, payment_date, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, 'FCFA', $7, $8, $9, 'VALIDE', $10, $11, $12, $13, $14, NOW())
+          campaign_code, is_test, payment_date, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'FCFA', $7, $8, $9, 'VALIDE', $10, $11, $12, $13, $14, $15, NOW())
         RETURNING *`,
         [
           id,
@@ -105,6 +111,7 @@ export class PaymentRepository {
           data.agentName || null,
           `${ins.first_name} ${ins.last_name}`,
           ins.campaign_code,
+          isTestPayment,
           paymentDate,
         ]
       );
@@ -203,6 +210,7 @@ export class PaymentRepository {
       agentName: r.agent_name || '',
       clientName: r.client_name || undefined,
       voyageCode: r.campaign_code || undefined,
+      isTest: Boolean(r.is_test),
       paymentDate: r.payment_date ? new Date(r.payment_date).toISOString() : new Date().toISOString(),
       createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
     };

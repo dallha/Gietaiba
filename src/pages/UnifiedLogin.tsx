@@ -4,15 +4,15 @@ import {
   Lock, 
   Mail, 
   AlertCircle, 
-  ShieldCheck, 
+  Shield, 
   ArrowRight, 
   CheckCircle2, 
   Eye, 
   EyeOff, 
   Loader2,
-  Info,
   Phone,
-  UserCheck
+  UserCheck,
+  Building2
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext.js';
 import { api } from '../services/api.js';
@@ -33,8 +33,6 @@ export const UnifiedLogin: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [showRbacInfo, setShowRbacInfo] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
 
   // Auto-redirect if already authenticated
   useEffect(() => {
@@ -96,44 +94,41 @@ export const UnifiedLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Subtle decorative background glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-amber-600/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[400px] h-[250px] bg-emerald-600/10 blur-[100px] rounded-full pointer-events-none" />
+    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden selection:bg-amber-500 selection:text-white">
+      {/* Subtle ambient decorative background glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-amber-600/10 blur-[130px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[500px] h-[300px] bg-emerald-600/10 blur-[120px] rounded-full pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-slate-950 font-serif font-black text-2xl shadow-xl shadow-amber-600/20 border border-amber-300/40 mb-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-600 to-amber-800 flex items-center justify-center text-slate-950 font-serif font-black text-2xl shadow-2xl shadow-amber-600/30 border border-amber-300/40 mb-4 tracking-tight">
             TV
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight uppercase">
+          <h1 className="text-2xl font-black text-white tracking-wider uppercase font-serif">
             GIE TAIBA VOYAGES
           </h1>
-          <p className="text-xs font-bold text-amber-400 uppercase tracking-widest mt-1">
-            Plateforme Unifiée Sécurisée • Hajj & Oumrah
-          </p>
-          <p className="text-xs text-slate-400 mt-2 max-w-sm">
-            Espace d'authentification centralisé. Vos droits d'accès sont automatiquement résolus selon votre profil officiel dans Neon PostgreSQL.
+          <p className="text-xs font-medium text-amber-300/90 tracking-widest mt-1.5 uppercase">
+            Votre voyage spirituel, notre engagement.
           </p>
         </div>
 
-        {/* Tab Selector: Staff / Espace Pèlerin */}
-        <div className="flex bg-slate-900/80 p-1 rounded-2xl border border-slate-800 mb-4">
+        {/* Tab Selector: Espace Équipe / Espace Pèlerin */}
+        <div className="flex bg-slate-900/90 p-1 rounded-2xl border border-slate-800 shadow-inner mb-5">
           <button
             type="button"
             onClick={() => {
               setTab('STAFF');
               setError(null);
             }}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
               tab === 'STAFF'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-950/40'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Lock className="w-3.5 h-3.5" />
-            <span>Compte & Mot de passe</span>
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Espace Équipe</span>
           </button>
           <button
             type="button"
@@ -141,65 +136,58 @@ export const UnifiedLogin: React.FC = () => {
               setTab('PILGRIM');
               setError(null);
             }}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
               tab === 'PILGRIM'
-                ? 'bg-emerald-600 text-white shadow-md'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <UserCheck className="w-3.5 h-3.5" />
-            <span>Accès Direct Pèlerin</span>
+            <span>Espace Pèlerin</span>
           </button>
         </div>
 
         {/* Main Card */}
-        <div className="bg-white py-8 px-6 sm:px-10 shadow-2xl rounded-3xl border border-slate-200">
+        <div className="bg-white py-8 px-6 sm:px-10 shadow-2xl rounded-3xl border border-slate-200/80">
           {/* Alerts */}
           {error && (
-            <div className="mb-5 p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-xs flex items-start gap-2.5 animate-fade-in">
+            <div className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-xs flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
               <span className="font-medium">{error}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="mb-5 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs flex items-start gap-2.5 animate-fade-in">
+            <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs flex items-start gap-2.5">
               <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
               <span className="font-medium">{successMsg}</span>
             </div>
           )}
 
-          {/* TAB 1: Connexion par Email & Mot de passe */}
+          {/* TAB 1: Connexion Équipe */}
           {tab === 'STAFF' && (
             <form onSubmit={handleEmailLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Adresse E-mail ou Téléphone
+                  Adresse e-mail professionnelle
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
                   <input
-                    type="text"
+                    type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-slate-900 text-xs font-medium bg-slate-50"
-                    placeholder="ex: mr.niass@gmail.com ou admin@taiba-voyages.sn"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-slate-900 text-xs font-medium bg-slate-50 transition"
+                    placeholder="direction@taiba-voyages.sn"
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-xs font-bold text-slate-700">Mot de passe</label>
-                  <button
-                    type="button"
-                    onClick={() => setShowHelpModal(true)}
-                    className="text-[11px] font-bold text-amber-600 hover:text-amber-700 hover:underline cursor-pointer"
-                  >
-                    Besoin d'aide ?
-                  </button>
-                </div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Mot de passe
+                </label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
                   <input
@@ -207,13 +195,13 @@ export const UnifiedLogin: React.FC = () => {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-slate-900 text-xs font-medium bg-slate-50"
+                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-slate-900 text-xs font-medium bg-slate-50 transition"
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -223,16 +211,16 @@ export const UnifiedLogin: React.FC = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 px-4 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50"
+                className="w-full py-3 px-4 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50"
               >
                 {submitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Connexion sécurisée en cours...</span>
+                    <span>Connexion en cours...</span>
                   </>
                 ) : (
                   <>
-                    <span>Se connecter</span>
+                    <span>Accéder à l'espace de gestion</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -240,16 +228,16 @@ export const UnifiedLogin: React.FC = () => {
             </form>
           )}
 
-          {/* TAB 2: Accès Rapide Pèlerin */}
+          {/* TAB 2: Connexion Rapide Pèlerin */}
           {tab === 'PILGRIM' && (
             <form onSubmit={handlePilgrimQuickLogin} className="space-y-4">
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 mb-2">
-                Pèlerins enregistrés : saisissez votre numéro de téléphone ou votre code dossier pour consulter immédiatement vos pièces, paiements et convocations.
+              <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl text-xs text-emerald-900 leading-relaxed">
+                Consultez immédiatement l'avancement de votre dossier Hajj ou Oumrah, vos reçus de versement et vos convocations de départ.
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Code Pèlerin ou Numéro de Téléphone
+                  Code dossier ou Téléphone
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
@@ -258,8 +246,8 @@ export const UnifiedLogin: React.FC = () => {
                     required
                     value={pilgrimIdentifier}
                     onChange={(e) => setPilgrimIdentifier(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-slate-900 text-xs font-medium bg-slate-50"
-                    placeholder="ex: GT-TEST-000001 ou +221770000000"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-slate-900 text-xs font-medium bg-slate-50 transition"
+                    placeholder="ex: GT-2027-00001 ou +221 77 000 00 00"
                   />
                 </div>
               </div>
@@ -267,16 +255,16 @@ export const UnifiedLogin: React.FC = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50"
+                className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50"
               >
                 {submitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Accès à votre espace...</span>
+                    <span>Recherche de votre dossier...</span>
                   </>
                 ) : (
                   <>
-                    <span>Accéder à mon Portail Pèlerin</span>
+                    <span>Consulter mon dossier</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -286,8 +274,8 @@ export const UnifiedLogin: React.FC = () => {
 
           {/* Assistance contact footer */}
           <div className="mt-6 pt-5 border-t border-slate-100 text-center">
-            <p className="text-xs text-slate-500">
-              Assistance technique ou réinitialisation d'accès :
+            <p className="text-[11px] text-slate-500">
+              Assistance & renseignements pèlerins :
             </p>
             <p className="text-xs font-bold text-slate-700 mt-0.5">
               direction@taiba-voyages.sn • +221 33 824 00 00
@@ -295,72 +283,12 @@ export const UnifiedLogin: React.FC = () => {
           </div>
         </div>
 
-        {/* Modal d'aide */}
-        {showHelpModal && (
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-800 max-w-sm w-full rounded-2xl p-6 text-white text-xs space-y-4 shadow-2xl">
-              <h3 className="font-black text-sm uppercase tracking-wider text-amber-400">
-                Aide à la Connexion
-              </h3>
-              <p className="text-slate-300 leading-relaxed">
-                Les comptes de la plateforme GIE TAIBA VOYAGES sont administrés directement sur la base centrale Neon PostgreSQL.
-              </p>
-              <ul className="space-y-2 text-slate-400 list-disc list-inside">
-                <li><strong className="text-white">Direction / Staff</strong> : Utilisez votre adresse e-mail professionnelle et mot de passe attribué.</li>
-                <li><strong className="text-white">Pèlerin</strong> : Vous pouvez vous connecter via l'onglet <em>Accès Direct Pèlerin</em> avec votre matricule ou téléphone.</li>
-              </ul>
-              <button
-                type="button"
-                onClick={() => setShowHelpModal(false)}
-                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition"
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* RBAC Security Policy Badge */}
+        {/* Security badge footer */}
         <div className="mt-6 text-center">
-          <button
-            onClick={() => setShowRbacInfo(!showRbacInfo)}
-            className="inline-flex items-center gap-1.5 text-slate-400 hover:text-slate-200 text-xs font-medium transition cursor-pointer"
-          >
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Architecture RBAC & Séparation Stricte des Espaces</span>
-            <Info className="w-3.5 h-3.5 text-slate-500" />
-          </button>
-
-          {showRbacInfo && (
-            <div className="mt-3 p-4 bg-slate-900/90 border border-slate-800 rounded-2xl text-left text-xs text-slate-300 space-y-2 animate-fade-in shadow-xl">
-              <p className="font-bold text-white uppercase text-[11px] tracking-wider pb-1 border-b border-slate-800">
-                Politique d'Habilitation Stricte
-              </p>
-              <div className="space-y-1.5 text-[11px]">
-                <div className="flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 mt-1 shrink-0" />
-                  <span>
-                    <strong className="text-emerald-300">PELERIN</strong> : Accès automatique au <em>Portail Pèlerin</em> (/portail). Accès ERP = <strong>DENIED</strong>.
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 mt-1 shrink-0" />
-                  <span>
-                    <strong className="text-amber-300">STAFF</strong> : Accès automatique à l'<em>Espace Équipe</em> (/erp). Accès portail pèlerin = <strong>DENIED</strong>.
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-indigo-400 mt-1 shrink-0" />
-                  <span>
-                    <strong className="text-indigo-300">SUPER_ADMIN</strong> : Accès complet à l'<em>Administration</em> et gouvernance système (/erp) = <strong>ALLOW</strong>.
-                  </span>
-                </div>
-              </div>
-              <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800/80">
-                La session est sécurisée par jeton cryptographique Bearer signé HMAC-SHA256 validé par le serveur Node/Express.
-              </p>
-            </div>
-          )}
+          <div className="inline-flex items-center gap-1.5 text-slate-500 text-[11px] font-medium">
+            <Shield className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Plateforme sécurisée • Dakar • Sénégal</span>
+          </div>
         </div>
       </div>
     </div>

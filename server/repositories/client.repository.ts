@@ -4,9 +4,13 @@ import { Client } from '../../src/types.js';
 import { formatClientCode } from '../utils/business-format.js';
 
 export class ClientRepository {
-  public async getClients(params?: { search?: string; status?: string }): Promise<Client[]> {
+  public async getClients(params?: { search?: string; status?: string; includeTest?: boolean }): Promise<Client[]> {
     let sql = `SELECT * FROM clients WHERE 1=1`;
     const values: any[] = [];
+
+    if (!params?.includeTest) {
+      sql += ` AND is_test = FALSE`;
+    }
 
     if (params?.status) {
       values.push(params.status);
@@ -155,8 +159,11 @@ export class ClientRepository {
     await pool.query(`DELETE FROM clients WHERE id = $1`, [id]);
   }
 
-  public async countClients(): Promise<number> {
-    const res = await pool.query(`SELECT COUNT(*) as count FROM clients`);
+  public async countClients(includeTest: boolean = false): Promise<number> {
+    const sql = includeTest
+      ? `SELECT COUNT(*) as count FROM clients`
+      : `SELECT COUNT(*) as count FROM clients WHERE is_test = FALSE`;
+    const res = await pool.query(sql);
     return parseInt(res.rows[0].count, 10);
   }
 
@@ -181,6 +188,7 @@ export class ClientRepository {
       passportNumber: r.passport_number || undefined,
       photoUrl: r.photo_url || undefined,
       status: r.status,
+      isTest: Boolean(r.is_test),
       createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
       updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
     };

@@ -99,24 +99,29 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   };
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard Direction', icon: LayoutDashboard, category: 'PILOTAGE' },
-    { id: 'clients', label: 'Pèlerins / Clients', icon: Users, category: 'GESTION PÈLERINS' },
-    { id: 'inscriptions', label: 'Inscriptions', icon: FileCheck, category: 'GESTION PÈLERINS' },
-    { id: 'voyages', label: 'Campagnes Voyages', icon: Calendar, category: 'OFFRES & TARIFS' },
-    { id: 'packages', label: 'Packages & Versions', icon: Layers, category: 'OFFRES & TARIFS' },
-    { id: 'paiements', label: 'Caisse & Paiements', icon: CreditCard, category: 'FINANCE' },
-    { id: 'recouvrement', label: 'Recouvrement & Soldes', icon: AlertCircle, category: 'FINANCE' },
-    { id: 'depenses', label: 'Dépenses & Rentabilité', icon: TrendingDown, category: 'FINANCE' },
-    { id: 'documents', label: 'GED Documents', icon: FileText, category: 'FORMALITÉS' },
-    { id: 'visas', label: 'Visas & Statuts', icon: Stamp, category: 'FORMALITÉS' },
-    { id: 'vols', label: 'Vols & Billets', icon: Plane, category: 'LOGISTIQUE' },
-    { id: 'hotels', label: 'Hôtels & Chambres', icon: Building, category: 'LOGISTIQUE' },
-    { id: 'groupes', label: 'Groupes & Encadreurs', icon: Users2, category: 'LOGISTIQUE' },
-    { id: 'rapports', label: 'Rapports & Exports', icon: FileSpreadsheet, category: 'DÉCISIONNEL' },
-    { id: 'audit', label: 'Journal d’Audit', icon: History, category: 'SÉCURITÉ' },
-    { id: 'settings', label: 'Paramètres Système', icon: Settings, category: 'CONFIGURATION' },
-    { id: 'users-roles', label: 'Utilisateurs & Rôles', icon: ShieldCheck, category: 'CONFIGURATION' },
-    { id: 'workspace', label: 'Intégrations Workspace', icon: FileSpreadsheet, category: 'CONFIGURATION' },
+    { id: 'dashboard', label: 'Tableau de bord exécutif', icon: LayoutDashboard, category: 'ACCUEIL' },
+    
+    { id: 'clients', label: 'Pèlerins & Contacts', icon: Users, category: 'PÈLERINS' },
+    { id: 'inscriptions', label: 'Dossiers d’Inscription', icon: FileCheck, category: 'PÈLERINS' },
+    
+    { id: 'paiements', label: 'Caisse & Versements', icon: CreditCard, category: 'FINANCES' },
+    { id: 'recouvrement', label: 'Recouvrement & Soldes', icon: AlertCircle, category: 'FINANCES' },
+    { id: 'depenses', label: 'Dépenses & Rentabilité', icon: TrendingDown, category: 'FINANCES' },
+    
+    { id: 'voyages', label: 'Campagnes Hajj & Oumrah', icon: Calendar, category: 'VOYAGES' },
+    { id: 'packages', label: 'Packages & Tarifs', icon: Layers, category: 'VOYAGES' },
+    { id: 'hotels', label: 'Hôtels Makkah & Médine', icon: Building, category: 'VOYAGES' },
+    { id: 'vols', label: 'Vols & Billetterie', icon: Plane, category: 'VOYAGES' },
+    { id: 'groupes', label: 'Groupes & Encadreurs', icon: Users2, category: 'VOYAGES' },
+    
+    { id: 'documents', label: 'GED Documents', icon: FileText, category: 'DOCUMENTS' },
+    { id: 'visas', label: 'Visas Nusuk & Statuts', icon: Stamp, category: 'DOCUMENTS' },
+    
+    { id: 'rapports', label: 'Rapports & Exports', icon: FileSpreadsheet, category: 'RAPPORTS' },
+    
+    { id: 'users-roles', label: 'Utilisateurs & Droits', icon: ShieldCheck, category: 'ADMINISTRATION' },
+    { id: 'settings', label: 'Paramètres Agence', icon: Settings, category: 'ADMINISTRATION' },
+    { id: 'audit', label: 'Journal d’Audit', icon: History, category: 'ADMINISTRATION' },
   ];
 
   return (
@@ -198,15 +203,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-6">
         {/* Sidebar Navigation for Desktop */}
         <aside className="hidden lg:block w-64 shrink-0">
-          <nav className="bg-white rounded-xl border border-slate-200 shadow-xs p-3 space-y-4 sticky top-22 max-h-[calc(100vh-6.5rem)] overflow-y-auto">
-            {['PILOTAGE', 'GESTION PÈLERINS', 'OFFRES & TARIFS', 'FINANCE', 'FORMALITÉS', 'LOGISTIQUE', 'DÉCISIONNEL', 'SÉCURITÉ', 'CONFIGURATION'].map(
+          <nav className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3 space-y-4 sticky top-22 max-h-[calc(100vh-6.5rem)] overflow-y-auto">
+            {['ACCUEIL', 'PÈLERINS', 'FINANCES', 'VOYAGES', 'DOCUMENTS', 'RAPPORTS', 'ADMINISTRATION'].map(
               (category) => {
                 const items = navItems.filter((i) => i.category === category);
                 if (items.length === 0) return null;
 
                 return (
                   <div key={category} className="space-y-1">
-                    <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <div className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-400">
                       {category}
                     </div>
                     {items.map((item) => {
@@ -216,9 +221,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                         <button
                           key={item.id}
                           onClick={() => navigate(item.id)}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left cursor-pointer ${
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all text-left cursor-pointer ${
                             isActive
-                              ? 'bg-slate-900 text-amber-400 shadow-xs font-semibold'
+                              ? 'bg-slate-900 text-amber-400 shadow-sm font-bold'
                               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                           }`}
                         >
@@ -238,31 +243,42 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         {mobileMenuOpen && (
           <div className="fixed inset-0 z-50 lg:hidden flex">
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs" onClick={() => setMobileMenuOpen(false)} />
-            <div className="relative bg-white w-72 max-w-full p-4 flex flex-col h-full shadow-xl overflow-y-auto">
+            <div className="relative bg-white w-72 max-w-full p-4 flex flex-col h-full shadow-2xl overflow-y-auto">
               <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-                <span className="font-bold text-sm text-slate-900">Navigation ERP</span>
-                <button onClick={() => setMobileMenuOpen(false)} className="p-1 rounded-md text-slate-400 hover:text-slate-700">
+                <span className="font-bold text-sm text-slate-900 font-serif">Navigation ERP</span>
+                <button onClick={() => setMobileMenuOpen(false)} className="p-1 rounded-md text-slate-400 hover:text-slate-700 cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="py-3 space-y-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeModule === item.id;
+              <div className="py-3 space-y-4">
+                {['ACCUEIL', 'PÈLERINS', 'FINANCES', 'VOYAGES', 'DOCUMENTS', 'RAPPORTS', 'ADMINISTRATION'].map((category) => {
+                  const items = navItems.filter((i) => i.category === category);
+                  if (items.length === 0) return null;
                   return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        navigate(item.id);
-                        setMobileMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-left ${
-                        isActive ? 'bg-slate-900 text-amber-400 font-bold' : 'text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {item.label}
-                    </button>
+                    <div key={category} className="space-y-1">
+                      <div className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        {category}
+                      </div>
+                      {items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = activeModule === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              navigate(item.id);
+                              setMobileMenuOpen(false);
+                            }}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-colors text-left ${
+                              isActive ? 'bg-slate-900 text-amber-400 font-bold' : 'text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            <Icon className="w-4 h-4 shrink-0" />
+                            <span>{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   );
                 })}
               </div>

@@ -78,14 +78,17 @@ async function runPhase5CTests() {
     superAdminToken = loginSuper.data.token || '';
     record('AUTH_SUPERADMIN', 2, 'Connexion Super Admin mr.niass@gmail.com', superOk, `status=${loginSuper.status}, role=${loginSuper.data?.user?.role}`);
 
-    // -------------------------------------------------------------
-    // TEST 3 : Accès Espace Super Admin protégé (Dashboard stats)
-    // -------------------------------------------------------------
     const statsRes = await requestJson(`${baseUrl}/api/dashboard/stats`, {
       headers: { Authorization: `Bearer ${superAdminToken}` }
     });
-    const totalPilgrimsVal = statsRes.data?.activity?.totalPilgrims ?? statsRes.data?.totalPilgrims;
-    record('AUTH_SUPERADMIN', 3, 'Accès Dashboard stats avec jeton Super Admin', statsRes.status === 200 && totalPilgrimsVal !== undefined, `status=${statsRes.status}, totalPilgrims=${totalPilgrimsVal}`);
+    const act = statsRes.data?.activity;
+    const fin = statsRes.data?.finance;
+    const statsOk = statsRes.status === 200 &&
+      act?.totalPilgrims === 6 &&
+      fin?.totalRevenueExpected === 30600000 &&
+      fin?.totalCollected === 4500000 &&
+      fin?.totalRemaining === 26100000;
+    record('AUTH_SUPERADMIN', 3, 'Accès Dashboard stats avec métriques saines (6 pèlerins, 30.6M CA, 4.5M encaissé, 26.1M reste)', statsOk, `status=${statsRes.status}, totalPilgrims=${act?.totalPilgrims}, CA=${fin?.totalRevenueExpected}, Encaissé=${fin?.totalCollected}, Reste=${fin?.totalRemaining}`);
 
     // -------------------------------------------------------------
     // TEST 4 : Accès Liste Utilisateurs (users.read)
