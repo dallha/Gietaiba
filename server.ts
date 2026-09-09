@@ -791,7 +791,7 @@ app.put('/api/visas/:id', requireAuth, requirePermission('visas.update'), async 
 });
 
 // 11. Flights & Tickets
-app.get('/api/flights', requireAuth, requirePermission('logistics.read'), async (req: Request, res: Response) => {
+app.get('/api/flights', requireNeonAuth, requirePermission('logistics.read'), async (req: Request, res: Response) => {
   const { voyageId } = req.query as { voyageId?: string };
   try {
     const flights = await logisticsService.getFlights(voyageId);
@@ -801,7 +801,7 @@ app.get('/api/flights', requireAuth, requirePermission('logistics.read'), async 
   }
 });
 
-app.post('/api/flights', requireAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
+app.post('/api/flights', requireNeonAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
   try {
     const flt = await logisticsService.createFlight(req.body, req.user!);
     res.status(201).json(flt);
@@ -810,7 +810,7 @@ app.post('/api/flights', requireAuth, requirePermission('logistics.manage'), asy
   }
 });
 
-app.get('/api/tickets', requireAuth, requirePermission('logistics.read'), async (req: Request, res: Response) => {
+app.get('/api/tickets', requireNeonAuth, requirePermission('logistics.read'), async (req: Request, res: Response) => {
   const { flightId, clientId } = req.query as { flightId?: string; clientId?: string };
   try {
     const tickets = await logisticsService.getTickets({ flightId, clientId });
@@ -820,7 +820,7 @@ app.get('/api/tickets', requireAuth, requirePermission('logistics.read'), async 
   }
 });
 
-app.post('/api/tickets', requireAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
+app.post('/api/tickets', requireNeonAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
   try {
     const ticket = await logisticsService.createTicket(req.body, req.user!);
     res.status(201).json(ticket);
@@ -830,7 +830,7 @@ app.post('/api/tickets', requireAuth, requirePermission('logistics.manage'), asy
 });
 
 // 12. Hotels & Rooms (Physical capacity enforcement)
-app.get('/api/hotels', requireAuth, requirePermission('logistics.read'), async (req: Request, res: Response) => {
+app.get('/api/hotels', requireNeonAuth, requirePermission('logistics.read'), async (req: Request, res: Response) => {
   const { voyageId } = req.query as { voyageId?: string };
   try {
     const hotels = await logisticsService.getHotels(voyageId);
@@ -840,7 +840,7 @@ app.get('/api/hotels', requireAuth, requirePermission('logistics.read'), async (
   }
 });
 
-app.post('/api/hotels', requireAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
+app.post('/api/hotels', requireNeonAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
   try {
     const hotel = await logisticsService.createHotel(req.body, req.user!);
     res.status(201).json(hotel);
@@ -849,7 +849,7 @@ app.post('/api/hotels', requireAuth, requirePermission('logistics.manage'), asyn
   }
 });
 
-app.get('/api/rooms', requireAuth, requirePermission('logistics.read'), async (req: Request, res: Response) => {
+app.get('/api/rooms', requireNeonAuth, requirePermission('logistics.read'), async (req: Request, res: Response) => {
   const { hotelId } = req.query as { hotelId?: string };
   try {
     const rooms = await logisticsService.getRooms(hotelId);
@@ -859,7 +859,7 @@ app.get('/api/rooms', requireAuth, requirePermission('logistics.read'), async (r
   }
 });
 
-app.post('/api/rooms', requireAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
+app.post('/api/rooms', requireNeonAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
   try {
     const room = await logisticsService.createRoom(req.body, req.user!);
     res.status(201).json(room);
@@ -868,7 +868,7 @@ app.post('/api/rooms', requireAuth, requirePermission('logistics.manage'), async
   }
 });
 
-app.post('/api/rooms/:id/assign', requireAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
+app.post('/api/rooms/:id/assign', requireNeonAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
   const { clientId, inscriptionId, checkInDate, checkOutDate, notes } = req.body;
   try {
     const assignment = await logisticsWorkflowService.assignRoomPessimistic({
@@ -886,7 +886,7 @@ app.post('/api/rooms/:id/assign', requireAuth, requirePermission('logistics.mana
   }
 });
 
-app.delete('/api/rooms/:id/occupants/:clientId', requireAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
+app.delete('/api/rooms/:id/occupants/:clientId', requireNeonAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
   try {
     const result = await logisticsService.removeClientFromRoom(req.params.id, req.params.clientId, req.user!);
     res.json(result);
@@ -896,7 +896,7 @@ app.delete('/api/rooms/:id/occupants/:clientId', requireAuth, requirePermission(
 });
 
 // 13. Groups & Accompagnateurs
-app.get('/api/groups', requireAuth, requirePermission('logistics.read'), async (req: Request, res: Response) => {
+app.get('/api/groups', requireNeonAuth, requirePermission('logistics.read'), async (req: Request, res: Response) => {
   const { voyageId } = req.query as { voyageId?: string };
   try {
     const groups = await logisticsService.getGroups(voyageId);
@@ -906,7 +906,7 @@ app.get('/api/groups', requireAuth, requirePermission('logistics.read'), async (
   }
 });
 
-app.post('/api/groups', requireAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
+app.post('/api/groups', requireNeonAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
   try {
     const grp = await logisticsService.createGroup(req.body, req.user!);
     res.status(201).json(grp);
@@ -915,7 +915,7 @@ app.post('/api/groups', requireAuth, requirePermission('logistics.manage'), asyn
   }
 });
 
-app.post('/api/groups/:id/members', requireAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
+app.post('/api/groups/:id/members', requireNeonAuth, requirePermission('logistics.manage'), async (req: Request, res: Response) => {
   const { clientId, inscriptionId } = req.body;
   try {
     const member = await logisticsService.addClientToGroup(req.params.id, clientId, inscriptionId, req.user!);
@@ -925,7 +925,7 @@ app.post('/api/groups/:id/members', requireAuth, requirePermission('logistics.ma
   }
 });
 
-app.get('/api/accompagnateurs', requireAuth, requirePermission('logistics.read'), async (req: Request, res: Response) => {
+app.get('/api/accompagnateurs', requireNeonAuth, requirePermission('logistics.read'), async (req: Request, res: Response) => {
   const { voyageId } = req.query as { voyageId?: string };
   try {
     const acc = await logisticsService.getAccompagnateurs(voyageId);
