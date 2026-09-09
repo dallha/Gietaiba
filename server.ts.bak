@@ -5,8 +5,10 @@ import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 
 // Middleware & Auth
-import { requirePermission, requireStaff } from './server/auth/auth.middleware.js';
+import { requireAuth, requirePermission, requireStaff } from './server/auth/auth.middleware.js';
 import { authorizationService } from './server/auth/authorization.service.js';
+import { createSignedSessionToken, getSessionSecret, parseCookieHeader, verifySignedSessionToken } from './server/auth/token.service.js';
+import { googleOAuthService } from './server/auth/google-oauth.service.js';
 
 import { requireNeonAuth } from './server/auth/neon-auth.middleware.js';
 
@@ -49,6 +51,14 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.use(express.json());
+
+// Middleware léger d'extraction des cookies (zéro dépendance externe)
+app.use((req: Request, _res: Response, next) => {
+  if (!(req as any).cookies) {
+    (req as any).cookies = parseCookieHeader(req.headers.cookie);
+  }
+  next();
+});
 
 // Normalisation des erreurs API (Phase 5)
 function formatErrorResponse(err: any) {
@@ -103,7 +113,69 @@ app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', engine: 'PostgreSQL Neon' });
 });
 
-// 1. Neon Auth is the only application authentication source.
+// 1. Auth routes (public login endpoints)
+app.post('/api/auth/login', async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email/Téléphone et mot de passe requis' });
+  }
+  try {
+    const session = await userRepository.authenticate(email, password);
+    if (!session) {
+      return res.status(401).json({ error: 'Identifiants invalides ou compte inactif' });
+    }
+    const token = createSignedSessionToken(session);
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('taiba_session', token, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+    res.json({ user: session, token });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/pilgrim-login', async (req: Request, res: Response) => {
+  const { identifier } = req.body;
+  if (!identifier) {
+    return res.status(400).json({ error: 'Numéro de téléphone ou Code pèlerin requis' });
+  }
+  try {
+    const result = await userRepository.authenticatePilgrim(identifier);
+    if (!result) {
+      return res.status(404).json({ error: 'Aucun pèlerin trouvé avec ce numéro ou code' });
+    }
+    const token = createSignedSessionToken(result.user);
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('taiba_session', token, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+    res.json({ ...result, token });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Google OAuth 2.0 / OpenID Connect (Sans Firebase)
+app.get('/api/auth/google/status', (req: Request, res: Response) => {
+  res.json({
+    configured: googleOAuthService.isConfigured(),
+  });
+});
+
+// ========================================================
+// 🟣 NEON-AUTH-1.0 — Étape B (PoC)
+// Route de test isolée pour valider le flux Neon Auth managé
+// sans affecter la production ni les utilisateurs réels.
+// ========================================================
 app.get('/api/auth/neon-me', requireNeonAuth, (req: Request, res: Response): void => {
   // Si le middleware passe, l'utilisateur est authentifié et autorisé
   res.json({
@@ -112,9 +184,121 @@ app.get('/api/auth/neon-me', requireNeonAuth, (req: Request, res: Response): voi
   });
 });
 
-// Logout of the Neon cookie is performed by the Neon Auth client SDK.
-app.post('/api/auth/logout', requireNeonAuth, async (_req: Request, res: Response) => {
-  res.status(204).end();
+app.get('/api/auth/google', (req: Request, res: Response) => {
+  if (!googleOAuthService.isConfigured()) {
+    return res.redirect(
+      '/login?error=' +
+        encodeURIComponent(
+          'Authentification Google non configurée sur le serveur. Veuillez configurer GOOGLE_CLIENT_ID et GOOGLE_CLIENT_SECRET.'
+        )
+    );
+  }
+
+  const state = crypto.randomBytes(16).toString('hex');
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  const baseUrl = process.env.APP_URL || `${proto}://${host}`;
+  const redirectUri = `${baseUrl}/api/auth/google/callback`;
+
+  const isProd = process.env.NODE_ENV === 'production';
+  // Cookie anti-CSRF temporaire (durée de validité : 10 minutes)
+  res.cookie('oauth_state', state, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'lax',
+    maxAge: 10 * 60 * 1000,
+    path: '/',
+  });
+
+  const authUrl = googleOAuthService.generateAuthUrl(redirectUri, state);
+  res.redirect(authUrl);
+});
+
+app.get('/api/auth/google/callback', async (req: Request, res: Response) => {
+  const { code, state, error } = req.query;
+  const isProd = process.env.NODE_ENV === 'production';
+
+  if (error) {
+    res.clearCookie('oauth_state', { path: '/', httpOnly: true, secure: isProd, sameSite: 'lax' });
+    return res.redirect(
+      '/login?error=' + encodeURIComponent(`Connexion Google annulée ou refusée (${error})`)
+    );
+  }
+
+  // 1. Contrôle strict anti-CSRF sur le paramètre state
+  const cookies = (req as any).cookies || parseCookieHeader(req.headers.cookie);
+  const storedState = cookies['oauth_state'];
+  res.clearCookie('oauth_state', { path: '/', httpOnly: true, secure: isProd, sameSite: 'lax' });
+
+  if (!state || typeof state !== 'string' || !storedState || state !== storedState) {
+    console.warn('[Google OAuth] Échec vérification anti-CSRF : state manquant ou invalide');
+    return res.redirect(
+      '/login?error=' + encodeURIComponent('Tentative de connexion invalide : échec de vérification anti-CSRF.')
+    );
+  }
+
+  if (!code || typeof code !== 'string') {
+    return res.redirect(
+      '/login?error=' + encodeURIComponent('Code d\'autorisation Google manquant.')
+    );
+  }
+
+  try {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const baseUrl = process.env.APP_URL || `${proto}://${host}`;
+    const redirectUri = `${baseUrl}/api/auth/google/callback`;
+
+    const googleUser = await googleOAuthService.exchangeCodeAndGetUserInfo(code, redirectUri);
+    const { token, redirectPath } = await googleOAuthService.authenticateWithGoogleUser(googleUser);
+
+    // 2. Cookie HttpOnly de session (mécanisme cible officiel)
+    res.cookie('taiba_session', token, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
+      path: '/',
+    });
+
+    // 3. Redirection vers l'application : session 100% HttpOnly (aucun token dans l'URL)
+    res.redirect(redirectPath);
+  } catch (err: any) {
+    console.error('[Google OAuth Callback Error]', err?.message || 'Échec auth');
+    const errorMessage = err?.message || 'Échec de l\'authentification Google.';
+    res.redirect('/login?error=' + encodeURIComponent(errorMessage));
+  }
+});
+
+// Endpoint de déconnexion officiel (invalidation cookies de session et audit log)
+app.post('/api/auth/logout', async (req: Request, res: Response) => {
+  const isProd = process.env.NODE_ENV === 'production';
+  res.clearCookie('taiba_session', { path: '/', httpOnly: true, secure: isProd, sameSite: 'lax' });
+  res.clearCookie('oauth_state', { path: '/', httpOnly: true, secure: isProd, sameSite: 'lax' });
+
+  try {
+    const rawToken = req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.substring(7).trim()
+      : ((req as any).cookies?.taiba_session || parseCookieHeader(req.headers.cookie)['taiba_session']);
+
+    if (rawToken) {
+      const payload = verifySignedSessionToken(rawToken);
+      if (payload) {
+        await auditRepository.logAudit({
+          actorUserId: payload.userId,
+          actorUserName: payload.email,
+          action: 'AUTH_LOGOUT',
+          entityType: 'USER',
+          entityId: payload.userId,
+          reason: 'Déconnexion utilisateur',
+        });
+      }
+    }
+  } catch {
+    // Non bloquant
+  }
+
+  res.json({ success: true, message: 'Déconnexion réussie.' });
 });
 
 app.get('/api/auth/me', requireNeonAuth, async (req: Request, res: Response) => {
@@ -419,7 +603,7 @@ app.post('/api/packages/:id/new-price-version', requireNeonAuth, requirePermissi
 });
 
 // 7. Inscriptions routes
-app.get('/api/inscriptions', requireNeonAuth, requirePermission('inscriptions.read'), async (req: Request, res: Response) => {
+app.get('/api/inscriptions', requireAuth, requirePermission('inscriptions.read'), async (req: Request, res: Response) => {
   const user = req.user!;
   const { voyageId, clientId } = req.query as { voyageId?: string; clientId?: string };
   try {
@@ -434,7 +618,7 @@ app.get('/api/inscriptions', requireNeonAuth, requirePermission('inscriptions.re
   }
 });
 
-app.post('/api/inscriptions', requireNeonAuth, requirePermission('inscriptions.create'), async (req: Request, res: Response) => {
+app.post('/api/inscriptions', requireAuth, requirePermission('inscriptions.create'), async (req: Request, res: Response) => {
   try {
     const idempotencyKey = (req.headers['idempotency-key'] as string) || req.body.idempotencyKey;
     const ins = await inscriptionWorkflowService.createInscription({
@@ -454,7 +638,7 @@ app.post('/api/inscriptions', requireNeonAuth, requirePermission('inscriptions.c
   }
 });
 
-app.patch('/api/inscriptions/:id/price', requireNeonAuth, requirePermission('inscriptions.update'), async (req: Request, res: Response) => {
+app.patch('/api/inscriptions/:id/price', requireAuth, requirePermission('inscriptions.update'), async (req: Request, res: Response) => {
   const { newPrice, reason } = req.body;
   if (!newPrice || Number(newPrice) <= 0) {
     return res.status(400).json({ error: 'Le montant convenu doit être supérieur à 0' });
@@ -471,7 +655,7 @@ app.patch('/api/inscriptions/:id/price', requireNeonAuth, requirePermission('ins
   }
 });
 
-app.put('/api/inscriptions/:id/status', requireNeonAuth, requirePermission('inscriptions.update'), async (req: Request, res: Response) => {
+app.put('/api/inscriptions/:id/status', requireAuth, requirePermission('inscriptions.update'), async (req: Request, res: Response) => {
   const { status } = req.body;
   try {
     const updated = await inscriptionService.updateInscriptionStatus(req.params.id, status, req.user!);
@@ -482,7 +666,7 @@ app.put('/api/inscriptions/:id/status', requireNeonAuth, requirePermission('insc
   }
 });
 
-app.delete('/api/inscriptions/:id', requireNeonAuth, requirePermission('inscriptions.cancel'), async (req: Request, res: Response) => {
+app.delete('/api/inscriptions/:id', requireAuth, requirePermission('inscriptions.cancel'), async (req: Request, res: Response) => {
   try {
     const reason = (req.body?.reason as string) || 'Annulation du dossier par le conseiller';
     const result = await inscriptionService.cancelInscription(req.params.id, reason, req.user!);
@@ -494,7 +678,7 @@ app.delete('/api/inscriptions/:id', requireNeonAuth, requirePermission('inscript
 });
 
 // 8. Payments & Receipts (Ultra-sensitive zone)
-app.get('/api/payments', requireNeonAuth, requirePermission('payments.read'), async (req: Request, res: Response) => {
+app.get('/api/payments', requireAuth, requirePermission('payments.read'), async (req: Request, res: Response) => {
   const user = req.user!;
   const { clientId, inscriptionId, voyageId } = req.query as {
     clientId?: string;
@@ -513,7 +697,7 @@ app.get('/api/payments', requireNeonAuth, requirePermission('payments.read'), as
   }
 });
 
-app.post('/api/payments', requireNeonAuth, requirePermission('payments.create'), async (req: Request, res: Response) => {
+app.post('/api/payments', requireAuth, requirePermission('payments.create'), async (req: Request, res: Response) => {
   try {
     const idempotencyKey = (req.headers['idempotency-key'] as string) || req.body.idempotencyKey;
     const payment = await paymentWorkflowService.recordPayment({
@@ -534,7 +718,7 @@ app.post('/api/payments', requireNeonAuth, requirePermission('payments.create'),
   }
 });
 
-app.post('/api/payments/:id/cancel', requireNeonAuth, requirePermission('payments.cancel'), async (req: Request, res: Response) => {
+app.post('/api/payments/:id/cancel', requireAuth, requirePermission('payments.cancel'), async (req: Request, res: Response) => {
   try {
     const idempotencyKey = (req.headers['idempotency-key'] as string) || req.body.idempotencyKey;
     const reason = req.body.reason || 'Erreur de saisie';
@@ -752,7 +936,7 @@ app.get('/api/accompagnateurs', requireNeonAuth, requirePermission('logistics.re
 });
 
 // 14. Expenses & Rentability
-app.get('/api/expenses', requireNeonAuth, requirePermission('expenses.read'), async (req: Request, res: Response) => {
+app.get('/api/expenses', requireAuth, requirePermission('expenses.read'), async (req: Request, res: Response) => {
   const { voyageId } = req.query as { voyageId?: string };
   try {
     const expenses = await expenseService.getExpenses(voyageId);
@@ -762,7 +946,7 @@ app.get('/api/expenses', requireNeonAuth, requirePermission('expenses.read'), as
   }
 });
 
-app.post('/api/expenses', requireNeonAuth, requirePermission('expenses.create'), async (req: Request, res: Response) => {
+app.post('/api/expenses', requireAuth, requirePermission('expenses.create'), async (req: Request, res: Response) => {
   try {
     const expense = await expenseService.createExpense(req.body, req.user!);
     res.status(201).json(expense);
@@ -771,7 +955,7 @@ app.post('/api/expenses', requireNeonAuth, requirePermission('expenses.create'),
   }
 });
 
-app.put('/api/expenses/:id', requireNeonAuth, requirePermission('expenses.create'), async (req: Request, res: Response) => {
+app.put('/api/expenses/:id', requireAuth, requirePermission('expenses.create'), async (req: Request, res: Response) => {
   try {
     const updated = await expenseService.updateExpense(req.params.id, req.body, req.user!);
     res.json(updated);
@@ -780,7 +964,7 @@ app.put('/api/expenses/:id', requireNeonAuth, requirePermission('expenses.create
   }
 });
 
-app.post('/api/expenses/:id/cancel', requireNeonAuth, requirePermission('expenses.delete'), async (req: Request, res: Response) => {
+app.post('/api/expenses/:id/cancel', requireAuth, requirePermission('expenses.delete'), async (req: Request, res: Response) => {
   try {
     const reason = req.body?.reason || 'Annulation administrative de la dépense';
     const cancelled = await expenseService.cancelExpense(req.params.id, reason, req.user!);
@@ -790,7 +974,7 @@ app.post('/api/expenses/:id/cancel', requireNeonAuth, requirePermission('expense
   }
 });
 
-app.delete('/api/expenses/:id', requireNeonAuth, requirePermission('expenses.delete'), async (req: Request, res: Response) => {
+app.delete('/api/expenses/:id', requireAuth, requirePermission('expenses.delete'), async (req: Request, res: Response) => {
   try {
     const resDel = await expenseService.deleteExpense(req.params.id, req.user!);
     res.json(resDel);
@@ -891,7 +1075,7 @@ app.post('/api/pilgrim/documents', requireNeonAuth, async (req: Request, res: Re
   }
 });
 
-app.post('/api/pilgrim/payments', requireNeonAuth, async (req: Request, res: Response) => {
+app.post('/api/pilgrim/payments', requireAuth, async (req: Request, res: Response) => {
   const { clientId, inscriptionId, amount, paymentMethod, reference, comment } = req.body;
   if (!clientId || !inscriptionId || !amount) {
     return res.status(400).json({ error: 'Client, Inscription et Montant requis' });

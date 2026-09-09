@@ -95,11 +95,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logoutUser = useCallback(async () => {
     try {
+      await api.logout();
       await neonAuthClient.signOut();
     } catch (e) {
       console.warn('Neon Auth signOut error', e);
     }
-    await api.logout();
     setCurrentUser(null);
     setRole(null);
   }, []);

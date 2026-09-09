@@ -347,7 +347,6 @@ export default function ErpApp() {
       users={users}
       onSwitchUser={(user) => {
         setCurrentUser(user);
-        api.setCurrentUserId(user.id);
       }}
       settings={settings}
       clients={clients}

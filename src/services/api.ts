@@ -25,32 +25,10 @@ import { createNotification } from './notification.service.js';
 
 
 class ApiService {
-  private token: string | null = typeof window !== 'undefined' ? localStorage.getItem('taiba_auth_token') : null;
-
-  public setToken(token: string | null) {
-    this.token = token;
-    if (typeof window !== 'undefined') {
-      if (token) {
-        localStorage.setItem('taiba_auth_token', token);
-      } else {
-        localStorage.removeItem('taiba_auth_token');
-      }
-    }
-  }
-
-  public getToken(): string | null {
-    return this.token;
-  }
-
-  // Deprecated compatibility methods
-  public setUserId(_userId: string) {}
-  public setCurrentUserId(_userId: string) {}
-
   private async request<T>(endpoint: string, options?: RequestInit & { idempotencyKey?: string }): Promise<T> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
       ...(options?.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
       ...(options?.headers as Record<string, string> || {}),
     };
@@ -86,7 +64,6 @@ class ApiService {
 
     if (!res.ok) {
       if (res.status === 401) {
-        this.setToken(null);
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('taiba:unauthorized'));
         }
@@ -118,35 +95,12 @@ class ApiService {
   }
 
   // Auth
-  async login(emailOrPhone: string, password: string): Promise<{ user: UserSession; token?: string }> {
-    const res = await this.request<{ user: UserSession; token?: string }>('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: emailOrPhone, password }),
-    });
-    if (res.token) {
-      this.setToken(res.token);
-    }
-    return res;
-  }
-
-  async pilgrimLogin(identifier: string): Promise<{ user: UserSession; client: Client; token?: string }> {
-    const res = await this.request<{ user: UserSession; client: Client; token?: string }>('/api/auth/pilgrim-login', {
-      method: 'POST',
-      body: JSON.stringify({ identifier }),
-    });
-    if (res.token) {
-      this.setToken(res.token);
-    }
-    return res;
-  }
-
   async getCurrentUser(): Promise<UserSession> {
     const res = await this.request<{ user: UserSession }>('/api/auth/me');
     return res.user;
   }
 
   async logout(): Promise<void> {
-    this.setToken(null);
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',

@@ -31,9 +31,7 @@ function createExpressRequestContext(req: Request, res: Response): RequestContex
 }
 
 /**
- * Middleware Express isolé pour la Phase NEON-AUTH-1.1.
- *
- * NE REMPLACE PAS requireAuth — coexiste en parallèle.
+ * Middleware Express canonique : Neon Auth est l'unique source d'identité.
  *
  * Flux :
  *   Session cookie Neon
