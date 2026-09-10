@@ -88,7 +88,7 @@ export function generateSecurePassword(length = 16): string {
 
 async function callNeonAdminCreateUser(
   cookieHeader: string,
-  body: { email: string; password: string; name: string; role?: string; data?: Record<string, unknown> },
+  body: { email: string; password: string; name: string; role?: string; emailVerified?: boolean; data?: Record<string, unknown> },
   reqOrigin?: string
 ): Promise<{ id: string; email: string }> {
   const neonAuthUrl = getNeonAuthUrl();
@@ -260,6 +260,7 @@ async function provisionCore(
       email,
       password: tempPassword,
       name: displayName,
+      emailVerified: true,
     },
     req.headers.origin
   );
