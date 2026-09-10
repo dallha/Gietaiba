@@ -188,11 +188,11 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
         overdueCount,
       },
       documents: {
-        completeCount: 0,
-        incompleteCount: clients.length || inscriptions.length,
-        missingPassports: Math.round((clients.length || 6) * 0.5),
-        missingVisas: clients.length || 6,
-        missingTickets: clients.length || 6,
+        completeCount: inscriptions.filter((i) => (i.documentCompletenessRate || 0) >= 100).length,
+        incompleteCount: inscriptions.filter((i) => (i.documentCompletenessRate || 0) < 100).length,
+        missingPassports: inscriptions.filter((i) => !i.documents?.some((d) => d.type === 'Passeport' && d.status === 'VALIDE')).length,
+        missingVisas: inscriptions.filter((i) => !i.visaStatus || (i.visaStatus !== 'VALIDE' && i.visaStatus !== 'APPROUVE')).length,
+        missingTickets: inscriptions.length,
         expiredDocs: 0,
       },
       recouvrement: {
@@ -327,44 +327,77 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
   }, [inscriptions]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Top Banner / Welcome */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="bg-slate-900 rounded-2xl p-6 text-white border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+        className="bg-slate-900 rounded-2xl p-4 sm:p-6 text-white border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
       >
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 mb-2">
-            Campagne Officielle Hajj 2027 (1448H) & Oumrah
+            Campagne Officielle {hajjVoyage?.title || 'Hajj 2027'} & Oumrah
           </div>
-          <h1 className="text-xl md:text-2xl font-serif font-black tracking-tight text-white">
-            Tableau de Bord Exécutif
+          <h1 className="text-xl sm:text-2xl font-serif font-black tracking-tight text-white">
+            Bonjour, {authUser?.firstName || authUser?.displayName || 'Équipe Taiba'} 👋
           </h1>
-          <p className="text-xs md:text-sm text-slate-300 mt-1">
-            Indicateurs certifiés en temps réel • Direction Générale GIE TAIBA VOYAGES
+          <p className="text-xs sm:text-sm text-slate-300 mt-1">
+            {isAgent
+              ? 'Priorités opérationnelles et dossiers nécessitant votre attention aujourd’hui.'
+              : 'Indicateurs certifiés en temps réel • Direction Générale GIE TAIBA VOYAGES'}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           <button
             onClick={() => onNavigate('inscriptions')}
-            className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md transition cursor-pointer flex items-center gap-1.5"
+            className="flex-1 md:flex-initial px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md transition cursor-pointer flex items-center justify-center gap-1.5"
           >
             <span>+ Nouveau Dossier</span>
           </button>
           {!isAgent && (
             <button
               onClick={() => onNavigate('paiements')}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
+              className="flex-1 md:flex-initial px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition cursor-pointer flex items-center justify-center gap-1.5"
             >
               <CreditCard className="w-3.5 h-3.5 text-amber-400" />
-              <span>Encaisser un versement</span>
+              <span>Encaisser</span>
             </button>
           )}
         </div>
       </motion.div>
+
+      {/* Puces d'urgences opérationnelles réelles pour AGENT (Scroll horizontal fluide sur mobile) */}
+      {isAgent && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs">
+          <button
+            onClick={() => onNavigate('inscriptions')}
+            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 font-bold hover:bg-amber-100 active:scale-95 transition cursor-pointer"
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span>{documents.incompleteCount} dossier(s) incomplet(s)</span>
+          </button>
+          <button
+            onClick={() => onNavigate('documents')}
+            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-900 font-bold hover:bg-red-100 active:scale-95 transition cursor-pointer"
+          >
+            <FileText className="w-3.5 h-3.5 text-red-600 shrink-0" />
+            <span>{documents.missingPassports} passeport(s) à récupérer</span>
+          </button>
+          <button
+            onClick={() => onNavigate('visas')}
+            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 font-bold hover:bg-indigo-100 active:scale-95 transition cursor-pointer"
+          >
+            <Stamp className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+            <span>{documents.missingVisas} visa(s) en attente</span>
+          </button>
+          <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 font-medium">
+            <Clock className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+            <span>Départ Hajj dans {daysLeftHajj} j</span>
+          </div>
+        </div>
+      )}
 
       {/* LIGNE 1 : LES 4 CHIFFRES ESSENTIELS */}
       {isAgent ? (
@@ -372,34 +405,34 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
           variants={containerVariants}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
         >
           {/* Operational KPI 1 : Dossiers Inscrits */}
           <motion.div
             variants={cardVariants}
             whileHover={{ y: -2, transition: { duration: 0.2 } }}
-            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
+            className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
           >
             <div>
-              <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
-                <span>1. Dossiers Inscrits</span>
-                <div className="p-2 bg-slate-100 rounded-xl text-slate-700">
-                  <Users className="w-4 h-4" />
+              <div className="flex items-center justify-between text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+                <span className="truncate">1. Dossiers Inscrits</span>
+                <div className="p-1.5 sm:p-2 bg-slate-100 rounded-xl text-slate-700 shrink-0">
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
               </div>
-              <div className="mt-2 text-2xl font-black text-slate-900 tracking-tight font-serif">
-                {activity.totalPilgrims} dossiers
+              <div className="mt-2 text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-serif">
+                {activity.totalPilgrims}
               </div>
-              <div className="mt-1 text-xs text-slate-500 font-medium">
-                Campagne active Hajj 2027
+              <div className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs text-slate-500 font-medium truncate">
+                Campagne active
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-100">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
-                <span>Remplissage du quota</span>
-                <span className="font-bold text-slate-800">{occupancyRate}% ({activity.totalPilgrims}/{totalCapacity})</span>
+            <div className="mt-3 pt-2 sm:mt-4 sm:pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-500 mb-1 font-medium">
+                <span>Quota</span>
+                <span className="font-bold text-slate-800">{occupancyRate}%</span>
               </div>
-              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-slate-100 rounded-full h-1.5 sm:h-2 overflow-hidden">
                 <motion.div
                   className="bg-slate-900 h-full rounded-full"
                   initial={{ width: 0 }}
@@ -414,28 +447,28 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
           <motion.div
             variants={cardVariants}
             whileHover={{ y: -2, transition: { duration: 0.2 } }}
-            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between"
+            className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between"
           >
             <div>
-              <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
-                <span>2. Pièces Conformes</span>
-                <span className="text-xs font-black text-emerald-800 bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-300">
+              <div className="flex items-center justify-between text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+                <span className="truncate">2. Pièces Conformes</span>
+                <span className="text-[10px] sm:text-xs font-black text-emerald-800 bg-emerald-100/80 px-1.5 sm:px-2 py-0.5 rounded-full border border-emerald-300">
                   {docCompletionRate}%
                 </span>
               </div>
-              <div className="mt-2 text-2xl font-black text-emerald-700 tracking-tight font-serif">
+              <div className="mt-2 text-xl sm:text-2xl font-black text-emerald-700 tracking-tight font-serif">
                 {documents.completeCount} / {totalDocsDossiers}
               </div>
-              <div className="mt-1 text-xs text-slate-500 font-medium">
-                Dossiers avec pièces validées à 100%
+              <div className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs text-slate-500 font-medium truncate">
+                Pièces 100% validées
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-100">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
-                <span>Taux de complétude GED</span>
-                <span className="font-bold text-emerald-700">{docCompletionRate}% validé</span>
+            <div className="mt-3 pt-2 sm:mt-4 sm:pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-500 mb-1 font-medium">
+                <span>Complétude</span>
+                <span className="font-bold text-emerald-700">{docCompletionRate}%</span>
               </div>
-              <div className="w-full bg-emerald-100/60 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-emerald-100/60 rounded-full h-1.5 sm:h-2 overflow-hidden">
                 <motion.div
                   className="bg-emerald-600 h-full rounded-full"
                   initial={{ width: 0 }}
@@ -450,36 +483,36 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
           <motion.div
             variants={cardVariants}
             whileHover={{ y: -2, transition: { duration: 0.2 } }}
-            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between"
+            className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between"
           >
             <div>
-              <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
-                <span>3. Passeports Reçus</span>
-                <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
-                  <FileText className="w-4 h-4" />
+              <div className="flex items-center justify-between text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+                <span className="truncate">3. Passeports Reçus</span>
+                <div className="p-1.5 sm:p-2 bg-amber-50 rounded-xl text-amber-600 shrink-0">
+                  <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
               </div>
-              <div className="mt-2 text-2xl font-black text-amber-600 tracking-tight font-serif">
+              <div className="mt-2 text-xl sm:text-2xl font-black text-amber-600 tracking-tight font-serif">
                 {Math.max(0, activity.totalPilgrims - documents.missingPassports)} / {activity.totalPilgrims}
               </div>
-              <div className="mt-1 text-xs text-slate-500 flex items-center justify-between font-medium">
-                <span>{documents.missingPassports} à réceptionner</span>
+              <div className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs text-slate-500 flex items-center justify-between font-medium">
+                <span className="truncate">{documents.missingPassports} restants</span>
                 <button
                   onClick={() => onNavigate('documents')}
-                  className="text-amber-700 font-bold hover:underline cursor-pointer"
+                  className="text-amber-700 font-bold hover:underline cursor-pointer text-[10px] sm:text-xs shrink-0"
                 >
                   GED →
                 </button>
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-100">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
-                <span>Passeports en agence</span>
+            <div className="mt-3 pt-2 sm:mt-4 sm:pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-500 mb-1 font-medium">
+                <span>En agence</span>
                 <span className="font-bold text-amber-700">
                   {activity.totalPilgrims > 0 ? Math.round(((activity.totalPilgrims - documents.missingPassports) / activity.totalPilgrims) * 100) : 0}%
                 </span>
               </div>
-              <div className="w-full bg-amber-100/60 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-amber-100/60 rounded-full h-1.5 sm:h-2 overflow-hidden">
                 <motion.div
                   className="bg-amber-500 h-full rounded-full"
                   initial={{ width: 0 }}
@@ -494,37 +527,37 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
           <motion.div
             variants={cardVariants}
             whileHover={{ y: -2, transition: { duration: 0.2 } }}
-            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
+            className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
           >
             <div>
-              <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
-                <span>4. Visas Nusuk</span>
-                <div className="p-2 bg-slate-100 rounded-xl text-slate-700">
-                  <Stamp className="w-4 h-4" />
+              <div className="flex items-center justify-between text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+                <span className="truncate">4. Visas Nusuk</span>
+                <div className="p-1.5 sm:p-2 bg-slate-100 rounded-xl text-slate-700 shrink-0">
+                  <Stamp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
               </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-black text-slate-900 font-serif">
+              <div className="mt-2 flex items-baseline gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-slate-900 font-serif">
                   {Math.max(0, activity.totalPilgrims - documents.missingVisas)}
                 </span>
-                <span className="text-xs font-bold text-emerald-700">délivrés</span>
+                <span className="text-[10px] sm:text-xs font-bold text-emerald-700">délivrés</span>
               </div>
-              <div className="mt-1 text-xs text-slate-500 flex items-center justify-between font-medium">
-                <span>Suivi consulaire Nusuk</span>
+              <div className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs text-slate-500 flex items-center justify-between font-medium">
+                <span className="truncate">Nusuk</span>
                 <button
                   onClick={() => onNavigate('visas')}
-                  className="text-slate-800 font-bold hover:underline cursor-pointer"
+                  className="text-slate-800 font-bold hover:underline cursor-pointer text-[10px] sm:text-xs shrink-0"
                 >
-                  Gérer Visas →
+                  Visas →
                 </button>
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-100">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
-                <span>Statut plateforme consulaire</span>
+            <div className="mt-3 pt-2 sm:mt-4 sm:pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-500 mb-1 font-medium">
+                <span>Statut</span>
                 <span className="font-bold text-slate-700">En cours</span>
               </div>
-              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-slate-100 rounded-full h-1.5 sm:h-2 overflow-hidden">
                 <motion.div
                   className="bg-teal-600 h-full rounded-full"
                   initial={{ width: 0 }}

@@ -4,7 +4,20 @@ import {BrowserRouter} from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
 
-// Force reload
+// Enregistrement sécurisé du Service Worker PWA
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((reg) => {
+        console.log('[PWA] Service Worker actif, scope:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('[PWA] Enregistrement Service Worker non disponible:', err);
+      });
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

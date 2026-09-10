@@ -19,6 +19,7 @@ import { Inscription, Client, Voyage, VoyagePackage, AgencySettings } from '../.
 import { formatFCFA, formatDate, getPaymentStatusBadge } from '../../utils/format.js';
 import { QrScannerModal } from '../../components/inscriptions/QrScannerModal.js';
 import { useAuth } from '../../auth/AuthContext.js';
+import { normalizeRole } from '../../auth/roleModules.js';
 import { api } from '../../services/api.js';
 import { exportToCSV, parseCSV } from '../../utils/csv.js';
 import { logPriceModificationAudit } from '../../services/audit.service.js';
@@ -57,6 +58,8 @@ export const InscriptionsModule: React.FC<InscriptionsModuleProps> = ({
   const [showQrScanner, setShowQrScanner] = useState(false);
 
   const { currentUser, role, hasPermission } = useAuth();
+  const currentRoleId = normalizeRole(role?.id || currentUser?.roleId);
+  const isAgent = currentRoleId === 'AGENT';
   const canEditPrice = hasPermission('inscriptions.update');
 
   // Price adjustment modal state
@@ -322,34 +325,61 @@ export const InscriptionsModule: React.FC<InscriptionsModuleProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 text-center">
-                    <div className="bg-slate-50 p-2 rounded-lg">
-                      <span className="text-[10px] text-slate-400 block font-medium">Snapshot V{ins.priceVersionSnapshotted || 1}</span>
-                      <span className="text-xs font-bold text-slate-800 block truncate">
-                        {formatFCFA(ins.appliedPrice)}
-                      </span>
+                  {isAgent ? (
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 text-center">
+                      <div className="bg-slate-50 p-2 rounded-lg">
+                        <span className="text-[10px] text-slate-400 block font-medium">Statut Dossier</span>
+                        <span className="text-xs font-bold text-slate-800 block truncate">
+                          {ins.status || 'CONFIRMEE'}
+                        </span>
+                      </div>
+                      <div className="bg-emerald-50/60 p-2 rounded-lg border border-emerald-100/60">
+                        <span className="text-[10px] text-emerald-700 block font-medium">Pièces GED</span>
+                        <span className="text-xs font-bold text-emerald-700 block truncate">
+                          {ins.documentCompletenessRate || 0}% validé
+                        </span>
+                      </div>
                     </div>
-                    <div className="bg-emerald-50/60 p-2 rounded-lg border border-emerald-100/60">
-                      <span className="text-[10px] text-emerald-700 block font-medium">Versé</span>
-                      <span className="text-xs font-bold text-emerald-700 block truncate">
-                        {formatFCFA(ins.totalPaid)}
-                      </span>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 text-center">
+                      <div className="bg-slate-50 p-2 rounded-lg">
+                        <span className="text-[10px] text-slate-400 block font-medium">Snapshot V{ins.priceVersionSnapshotted || 1}</span>
+                        <span className="text-xs font-bold text-slate-800 block truncate">
+                          {formatFCFA(ins.appliedPrice)}
+                        </span>
+                      </div>
+                      <div className="bg-emerald-50/60 p-2 rounded-lg border border-emerald-100/60">
+                        <span className="text-[10px] text-emerald-700 block font-medium">Versé</span>
+                        <span className="text-xs font-bold text-emerald-700 block truncate">
+                          {formatFCFA(ins.totalPaid)}
+                        </span>
+                      </div>
+                      <div className="bg-amber-50/60 p-2 rounded-lg border border-amber-100/60">
+                        <span className="text-[10px] text-amber-800 block font-medium">Reste</span>
+                        <span className="text-xs font-bold text-amber-800 block truncate">
+                          {formatFCFA(ins.balance)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="bg-amber-50/60 p-2 rounded-lg border border-amber-100/60">
-                      <span className="text-[10px] text-amber-800 block font-medium">Reste</span>
-                      <span className="text-xs font-bold text-amber-800 block truncate">
-                        {formatFCFA(ins.balance)}
-                      </span>
-                    </div>
-                  </div>
+                  )}
 
-                  <button
-                    onClick={() => onNavigateToPayment(ins.clientId, ins.id)}
-                    className="w-full py-2 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    Encaisser un versement
-                  </button>
+                  {isAgent ? (
+                    <button
+                      onClick={() => window.location.assign('/documents')}
+                      className="w-full py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                    >
+                      <FileCheck className="w-4 h-4" />
+                      Gérer les pièces & documents
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onNavigateToPayment(ins.clientId, ins.id)}
+                      className="w-full py-2 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      Encaisser un versement
+                    </button>
+                  )}
                 </div>
               );
             })
@@ -428,13 +458,23 @@ export const InscriptionsModule: React.FC<InscriptionsModuleProps> = ({
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => onNavigateToPayment(ins.clientId, ins.id)}
-                          className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs transition-colors inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <CreditCard className="w-3.5 h-3.5" />
-                          Encaisser
-                        </button>
+                        {isAgent ? (
+                          <a
+                            href="/documents"
+                            className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-amber-400 font-semibold text-xs transition-colors inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <FileCheck className="w-3.5 h-3.5" />
+                            Pièces
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => onNavigateToPayment(ins.clientId, ins.id)}
+                            className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs transition-colors inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            Encaisser
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

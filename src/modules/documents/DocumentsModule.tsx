@@ -12,6 +12,7 @@ import {
   X,
   Plus,
   ShieldCheck,
+  Camera,
 } from 'lucide-react';
 import { PilgrimDocument, Client, Inscription, AgencySettings } from '../../types.js';
 import { formatDate, getDocStatusBadge } from '../../utils/format.js';
@@ -49,6 +50,19 @@ export const DocumentsModule: React.FC<DocumentsModuleProps> = ({
   const [uploadType, setUploadType] = useState<PilgrimDocument['type']>('PASSEPORT');
   const [uploadFileName, setUploadFileName] = useState('');
   const [uploadVisibleToClient, setUploadVisibleToClient] = useState(true);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      if (!uploadFileName || uploadFileName.startsWith('Document_') || uploadFileName.startsWith('Photo_')) {
+        setUploadFileName(file.name);
+      }
+    }
+  };
 
   // Review status modal
   const [reviewingDoc, setReviewingDoc] = useState<PilgrimDocument | null>(null);
@@ -465,6 +479,57 @@ export const DocumentsModule: React.FC<DocumentsModuleProps> = ({
                   <option value="BILLET">Billet d'Avion Électronique</option>
                   <option value="ATTESTATION">Attestation Médicale d'Aptitude</option>
                 </select>
+              </div>
+
+              {/* Sélecteurs polyvalents : Fichier / Galerie / PDF + Caméra directe */}
+              <div className="space-y-2">
+                <label className="font-semibold text-slate-700 block">Fichier / Document Numérisé *</label>
+                
+                {/* Inputs réels cachés */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center justify-center gap-1.5 p-3 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 active:scale-95 transition text-slate-800 font-semibold text-xs cursor-pointer"
+                  >
+                    <Upload className="w-4 h-4 text-slate-600" />
+                    <span>Fichier / PDF / Galerie</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="flex items-center justify-center gap-1.5 p-3 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 active:scale-95 transition text-amber-900 font-semibold text-xs cursor-pointer"
+                  >
+                    <Camera className="w-4 h-4 text-amber-700" />
+                    <span>Prendre Photo</span>
+                  </button>
+                </div>
+
+                {selectedFile && (
+                  <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">
+                    <span className="truncate font-medium">📎 {selectedFile.name}</span>
+                    <span className="text-[10px] text-emerald-700 font-mono shrink-0 ml-2">
+                      ({Math.round(selectedFile.size / 1024)} Ko)
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div>

@@ -26,6 +26,8 @@ import { formatFCFA, formatDate, getDocStatusBadge, getPaymentStatusBadge } from
 import { ConfirmModal } from '../../components/ui/ConfirmModal.js';
 import { exportToCSV, parseCSV } from '../../utils/csv.js';
 import { api } from '../../services/api.js';
+import { useAuth } from '../../auth/AuthContext.js';
+import { normalizeRole } from '../../auth/roleModules.js';
 
 interface ClientsModuleProps {
   clients: Client[];
@@ -56,6 +58,10 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
   onOpenReceipt,
   onNavigateToPayment,
 }) => {
+  const { currentUser, role } = useAuth();
+  const currentRoleId = normalizeRole(role?.id || currentUser?.roleId);
+  const isAgent = currentRoleId === 'AGENT';
+
   console.log('[ClientsModule] Received clients length:', clients.length);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -65,6 +71,13 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [archiveReason, setArchiveReason] = useState('');
   const [archiveLoading, setArchiveLoading] = useState(false);
+
+  // Sécurité d'affichage : si AGENT essaie d'ouvrir l'onglet paiements, basculer sur 'info'
+  React.useEffect(() => {
+    if (isAgent && activeTab === 'paiements') {
+      setActiveTab('info');
+    }
+  }, [isAgent, activeTab]);
 
   const confirmDeleteClient = async () => {
     if (!selectedClient) return;
@@ -505,10 +518,10 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex items-center border-b border-slate-200 bg-slate-50 px-5 text-xs font-semibold text-slate-600">
+            <div className="flex items-center border-b border-slate-200 bg-slate-50 px-3 sm:px-5 text-xs font-semibold text-slate-600 overflow-x-auto no-scrollbar whitespace-nowrap shrink-0">
               <button
                 onClick={() => setActiveTab('info')}
-                className={`py-3 px-3 border-b-2 transition-colors cursor-pointer ${
+                className={`py-3 px-3 border-b-2 transition-colors cursor-pointer shrink-0 ${
                   activeTab === 'info'
                     ? 'border-amber-600 text-amber-900 font-bold bg-white'
                     : 'border-transparent hover:text-slate-900'
@@ -518,7 +531,7 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
               </button>
               <button
                 onClick={() => setActiveTab('inscriptions')}
-                className={`py-3 px-3 border-b-2 transition-colors cursor-pointer ${
+                className={`py-3 px-3 border-b-2 transition-colors cursor-pointer shrink-0 ${
                   activeTab === 'inscriptions'
                     ? 'border-amber-600 text-amber-900 font-bold bg-white'
                     : 'border-transparent hover:text-slate-900'
@@ -526,19 +539,21 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
               >
                 Inscriptions ({clientInscriptions.length})
               </button>
-              <button
-                onClick={() => setActiveTab('paiements')}
-                className={`py-3 px-3 border-b-2 transition-colors cursor-pointer ${
-                  activeTab === 'paiements'
-                    ? 'border-amber-600 text-amber-900 font-bold bg-white'
-                    : 'border-transparent hover:text-slate-900'
-                }`}
-              >
-                Paiements & Reçus ({clientPayments.length})
-              </button>
+              {!isAgent && (
+                <button
+                  onClick={() => setActiveTab('paiements')}
+                  className={`py-3 px-3 border-b-2 transition-colors cursor-pointer shrink-0 ${
+                    activeTab === 'paiements'
+                      ? 'border-amber-600 text-amber-900 font-bold bg-white'
+                      : 'border-transparent hover:text-slate-900'
+                  }`}
+                >
+                  Paiements & Reçus ({clientPayments.length})
+                </button>
+              )}
               <button
                 onClick={() => setActiveTab('documents')}
-                className={`py-3 px-3 border-b-2 transition-colors cursor-pointer ${
+                className={`py-3 px-3 border-b-2 transition-colors cursor-pointer shrink-0 ${
                   activeTab === 'documents'
                     ? 'border-amber-600 text-amber-900 font-bold bg-white'
                     : 'border-transparent hover:text-slate-900'

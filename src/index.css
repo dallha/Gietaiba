@@ -1,1 +1,28 @@
 @import "tailwindcss";
+
+/* Safe Area Inset utilities for Mobile / PWA */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
+.safe-bottom-pad {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-top-pad {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Optimisations tactiles smartphone */
+html {
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+body {
+  overscroll-behavior-y: none;
+  -webkit-touch-callout: none;
+}

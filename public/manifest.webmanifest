@@ -1,0 +1,32 @@
+{
+  "name": "GIE TAIBA VOYAGES",
+  "short_name": "Taiba Voyages",
+  "description": "Plateforme officielle de gestion Hajj & Oumrah — GIE TAIBA VOYAGES. Votre voyage spirituel, notre engagement.",
+  "start_url": "/tableau-de-bord",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "fr-FR",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -34,6 +34,8 @@ import { NotificationBell } from '../notifications/NotificationBell.js';
 
 import { useAuth } from '../../auth/AuthContext.js';
 import { isModuleAllowedForRole, normalizeRole } from '../../auth/roleModules.js';
+import { MobileBottomBar } from './MobileBottomBar.js';
+import { MobileQuickActionSheet } from './MobileQuickActionSheet.js';
 
 interface AppLayoutProps {
   currentUser?: any;
@@ -80,6 +82,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 }) => {
   const { currentUser: authUser, role, hasPermission, logoutUser } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [quickActionOpen, setQuickActionOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing'>('synced');
   
   useEffect(() => {
@@ -205,7 +208,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       </header>
 
       {/* Body container: Sidebar + Main Content */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-6">
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 lg:pb-6 flex gap-6">
         {/* Sidebar Navigation for Desktop */}
         <aside className="hidden lg:block w-64 shrink-0">
           <nav className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3 space-y-4 sticky top-22 max-h-[calc(100vh-6.5rem)] overflow-y-auto">
@@ -297,8 +300,23 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         </main>
       </div>
 
-      {/* Simple Institutional Footer */}
-      <footer className="bg-white border-t border-slate-200 py-4 mt-auto">
+      {/* Mobile Bottom Navigation Bar & Action Sheet */}
+      <MobileBottomBar
+        activeModule={activeModule}
+        onNavigate={navigate}
+        roleId={userRoleId}
+        onOpenQuickAction={() => setQuickActionOpen(true)}
+      />
+
+      <MobileQuickActionSheet
+        isOpen={quickActionOpen}
+        onClose={() => setQuickActionOpen(false)}
+        onNavigate={navigate}
+        roleId={userRoleId}
+      />
+
+      {/* Simple Institutional Footer (hidden on small mobile to give room to bottom bar) */}
+      <footer className="hidden sm:block bg-white border-t border-slate-200 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
           <p>© {new Date().getFullYear()} {settings?.agencyName || 'GIE TAIBA VOYAGES'}. Organisation Agréée Hajj & Oumrah. Tous droits réservés.</p>
           <div className="flex items-center gap-4">
