@@ -27,7 +27,13 @@ async function getRawBody(req: ExpressRequest): Promise<Buffer | undefined> {
  */
 export const neonAuthProxyMiddleware = async (req: ExpressRequest, res: ExpressResponse, next: any): Promise<void> => {
   // Ignorer les routes locales spécifiques à notre backend GIE TAIBA
-  if (req.path === '/api/auth/me' || req.path === '/api/auth/users') {
+  const LOCAL_AUTH_ROUTES = [
+    '/api/auth/me',
+    '/api/auth/neon-me',
+    '/api/auth/logout',
+    '/api/auth/users',
+  ];
+  if (LOCAL_AUTH_ROUTES.includes(req.path)) {
     return next();
   }
 
