@@ -26,3 +26,79 @@ body {
   overscroll-behavior-y: none;
   -webkit-touch-callout: none;
 }
+
+/* ==========================================================================
+   RÈGLES D'IMPRESSION & PDF OFFICIEL : 1 SEULE PAGE A4 STRICTE
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Masquer impérativement toute l'interface de navigation, barre de recherche, cloche, footer */
+  header,
+  footer,
+  aside,
+  nav,
+  .print\:hidden,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Forcer les conteneurs à prendre toute la largeur sans marges superflues */
+  main,
+  #root,
+  .min-h-screen {
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    background: transparent !important;
+  }
+
+  /* Éviter tout saut de page indésirable sur les lignes et blocs */
+  .page-break-avoid,
+  tr,
+  tbody,
+  table,
+  .border,
+  .rounded-xl,
+  .rounded-2xl {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Modal de reçu / facture imprimé */
+  #receipt-modal-backdrop {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  #receipt-modal-backdrop > div {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}

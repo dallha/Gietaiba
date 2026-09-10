@@ -246,20 +246,20 @@ export const RapportsModule: React.FC<RapportsModuleProps> = ({
       {/* Printable Sheet Canvas with Official Agency Branding & Logo */}
       <div
         id="official-report-canvas"
-        className="bg-white p-8 md:p-10 rounded-xl border border-slate-200 shadow-sm space-y-6 text-slate-900"
+        className="bg-white p-4 sm:p-8 md:p-10 rounded-xl border border-slate-200 shadow-sm space-y-6 text-slate-900 print:p-0 print:space-y-3 print:border-none print:shadow-none"
       >
         {/* Official Header with Logo & Branding from Settings */}
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b-2 border-slate-900 pb-5 gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b-2 border-slate-900 pb-5 gap-4 print:pb-2 print:gap-2">
           <div className="flex items-start gap-3.5">
             {/* Agency Logo / Emblem from settings */}
             {settings?.logoUrl && settings.logoUrl !== '/logo.png' ? (
               <img
                 src={settings.logoUrl}
                 alt={settings.agencyName || 'Logo Agence'}
-                className="w-14 h-14 rounded-lg object-contain border border-slate-200 p-1 bg-white shadow-2xs shrink-0"
+                className="w-14 h-14 rounded-lg object-contain border border-slate-200 p-1 bg-white shadow-2xs shrink-0 print:w-10 print:h-10"
               />
             ) : (
-              <div className="w-13 h-13 rounded-xl bg-linear-to-br from-slate-900 to-slate-800 border-2 border-amber-500/80 text-amber-400 font-serif font-black flex flex-col items-center justify-center text-lg shadow-sm shrink-0">
+              <div className="w-13 h-13 rounded-xl bg-linear-to-br from-slate-900 to-slate-800 border-2 border-amber-500/80 text-amber-400 font-serif font-black flex flex-col items-center justify-center text-lg shadow-sm shrink-0 print:w-9 print:h-9 print:text-sm">
                 <span>TV</span>
                 <span className="text-[7px] font-sans font-bold text-slate-300 tracking-wider">HAJJ</span>
               </div>
@@ -267,18 +267,18 @@ export const RapportsModule: React.FC<RapportsModuleProps> = ({
 
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black tracking-tight text-slate-900">
+                <h2 className="text-lg font-black tracking-tight text-slate-900 print:text-base">
                   {settings?.agencyName || 'GIE TAIBA VOYAGES'}
                 </h2>
-                <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.2 rounded">
+                <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.2 rounded print:text-[8px]">
                   AGENCE AGRÉÉE
                 </span>
               </div>
-              <p className="text-xs text-amber-800 font-bold mt-0.5">
+              <p className="text-xs text-amber-800 font-bold mt-0.5 print:text-[10px]">
                 {settings?.subtitle || 'Régie Générale du Pèlerinage Hajj & Oumrah — Sénégal & Arabie Saoudite'}
               </p>
 
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-slate-500 mt-1">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-slate-500 mt-1 print:text-[8px]">
                 <span>NINEA : <strong className="text-slate-700">{settings?.ninea || '005421882 2V3'}</strong></span>
                 <span>•</span>
                 <span>RC : <strong className="text-slate-700">{settings?.rcNumber || 'SN.DKR.2014.B.1820'}</strong></span>
@@ -286,28 +286,28 @@ export const RapportsModule: React.FC<RapportsModuleProps> = ({
                 <span>Agrément : <strong className="text-slate-700">{settings?.licenseNumber || 'HAJJ-SN-2027-042'}</strong></span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-3 text-[10px] text-slate-400 mt-0.5">
+              <div className="flex flex-wrap items-center gap-x-3 text-[10px] text-slate-400 mt-0.5 print:text-[8px]">
                 <span className="flex items-center gap-1">
-                  <MapPin className="w-2.5 h-2.5" />
+                  <MapPin className="w-2.5 h-2.5 print:hidden" />
                   {settings?.address || 'Avenue Cheikh Anta Diop, Dakar, Sénégal'}
                 </span>
                 <span className="flex items-center gap-1">
-                  <Phone className="w-2.5 h-2.5" />
+                  <Phone className="w-2.5 h-2.5 print:hidden" />
                   {settings?.phone || '+221 33 824 55 00'}
                 </span>
                 <span className="flex items-center gap-1">
-                  <Mail className="w-2.5 h-2.5" />
+                  <Mail className="w-2.5 h-2.5 print:hidden" />
                   {settings?.email || 'contact@taiba-voyages.sn'}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="text-left sm:text-right shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
-            <span className="text-[10px] font-mono text-slate-400 block">Date d'édition</span>
-            <span className="text-xs font-bold text-slate-800">{formatDate(new Date().toISOString())}</span>
-            <div className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded mt-1">
-              <CheckCircle className="w-3 h-3 text-emerald-600" />
+          <div className="text-left sm:text-right shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 print:pt-0 print:border-none">
+            <span className="text-[10px] font-mono text-slate-400 block print:text-[8px]">Date d'édition</span>
+            <span className="text-xs font-bold text-slate-800 print:text-[10px]">{formatDate(new Date().toISOString())}</span>
+            <div className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded mt-1 print:text-[8px] print:py-0">
+              <CheckCircle className="w-3 h-3 text-emerald-600 print:w-2.5 print:h-2.5" />
               <span>Document Officiel Conforme</span>
             </div>
           </div>
@@ -315,13 +315,13 @@ export const RapportsModule: React.FC<RapportsModuleProps> = ({
 
         {/* 1. RAPPORT FINANCIER */}
         {selectedReport === 'financier' && (
-          <div className="space-y-6">
-            <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
+          <div className="space-y-6 print:space-y-3">
+            <div className="border-b border-slate-200 pb-3 print:pb-1.5 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-black text-slate-900 uppercase">
+                <h3 className="text-base font-black text-slate-900 uppercase print:text-sm">
                   État Récapitulatif Financier — Campagne 2027
                 </h3>
-                <p className="text-xs text-slate-500">Synthèse des engagements, encaissements et soldes résiduels</p>
+                <p className="text-xs text-slate-500 print:text-[10px]">Synthèse des engagements, encaissements et soldes résiduels</p>
               </div>
               <button
                 onClick={() => handleDownloadReport('financier')}
@@ -332,45 +332,86 @@ export const RapportsModule: React.FC<RapportsModuleProps> = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200 text-center print:grid-cols-4 print:p-2 print:gap-2 print:my-2">
               <div>
-                <span className="text-[11px] text-slate-500 font-medium block">Total Facturé Contrats</span>
-                <span className="text-lg font-black text-slate-900">{formatFCFA(totalCA)}</span>
+                <span className="text-[11px] text-slate-500 font-medium block print:text-[9px]">Total Facturé Contrats</span>
+                <span className="text-lg font-black text-slate-900 print:text-sm">{formatFCFA(totalCA)}</span>
               </div>
               <div>
-                <span className="text-[11px] text-slate-500 font-medium block">Total Encaissé en Caisse</span>
-                <span className="text-lg font-black text-emerald-700">{formatFCFA(totalEncaissé)}</span>
+                <span className="text-[11px] text-slate-500 font-medium block print:text-[9px]">Total Encaissé en Caisse</span>
+                <span className="text-lg font-black text-emerald-700 print:text-sm">{formatFCFA(totalEncaissé)}</span>
               </div>
               <div>
-                <span className="text-[11px] text-slate-500 font-medium block">Créances Résiduelles</span>
-                <span className="text-lg font-black text-amber-700">{formatFCFA(totalReste)}</span>
+                <span className="text-[11px] text-slate-500 font-medium block print:text-[9px]">Créances Résiduelles</span>
+                <span className="text-lg font-black text-amber-700 print:text-sm">{formatFCFA(totalReste)}</span>
               </div>
               <div>
-                <span className="text-[11px] text-slate-500 font-medium block">Taux de Recouvrement</span>
-                <span className="text-lg font-black text-blue-700">{tauxRecouvrement}%</span>
+                <span className="text-[11px] text-slate-500 font-medium block print:text-[9px]">Taux de Recouvrement</span>
+                <span className="text-lg font-black text-blue-700 print:text-sm">{tauxRecouvrement}%</span>
               </div>
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-800 uppercase">Journal des Écritures Récentes de Caisse</h4>
-              <table className="w-full text-left text-xs border border-slate-200">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-slate-800 uppercase">Journal des Écritures Récentes de Caisse</h4>
+                <span className="text-[10px] text-slate-500 font-medium md:hidden">{payments.length} écritures</span>
+              </div>
+
+              {/* Vue Cartes Mobile (< md, masquée à l'impression) */}
+              <div className="block md:hidden print:hidden space-y-2.5">
+                {payments.map((p) => (
+                  <div
+                    key={p.id}
+                    className="p-3 bg-slate-50/80 rounded-xl border border-slate-200/80 flex flex-col gap-2 shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">
+                        {p.receiptNumber}
+                      </span>
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        {formatDate(p.paymentDate)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 text-sm truncate">
+                          {p.clientName}
+                        </p>
+                        <span className="inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200/80 text-slate-700">
+                          {p.paymentMethod}
+                        </span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] text-slate-400 font-semibold block uppercase">Montant</span>
+                        <span className="font-bold text-emerald-700 text-sm">
+                          {formatFCFA(p.amount)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Vue Tableau Desktop & Impression Officielle */}
+              <table className="hidden md:table print:table w-full text-left text-xs border border-slate-200">
                 <thead className="bg-slate-100 text-slate-700 font-semibold">
                   <tr>
-                    <th className="py-2 px-3 border-b">N° Reçu</th>
-                    <th className="py-2 px-3 border-b">Date</th>
-                    <th className="py-2 px-3 border-b">Pèlerin</th>
-                    <th className="py-2 px-3 border-b">Mode</th>
-                    <th className="py-2 px-3 border-b text-right">Montant</th>
+                    <th className="py-2 px-3 print:py-1 print:px-2 border-b">N° Reçu</th>
+                    <th className="py-2 px-3 print:py-1 print:px-2 border-b">Date</th>
+                    <th className="py-2 px-3 print:py-1 print:px-2 border-b">Pèlerin</th>
+                    <th className="py-2 px-3 print:py-1 print:px-2 border-b">Mode</th>
+                    <th className="py-2 px-3 print:py-1 print:px-2 border-b text-right">Montant</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {payments.map((p) => (
                     <tr key={p.id}>
-                      <td className="py-2 px-3 font-mono font-bold">{p.receiptNumber}</td>
-                      <td className="py-2 px-3 text-slate-600">{formatDate(p.paymentDate)}</td>
-                      <td className="py-2 px-3 font-medium">{p.clientName}</td>
-                      <td className="py-2 px-3">{p.paymentMethod}</td>
-                      <td className="py-2 px-3 text-right font-bold text-emerald-700">{formatFCFA(p.amount)}</td>
+                      <td className="py-2 px-3 print:py-1 print:px-2 font-mono font-bold">{p.receiptNumber}</td>
+                      <td className="py-2 px-3 print:py-1 print:px-2 text-slate-600">{formatDate(p.paymentDate)}</td>
+                      <td className="py-2 px-3 print:py-1 print:px-2 font-medium">{p.clientName}</td>
+                      <td className="py-2 px-3 print:py-1 print:px-2">{p.paymentMethod}</td>
+                      <td className="py-2 px-3 print:py-1 print:px-2 text-right font-bold text-emerald-700">{formatFCFA(p.amount)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -417,44 +458,46 @@ export const RapportsModule: React.FC<RapportsModuleProps> = ({
               </div>
             </div>
 
-            <table className="w-full text-left text-xs border border-slate-200">
-              <thead className="bg-slate-100 text-slate-700 font-semibold">
-                <tr>
-                  <th className="py-2 px-3 border-b">N°</th>
-                  <th className="py-2 px-3 border-b">Nom & Prénom</th>
-                  <th className="py-2 px-3 border-b">N° Passeport</th>
-                  <th className="py-2 px-3 border-b">Nationalité</th>
-                  <th className="py-2 px-3 border-b">Téléphone</th>
-                  <th className="py-2 px-3 border-b">Package</th>
-                  <th className="py-2 px-3 border-b text-center">Statut Solde</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {inscriptions.map((ins, i) => (
-                  <tr key={ins.id}>
-                    <td className="py-2 px-3 font-mono">{i + 1}</td>
-                    <td className="py-2 px-3 font-bold">
-                      {ins.client?.civility} {ins.client?.lastName} {ins.client?.firstName}
-                    </td>
-                    <td className="py-2 px-3 font-mono">{ins.client?.passportNumber || 'En attente'}</td>
-                    <td className="py-2 px-3">{ins.client?.nationality}</td>
-                    <td className="py-2 px-3">{ins.client?.phone}</td>
-                    <td className="py-2 px-3 font-medium">{ins.package?.name}</td>
-                    <td className="py-2 px-3 text-center font-bold text-[10px]">
-                      {ins.balance === 0 ? (
-                        <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                          SOLDÉ (100%)
-                        </span>
-                      ) : (
-                        <span className="text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                          SOLDE : {formatFCFA(ins.balance)}
-                        </span>
-                      )}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border border-slate-200">
+                <thead className="bg-slate-100 text-slate-700 font-semibold">
+                  <tr>
+                    <th className="py-2 px-3 border-b">N°</th>
+                    <th className="py-2 px-3 border-b">Nom & Prénom</th>
+                    <th className="py-2 px-3 border-b">N° Passeport</th>
+                    <th className="py-2 px-3 border-b">Nationalité</th>
+                    <th className="py-2 px-3 border-b">Téléphone</th>
+                    <th className="py-2 px-3 border-b">Package</th>
+                    <th className="py-2 px-3 border-b text-center">Statut Solde</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {inscriptions.map((ins, i) => (
+                    <tr key={ins.id}>
+                      <td className="py-2 px-3 font-mono">{i + 1}</td>
+                      <td className="py-2 px-3 font-bold">
+                        {ins.client?.civility} {ins.client?.lastName} {ins.client?.firstName}
+                      </td>
+                      <td className="py-2 px-3 font-mono">{ins.client?.passportNumber || 'En attente'}</td>
+                      <td className="py-2 px-3">{ins.client?.nationality}</td>
+                      <td className="py-2 px-3">{ins.client?.phone}</td>
+                      <td className="py-2 px-3 font-medium">{ins.package?.name}</td>
+                      <td className="py-2 px-3 text-center font-bold text-[10px]">
+                        {ins.balance === 0 ? (
+                          <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            SOLDÉ (100%)
+                          </span>
+                        ) : (
+                          <span className="text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                            SOLDE : {formatFCFA(ins.balance)}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -496,45 +539,47 @@ export const RapportsModule: React.FC<RapportsModuleProps> = ({
               </div>
             </div>
 
-            <table className="w-full text-left text-xs border border-slate-200">
-              <thead className="bg-slate-100 text-slate-700 font-semibold">
-                <tr>
-                  <th className="py-2 px-3 border-b">Chambre</th>
-                  <th className="py-2 px-3 border-b">Hôtel & Ville</th>
-                  <th className="py-2 px-3 border-b">Type</th>
-                  <th className="py-2 px-3 border-b">Pèlerins Occupants</th>
-                  <th className="py-2 px-3 border-b text-right">Remplissage</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {rooms.map((room) => {
-                  const hotel = hotels.find((h) => h.id === room.hotelId);
-                  return (
-                    <tr key={room.id}>
-                      <td className="py-2 px-3 font-mono font-bold">N° {room.roomNumber}</td>
-                      <td className="py-2 px-3">
-                        {hotel?.name} ({hotel?.city})
-                      </td>
-                      <td className="py-2 px-3 font-medium">{room.roomType || 'Standard'}</td>
-                      <td className="py-2 px-3">
-                        {room.occupants && room.occupants.length > 0 ? (
-                          room.occupants.map((o) => (
-                            <span key={o.id} className="inline-block mr-2 font-medium text-slate-800">
-                              • {o.civility} {o.lastName} {o.firstName}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-slate-400 italic">Vide</span>
-                        )}
-                      </td>
-                      <td className="py-2 px-3 text-right font-bold">
-                        {room.occupants?.length || 0} / {room.capacity}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border border-slate-200">
+                <thead className="bg-slate-100 text-slate-700 font-semibold">
+                  <tr>
+                    <th className="py-2 px-3 border-b">Chambre</th>
+                    <th className="py-2 px-3 border-b">Hôtel & Ville</th>
+                    <th className="py-2 px-3 border-b">Type</th>
+                    <th className="py-2 px-3 border-b">Pèlerins Occupants</th>
+                    <th className="py-2 px-3 border-b text-right">Remplissage</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {rooms.map((room) => {
+                    const hotel = hotels.find((h) => h.id === room.hotelId);
+                    return (
+                      <tr key={room.id}>
+                        <td className="py-2 px-3 font-mono font-bold">N° {room.roomNumber}</td>
+                        <td className="py-2 px-3">
+                          {hotel?.name} ({hotel?.city})
+                        </td>
+                        <td className="py-2 px-3 font-medium">{room.roomType || 'Standard'}</td>
+                        <td className="py-2 px-3">
+                          {room.occupants && room.occupants.length > 0 ? (
+                            room.occupants.map((o) => (
+                              <span key={o.id} className="inline-block mr-2 font-medium text-slate-800">
+                                • {o.civility} {o.lastName} {o.firstName}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-slate-400 italic">Vide</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-right font-bold">
+                          {room.occupants?.length || 0} / {room.capacity}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -574,38 +619,40 @@ export const RapportsModule: React.FC<RapportsModuleProps> = ({
               </div>
             </div>
 
-            <table className="w-full text-left text-xs border border-slate-200">
-              <thead className="bg-slate-100 text-slate-700 font-semibold">
-                <tr>
-                  <th className="py-2 px-3 border-b">Pèlerin</th>
-                  <th className="py-2 px-3 border-b">Téléphone</th>
-                  <th className="py-2 px-3 border-b">Dossier</th>
-                  <th className="py-2 px-3 border-b text-right">Prix Convenu</th>
-                  <th className="py-2 px-3 border-b text-right">Acomptes Encaissés</th>
-                  <th className="py-2 px-3 border-b text-right">Reste à Recouvrer</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {inscriptions
-                  .filter((i) => i.balance > 0)
-                  .map((ins) => (
-                    <tr key={ins.id}>
-                      <td className="py-2 px-3 font-bold">
-                        {ins.client?.civility} {ins.client?.lastName} {ins.client?.firstName}
-                      </td>
-                      <td className="py-2 px-3">{ins.client?.phone}</td>
-                      <td className="py-2 px-3 font-mono">{ins.code}</td>
-                      <td className="py-2 px-3 text-right">{formatFCFA(ins.appliedPrice)}</td>
-                      <td className="py-2 px-3 text-right font-bold text-emerald-700">
-                        {formatFCFA(ins.totalPaid)}
-                      </td>
-                      <td className="py-2 px-3 text-right font-black text-rose-700 text-sm">
-                        {formatFCFA(ins.balance)}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border border-slate-200">
+                <thead className="bg-slate-100 text-slate-700 font-semibold">
+                  <tr>
+                    <th className="py-2 px-3 border-b">Pèlerin</th>
+                    <th className="py-2 px-3 border-b">Téléphone</th>
+                    <th className="py-2 px-3 border-b">Dossier</th>
+                    <th className="py-2 px-3 border-b text-right">Prix Convenu</th>
+                    <th className="py-2 px-3 border-b text-right">Acomptes Encaissés</th>
+                    <th className="py-2 px-3 border-b text-right">Reste à Recouvrer</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {inscriptions
+                    .filter((i) => i.balance > 0)
+                    .map((ins) => (
+                      <tr key={ins.id}>
+                        <td className="py-2 px-3 font-bold">
+                          {ins.client?.civility} {ins.client?.lastName} {ins.client?.firstName}
+                        </td>
+                        <td className="py-2 px-3">{ins.client?.phone}</td>
+                        <td className="py-2 px-3 font-mono">{ins.code}</td>
+                        <td className="py-2 px-3 text-right">{formatFCFA(ins.appliedPrice)}</td>
+                        <td className="py-2 px-3 text-right font-bold text-emerald-700">
+                          {formatFCFA(ins.totalPaid)}
+                        </td>
+                        <td className="py-2 px-3 text-right font-black text-rose-700 text-sm">
+                          {formatFCFA(ins.balance)}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -649,75 +696,77 @@ export const RapportsModule: React.FC<RapportsModuleProps> = ({
 
             <div className="space-y-2">
               <h4 className="text-xs font-bold text-slate-800 uppercase">Répartition par Campagne & Voyage</h4>
-              <table className="w-full text-left text-xs border border-slate-200">
-                <thead className="bg-slate-100 text-slate-700 font-semibold">
-                  <tr>
-                    <th className="py-2 px-3 border-b">Code</th>
-                    <th className="py-2 px-3 border-b">Campagne</th>
-                    <th className="py-2 px-3 border-b">Type</th>
-                    <th className="py-2 px-3 border-b">Date Départ</th>
-                    <th className="py-2 px-3 border-b text-center">Inscriptions / Capacité</th>
-                    <th className="py-2 px-3 border-b text-right">CA Facturé</th>
-                    <th className="py-2 px-3 border-b text-right">Encaissé</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {voyages.map((v) => {
-                    const vInscriptions = inscriptions.filter((i) => i.voyageId === v.id);
-                    const vCA = vInscriptions.reduce((acc, i) => acc + (i.appliedPrice || 0), 0);
-                    const vPaid = vInscriptions.reduce((acc, i) => acc + (i.totalPaid || 0), 0);
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border border-slate-200">
+                  <thead className="bg-slate-100 text-slate-700 font-semibold">
+                    <tr>
+                      <th className="py-2 px-3 border-b">Code</th>
+                      <th className="py-2 px-3 border-b">Campagne</th>
+                      <th className="py-2 px-3 border-b">Type</th>
+                      <th className="py-2 px-3 border-b">Date Départ</th>
+                      <th className="py-2 px-3 border-b text-center">Inscriptions / Capacité</th>
+                      <th className="py-2 px-3 border-b text-right">CA Facturé</th>
+                      <th className="py-2 px-3 border-b text-right">Encaissé</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {voyages.map((v) => {
+                      const vInscriptions = inscriptions.filter((i) => i.voyageId === v.id);
+                      const vCA = vInscriptions.reduce((acc, i) => acc + (i.appliedPrice || 0), 0);
+                      const vPaid = vInscriptions.reduce((acc, i) => acc + (i.totalPaid || 0), 0);
 
-                    return (
-                      <tr key={v.id}>
-                        <td className="py-2 px-3 font-mono font-bold text-slate-900">{v.code}</td>
-                        <td className="py-2 px-3 font-semibold">{v.title}</td>
-                        <td className="py-2 px-3">
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                              v.type === 'HAJJ'
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                : 'bg-indigo-50 text-indigo-800 border border-indigo-200'
-                            }`}
-                          >
-                            {v.type}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 text-slate-600">{formatDate(v.departureDate)}</td>
-                        <td className="py-2 px-3 text-center font-bold">
-                          {vInscriptions.length} / {v.capacity}
-                        </td>
-                        <td className="py-2 px-3 text-right font-medium">{formatFCFA(vCA)}</td>
-                        <td className="py-2 px-3 text-right font-bold text-emerald-700">{formatFCFA(vPaid)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                      return (
+                        <tr key={v.id}>
+                          <td className="py-2 px-3 font-mono font-bold text-slate-900">{v.code}</td>
+                          <td className="py-2 px-3 font-semibold">{v.title}</td>
+                          <td className="py-2 px-3">
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                v.type === 'HAJJ'
+                                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                  : 'bg-indigo-50 text-indigo-800 border border-indigo-200'
+                              }`}
+                            >
+                              {v.type}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-slate-600">{formatDate(v.departureDate)}</td>
+                          <td className="py-2 px-3 text-center font-bold">
+                            {vInscriptions.length} / {v.capacity}
+                          </td>
+                          <td className="py-2 px-3 text-right font-medium">{formatFCFA(vCA)}</td>
+                          <td className="py-2 px-3 text-right font-bold text-emerald-700">{formatFCFA(vPaid)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
 
         {/* Official Footer Signature & Stamp Block */}
-        <div className="pt-8 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-slate-500">
+        <div className="pt-8 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-slate-500 print:pt-2 print:mt-1 print:flex-row print:border-t">
           <div>
-            <p className="font-bold text-slate-900">{settings?.agencyName || 'GIE TAIBA VOYAGES'}</p>
-            <p className="text-[11px] text-slate-600 font-medium">
+            <p className="font-bold text-slate-900 print:text-[10px]">{settings?.agencyName || 'GIE TAIBA VOYAGES'}</p>
+            <p className="text-[11px] text-slate-600 font-medium print:text-[8px]">
               Document officiel certifié conforme pour valoir ce que de droit
             </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">
+            <p className="text-[10px] text-slate-400 mt-0.5 print:text-[7px]">
               Régie du Pèlerinage • NINEA : {settings?.ninea || '005421882 2V3'} • RC : {settings?.rcNumber || 'SN.DKR.2014.B.1820'}
             </p>
           </div>
 
           <div className="text-right">
-            <div className="w-48 h-18 border-2 border-dashed border-amber-600/70 bg-amber-50/40 rounded-lg p-2 flex flex-col items-center justify-center text-center">
-              <span className="text-[9px] font-black uppercase text-amber-800 tracking-wider">
+            <div className="w-48 h-18 border-2 border-dashed border-amber-600/70 bg-amber-50/40 rounded-lg p-2 flex flex-col items-center justify-center text-center print:w-36 print:h-12 print:p-1">
+              <span className="text-[9px] font-black uppercase text-amber-800 tracking-wider print:text-[8px]">
                 Cachet Officiel & Visa
               </span>
-              <span className="text-[8px] font-bold text-slate-700 mt-0.5">
+              <span className="text-[8px] font-bold text-slate-700 mt-0.5 print:text-[7px]">
                 {settings?.agencyName || 'GIE TAIBA VOYAGES'}
               </span>
-              <span className="text-[7px] text-slate-400">Direction Générale — Dakar</span>
+              <span className="text-[7px] text-slate-400 print:text-[6px]">Direction Générale — Dakar</span>
             </div>
           </div>
         </div>

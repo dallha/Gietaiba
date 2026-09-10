@@ -980,54 +980,110 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
               Aucun paiement enregistré pour l'instant.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase text-[10px]">
-                    <th className="pb-2.5">Reçu N°</th>
-                    <th className="pb-2.5">Date</th>
-                    <th className="pb-2.5">Pèlerin</th>
-                    <th className="pb-2.5">Mode</th>
-                    <th className="pb-2.5 text-right">Montant Encaissé</th>
-                    <th className="pb-2.5 text-right">Reçu Officiel</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {recentPayments.map((p) => {
-                    const ins = inscriptions.find((i) => i.id === p.inscriptionId);
-                    return (
-                      <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-3 font-mono font-bold text-slate-900">
+            <>
+              {/* Vue Cartes Mobile (< md) */}
+              <div className="block md:hidden space-y-3">
+                {recentPayments.map((p) => {
+                  const ins = inscriptions.find((i) => i.id === p.inscriptionId);
+                  return (
+                    <div
+                      key={p.id}
+                      className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/80 hover:bg-slate-50 transition-colors flex flex-col gap-2.5 shadow-2xs"
+                    >
+                      {/* En-tête de carte: N° Reçu & Date */}
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">
                           {p.receiptNumber}
-                        </td>
-                        <td className="py-3 text-slate-600 font-medium">
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-medium">
                           {formatDate(p.paymentDate)}
-                        </td>
-                        <td className="py-3 font-bold text-slate-900">
-                          {p.clientName || 'Pèlerin'}
-                        </td>
-                        <td className="py-3">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                        </span>
+                      </div>
+
+                      {/* Corps: Nom Pèlerin & Mode de Paiement */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 text-sm truncate">
+                            {p.clientName || 'Pèlerin'}
+                          </p>
+                          <span className="inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200/80 text-slate-700">
                             {p.paymentMethod}
                           </span>
-                        </td>
-                        <td className="py-3 text-right font-serif font-black text-emerald-700 text-sm">
-                          {formatFCFA(p.amount)}
-                        </td>
-                        <td className="py-3 text-right">
-                          <button
-                            onClick={() => onOpenReceipt ? onOpenReceipt(p, ins) : onNavigate('paiements')}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-200 transition cursor-pointer"
-                          >
-                            Consulter le reçu
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+                        {/* Montant Encaissé */}
+                        <div className="text-right shrink-0">
+                          <span className="text-[10px] text-slate-400 font-semibold block uppercase">Montant Encaissé</span>
+                          <span className="font-serif font-black text-emerald-700 text-base">
+                            {formatFCFA(p.amount)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Action: Consulter le reçu */}
+                      <div className="pt-2 border-t border-slate-200/60 flex justify-end">
+                        <button
+                          onClick={() => onOpenReceipt ? onOpenReceipt(p, ins) : onNavigate('paiements')}
+                          className="w-full py-2 px-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200 transition cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <Receipt className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Consulter le reçu officiel</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Vue Tableau Desktop (>= md) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase text-[10px]">
+                      <th className="pb-2.5">Reçu N°</th>
+                      <th className="pb-2.5">Date</th>
+                      <th className="pb-2.5">Pèlerin</th>
+                      <th className="pb-2.5">Mode</th>
+                      <th className="pb-2.5 text-right">Montant Encaissé</th>
+                      <th className="pb-2.5 text-right">Reçu Officiel</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {recentPayments.map((p) => {
+                      const ins = inscriptions.find((i) => i.id === p.inscriptionId);
+                      return (
+                        <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-3 font-mono font-bold text-slate-900">
+                            {p.receiptNumber}
+                          </td>
+                          <td className="py-3 text-slate-600 font-medium">
+                            {formatDate(p.paymentDate)}
+                          </td>
+                          <td className="py-3 font-bold text-slate-900">
+                            {p.clientName || 'Pèlerin'}
+                          </td>
+                          <td className="py-3">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                              {p.paymentMethod}
+                            </span>
+                          </td>
+                          <td className="py-3 text-right font-serif font-black text-emerald-700 text-sm">
+                            {formatFCFA(p.amount)}
+                          </td>
+                          <td className="py-3 text-right">
+                            <button
+                              onClick={() => onOpenReceipt ? onOpenReceipt(p, ins) : onNavigate('paiements')}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-200 transition cursor-pointer"
+                            >
+                              Consulter le reçu
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </motion.div>
       ) : (

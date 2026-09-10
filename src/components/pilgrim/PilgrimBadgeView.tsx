@@ -45,7 +45,7 @@ export const PilgrimBadgeView: React.FC<PilgrimBadgeViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Header & Print Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
         <div>
           <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
             <QrCode className="w-6 h-6 text-emerald-700" />
@@ -66,10 +66,10 @@ export const PilgrimBadgeView: React.FC<PilgrimBadgeViewProps> = ({
       </div>
 
       {/* Main Badge Layout (Printable) */}
-      <div className="max-w-md mx-auto">
+      <div className="max-w-md mx-auto print:max-w-sm print:mx-auto print:my-0">
         <div 
           ref={badgeRef}
-          className="bg-white rounded-3xl border-2 border-slate-200 shadow-xl overflow-hidden print:shadow-none print:border print:m-0"
+          className="bg-white rounded-3xl border-2 border-slate-200 shadow-xl overflow-hidden print:shadow-none print:border print:m-0 print:rounded-2xl"
         >
           {/* Badge Header Strip */}
           <div className="bg-linear-to-r from-emerald-900 via-emerald-800 to-emerald-950 text-white p-6 text-center relative">

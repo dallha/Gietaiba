@@ -138,7 +138,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800 antialiased">
       {/* Top Header Bar */}
-      <header className="bg-slate-900 text-white sticky top-0 z-40 border-b border-slate-800 shadow-md">
+      <header className="bg-slate-900 text-white sticky top-0 z-40 border-b border-slate-800 shadow-md print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
           {/* Brand Left */}
           <div className="flex items-center gap-3">
@@ -208,9 +208,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       </header>
 
       {/* Body container: Sidebar + Main Content */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 lg:pb-6 flex gap-6">
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 lg:pb-6 flex gap-6 print:p-0 print:m-0 print:max-w-full print:block">
         {/* Sidebar Navigation for Desktop */}
-        <aside className="hidden lg:block w-64 shrink-0">
+        <aside className="hidden lg:block w-64 shrink-0 print:hidden">
           <nav className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3 space-y-4 sticky top-22 max-h-[calc(100vh-6.5rem)] overflow-y-auto">
             {['ACCUEIL', 'PÈLERINS', 'FINANCES', 'VOYAGES', 'DOCUMENTS', 'RAPPORTS', 'ADMINISTRATION'].map(
               (category) => {
@@ -249,7 +249,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div className="fixed inset-0 z-50 lg:hidden flex print:hidden">
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs" onClick={() => setMobileMenuOpen(false)} />
             <div className="relative bg-white w-72 max-w-full p-4 flex flex-col h-full shadow-2xl overflow-y-auto">
               <div className="flex items-center justify-between pb-4 border-b border-slate-200">
@@ -295,28 +295,30 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         )}
 
         {/* Main Content Area */}
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 print:w-full print:max-w-full">
           {children}
         </main>
       </div>
 
       {/* Mobile Bottom Navigation Bar & Action Sheet */}
-      <MobileBottomBar
-        activeModule={activeModule}
-        onNavigate={navigate}
-        roleId={userRoleId}
-        onOpenQuickAction={() => setQuickActionOpen(true)}
-      />
+      <div className="print:hidden">
+        <MobileBottomBar
+          activeModule={activeModule}
+          onNavigate={navigate}
+          roleId={userRoleId}
+          onOpenQuickAction={() => setQuickActionOpen(true)}
+        />
 
-      <MobileQuickActionSheet
-        isOpen={quickActionOpen}
-        onClose={() => setQuickActionOpen(false)}
-        onNavigate={navigate}
-        roleId={userRoleId}
-      />
+        <MobileQuickActionSheet
+          isOpen={quickActionOpen}
+          onClose={() => setQuickActionOpen(false)}
+          onNavigate={navigate}
+          roleId={userRoleId}
+        />
+      </div>
 
-      {/* Simple Institutional Footer (hidden on small mobile to give room to bottom bar) */}
-      <footer className="hidden sm:block bg-white border-t border-slate-200 py-4 mt-auto">
+      {/* Simple Institutional Footer (hidden on small mobile to give room to bottom bar, hidden on print) */}
+      <footer className="hidden sm:block bg-white border-t border-slate-200 py-4 mt-auto print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
           <p>© {new Date().getFullYear()} {settings?.agencyName || 'GIE TAIBA VOYAGES'}. Organisation Agréée Hajj & Oumrah. Tous droits réservés.</p>
           <div className="flex items-center gap-4">
