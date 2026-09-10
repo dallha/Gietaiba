@@ -164,8 +164,9 @@ export const requireNeonAuth = async (req: Request, res: Response, next: NextFun
     // sans double-exécution du middleware.
     if (session.mustChangePassword) {
       const PASSWORD_CHANGE_ALLOWED_PATHS = [
-        '/api/change-password',
+        '/api/auth/me',
         '/api/auth/neon-me',
+        '/api/change-password',
         '/api/auth/logout',
       ];
 
