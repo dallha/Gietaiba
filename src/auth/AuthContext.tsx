@@ -71,6 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       active: true,
       clientId: userSession.clientId,
       allowedInscriptionIds: userSession.allowedInscriptionIds,
+      mustChangePassword: userSession.mustChangePassword,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

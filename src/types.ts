@@ -9,6 +9,7 @@ export interface UserSession {
   allowedInscriptionIds?: string[];
   phone?: string;
   active?: boolean;
+  mustChangePassword?: boolean;
   permissions?: string[];
   roles?: string[];
   accessibleClientIds?: string[];
@@ -60,6 +61,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   lastLoginAt?: string;
+  mustChangePassword?: boolean;
 }
 
 export type Package = VoyagePackage;

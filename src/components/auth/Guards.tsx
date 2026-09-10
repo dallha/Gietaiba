@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext.js';
 import { ShieldAlert, LogOut, ArrowLeft, Lock, ArrowRight } from 'lucide-react';
+import { ForcePasswordChange } from './ForcePasswordChange.js';
 
 // Protects routes that require ANY authenticated user who is active
 export const AuthGuard: React.FC = () => {
@@ -46,6 +47,16 @@ export const AuthGuard: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  // Signed in but must change password on first login -> force the change
+  // screen INSTEAD of the requested page. No route can be reached while the
+  // flag is set: this guard wraps every protected route (/erp/*, /pelerin/*,
+  // /portail/*) and the backend enforces 403 PASSWORD_CHANGE_REQUIRED on all
+  // API calls except the allowlist (/api/change-password, /api/auth/neon-me,
+  // /api/auth/logout).
+  if (currentUser.mustChangePassword) {
+    return <ForcePasswordChange />;
   }
 
   return <Outlet />;

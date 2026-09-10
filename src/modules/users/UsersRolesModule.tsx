@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { User, Role, Client, Inscription } from '../../types.js';
 
 import { 
@@ -19,11 +19,16 @@ import {
   Layers, 
   Search, 
   Filter,
-  Plus
+  Plus,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext.js';
 import { logAudit } from '../../services/audit.service.js';
 import { api } from '../../services/api.js';
+import { CreateStaffAccountModal } from './CreateStaffAccountModal.js';
+import { TempPasswordScreen } from './TempPasswordScreen.js';
+import type { ProvisionResult, ProvisionPartialResult } from '../../../contracts/provisioning.js';
 
 // Standard RBAC entity modules and actions matrix definition
 const RBAC_MODULES = [
@@ -76,6 +81,22 @@ export const UsersRolesModule: React.FC = () => {
   const [newPilgrimInscriptionIds, setNewPilgrimInscriptionIds] = useState<string[]>([]);
   const [clientSearch, setClientSearch] = useState('');
   const [isClientSearchOpen, setIsClientSearchOpen] = useState(false);
+
+  // Staff account modal state
+  const [isCreateStaffModalOpen, setIsCreateStaffModalOpen] = useState(false);
+
+  // Pilgrim provisioning result screen
+  type PilgrimScreen = 'form' | 'tempPassword' | 'partialError';
+  const [pilgrimScreen, setPilgrimScreen] = useState<PilgrimScreen>('form');
+  const [pilgrimProvisionResult, setPilgrimProvisionResult] = useState<ProvisionResult | null>(null);
+  const [pilgrimPartialError, setPilgrimPartialError] = useState<{ message: string; correlationId: string } | null>(null);
+  const [pilgrimSubmitting, setPilgrimSubmitting] = useState(false);
+
+  // Pilgrim email check state
+  const [pilgrimEmailChecking, setPilgrimEmailChecking] = useState(false);
+  const [pilgrimEmailAvailable, setPilgrimEmailAvailable] = useState<boolean | null>(null);
+  const [pilgrimEmailError, setPilgrimEmailError] = useState('');
+  const lastCheckedPilgrimEmail = useRef('');
 
   const filteredClients = clients.filter(c => 
     (c.firstName + ' ' + c.lastName + ' ' + (c.code || '')).toLowerCase().includes(clientSearch.toLowerCase())
@@ -173,6 +194,40 @@ export const UsersRolesModule: React.FC = () => {
     }
   };
 
+  const handlePilgrimEmailBlur = useCallback(async () => {
+    const trimmed = newPilgrimEmail.trim().toLowerCase();
+    if (!trimmed || trimmed === lastCheckedPilgrimEmail.current) return;
+    if (!trimmed.includes('@')) {
+      setPilgrimEmailAvailable(false);
+      setPilgrimEmailError('Adresse email invalide.');
+      return;
+    }
+
+    setPilgrimEmailChecking(true);
+    setPilgrimEmailError('');
+    try {
+      const result = await api.checkEmailAvailability(trimmed);
+      setPilgrimEmailAvailable(result.available);
+      if (!result.available) {
+        setPilgrimEmailError('Cette adresse email est déjà utilisée.');
+      }
+      lastCheckedPilgrimEmail.current = trimmed;
+    } catch {
+      setPilgrimEmailAvailable(null);
+      setPilgrimEmailError('');
+    } finally {
+      setPilgrimEmailChecking(false);
+    }
+  }, [newPilgrimEmail]);
+
+  useEffect(() => {
+    const trimmed = newPilgrimEmail.trim().toLowerCase();
+    if (trimmed !== lastCheckedPilgrimEmail.current) {
+      setPilgrimEmailAvailable(null);
+      setPilgrimEmailError('');
+    }
+  }, [newPilgrimEmail]);
+
   const handleCreatePilgrimAccount = async () => {
     if (!newPilgrimEmail.trim()) {
       return alert("Veuillez saisir une adresse email pour ce compte pèlerin.");
@@ -180,50 +235,36 @@ export const UsersRolesModule: React.FC = () => {
     if (!newPilgrimClientId) {
       return alert("Veuillez sélectionner le client à rattacher.");
     }
+    if (pilgrimEmailAvailable === false) {
+      return alert("Cette adresse email est déjà utilisée.");
+    }
 
+    setPilgrimSubmitting(true);
     try {
-      const userUid = `pilgrim_${Date.now()}`;
-      const newPilgrimUser: Partial<User> = {
-        id: userUid,
-        authUid: userUid,
+      const result = await api.provisionPilgrim({
         email: newPilgrimEmail.trim().toLowerCase(),
         firstName: newPilgrimFirstName.trim() || 'Pèlerin',
         lastName: newPilgrimLastName.trim() || '',
         phone: newPilgrimPhone.trim() || undefined,
-        roleId: 'PELERIN',
-        status: 'ACTIF',
-        active: true,
         clientId: newPilgrimClientId,
-        allowedInscriptionIds: newPilgrimInscriptionIds,
-      };
+        allowedInscriptionIds: newPilgrimInscriptionIds.length > 0 ? newPilgrimInscriptionIds : undefined,
+      });
 
-      await api.createUser(newPilgrimUser);
-
-      await logAudit(
-        currentUser?.id || 'system',
-        currentUser?.roleId || 'STAFF',
-        'PILGRIM_ACCOUNT_PROVISIONED',
-        'users',
-        userUid,
-        {
-          email: newPilgrimUser.email,
-          clientId: newPilgrimClientId,
-          allowedInscriptionIds: newPilgrimInscriptionIds
-        }
-      );
-
-      alert("Compte pèlerin créé et rattaché avec succès.");
-      setIsCreatePilgrimModalOpen(false);
-      setNewPilgrimEmail('');
-      setNewPilgrimFirstName('');
-      setNewPilgrimLastName('');
-      setNewPilgrimPhone('');
-      setNewPilgrimClientId('');
-      setNewPilgrimInscriptionIds([]);
-      fetchData();
+      if ('tempPassword' in result) {
+        setPilgrimProvisionResult(result as ProvisionResult);
+        setPilgrimScreen('tempPassword');
+        fetchData();
+      } else if ('status' in result && (result as ProvisionPartialResult).status === 'partial') {
+        const partial = result as ProvisionPartialResult;
+        setPilgrimPartialError({ message: partial.message, correlationId: partial.correlationId });
+        setPilgrimScreen('partialError');
+        fetchData();
+      }
     } catch (e: any) {
       console.error(e);
       alert("Erreur lors de la création du compte pèlerin : " + (e.message || 'Action non autorisée.'));
+    } finally {
+      setPilgrimSubmitting(false);
     }
   };
 
@@ -392,6 +433,16 @@ export const UsersRolesModule: React.FC = () => {
             Gouvernance stricte des accès, matrice de permissions RBAC et affectation sécurisée Pèlerin ↔ Dossier
           </p>
         </div>
+
+        {activeTab === 'users' && currentUser?.roleId === 'SUPER_ADMIN' && (
+          <button
+            onClick={() => setIsCreateStaffModalOpen(true)}
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nouveau Compte</span>
+          </button>
+        )}
 
         {activeTab === 'roles' && (
           <button
@@ -839,177 +890,265 @@ export const UsersRolesModule: React.FC = () => {
       {isCreatePilgrimModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
-                  <UserPlus className="w-5 h-5 text-emerald-700" />
-                  <span>Nouveau Compte Accès Pèlerin</span>
-                </h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Créez un compte pèlerin rattaché à une fiche Client existante et à ses dossiers autorisés.
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {/* Client Selection */}
-              <div className="relative">
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  1. Sélectionner la Fiche Client existante *
-                </label>
-                <div 
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 font-medium focus-within:border-emerald-500 cursor-text flex justify-between items-center"
-                  onClick={() => setIsClientSearchOpen(true)}
-                >
-                  <input 
-                    type="text" 
-                    value={isClientSearchOpen ? clientSearch : (clients.find(c => c.id === newPilgrimClientId)?.lastName ? `${clients.find(c => c.id === newPilgrimClientId)?.lastName} ${clients.find(c => c.id === newPilgrimClientId)?.firstName}` : '')}
-                    onChange={(e) => {
-                      setClientSearch(e.target.value);
-                      setIsClientSearchOpen(true);
-                      if (!e.target.value) setNewPilgrimClientId('');
-                    }}
-                    onFocus={() => setIsClientSearchOpen(true)}
-                    placeholder="-- Rechercher un client dans la base --"
-                    className="bg-transparent outline-none w-full"
-                  />
-                  <Search className="w-4 h-4 text-slate-400" />
+            {pilgrimScreen === 'tempPassword' && pilgrimProvisionResult ? (
+              <TempPasswordScreen
+                email={pilgrimProvisionResult.email}
+                tempPassword={pilgrimProvisionResult.tempPassword}
+                roleLabel="Pèlerin"
+                onClose={() => {
+                  setPilgrimScreen('form');
+                  setPilgrimProvisionResult(null);
+                  setIsCreatePilgrimModalOpen(false);
+                  setNewPilgrimEmail('');
+                  setNewPilgrimFirstName('');
+                  setNewPilgrimLastName('');
+                  setNewPilgrimPhone('');
+                  setNewPilgrimClientId('');
+                  setNewPilgrimInscriptionIds([]);
+                  lastCheckedPilgrimEmail.current = '';
+                }}
+              />
+            ) : pilgrimScreen === 'partialError' && pilgrimPartialError ? (
+              <div className="space-y-5">
+                <div className="text-center">
+                  <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <AlertCircle className="w-7 h-7 text-amber-600" />
+                  </div>
+                  <h2 className="text-lg font-black text-slate-900">Intervention requise</h2>
                 </div>
-                {isClientSearchOpen && (
-                  <div className="absolute z-[100] w-full mt-1 bg-white border border-slate-300 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
-                    {filteredClients.length > 0 ? (
-                      filteredClients.map(c => (
-                        <div 
-                          key={c.id} 
-                          className="px-3 py-3 hover:bg-slate-100 cursor-pointer border-b border-slate-100 last:border-0 text-xs text-slate-900"
-                          onClick={() => {
-                            handleSelectNewPilgrimClient(c.id);
-                            setClientSearch('');
-                            setIsClientSearchOpen(false);
-                          }}
-                        >
-                          <div className="font-bold">{c.lastName} {c.firstName}</div>
-                          <div className="text-slate-500">{c.code || c.id}</div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="px-3 py-4 text-center text-slate-500 text-xs italic">Aucun client trouvé</div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900">
+                  <p className="font-bold mb-1">Compte partiellement créé.</p>
+                  <p>Intervention manuelle requise.</p>
+                  <p className="mt-2 font-mono text-[11px] text-amber-700">
+                    Référence : {pilgrimPartialError.correlationId}
+                  </p>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={() => {
+                      setPilgrimScreen('form');
+                      setPilgrimPartialError(null);
+                      setIsCreatePilgrimModalOpen(false);
+                      setNewPilgrimEmail('');
+                      setNewPilgrimFirstName('');
+                      setNewPilgrimLastName('');
+                      setNewPilgrimPhone('');
+                      setNewPilgrimClientId('');
+                      setNewPilgrimInscriptionIds([]);
+                      lastCheckedPilgrimEmail.current = '';
+                    }}
+                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                  >
+                    Fermer
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+                      <UserPlus className="w-5 h-5 text-emerald-700" />
+                      <span>Nouveau Compte Accès Pèlerin</span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Créez un compte pèlerin rattaché à une fiche Client existante et à ses dossiers autorisés.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Client Selection */}
+                  <div className="relative">
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      1. Sélectionner la Fiche Client existante *
+                    </label>
+                    <div 
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 font-medium focus-within:border-emerald-500 cursor-text flex justify-between items-center"
+                      onClick={() => setIsClientSearchOpen(true)}
+                    >
+                      <input 
+                        type="text" 
+                        value={isClientSearchOpen ? clientSearch : (clients.find(c => c.id === newPilgrimClientId)?.lastName ? `${clients.find(c => c.id === newPilgrimClientId)?.lastName} ${clients.find(c => c.id === newPilgrimClientId)?.firstName}` : '')}
+                        onChange={(e) => {
+                          setClientSearch(e.target.value);
+                          setIsClientSearchOpen(true);
+                          if (!e.target.value) setNewPilgrimClientId('');
+                        }}
+                        onFocus={() => setIsClientSearchOpen(true)}
+                        placeholder="-- Rechercher un client dans la base --"
+                        className="bg-transparent outline-none w-full"
+                      />
+                      <Search className="w-4 h-4 text-slate-400" />
+                    </div>
+                    {isClientSearchOpen && (
+                      <div className="absolute z-[100] w-full mt-1 bg-white border border-slate-300 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                        {filteredClients.length > 0 ? (
+                          filteredClients.map(c => (
+                            <div 
+                              key={c.id} 
+                              className="px-3 py-3 hover:bg-slate-100 cursor-pointer border-b border-slate-100 last:border-0 text-xs text-slate-900"
+                              onClick={() => {
+                                handleSelectNewPilgrimClient(c.id);
+                                setClientSearch('');
+                                setIsClientSearchOpen(false);
+                              }}
+                            >
+                              <div className="font-bold">{c.lastName} {c.firstName}</div>
+                              <div className="text-slate-500">{c.code || c.id}</div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-3 py-4 text-center text-slate-500 text-xs italic">Aucun client trouvé</div>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              {/* Login Email */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  2. Adresse E-mail de Connexion *
-                </label>
-                <input
-                  type="email"
-                  value={newPilgrimEmail}
-                  onChange={e => setNewPilgrimEmail(e.target.value)}
-                  placeholder="pelerin@exemple.com"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 font-medium focus:border-emerald-500 outline-none"
-                />
-              </div>
+                  {/* Login Email */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      2. Adresse E-mail de Connexion *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="email"
+                        value={newPilgrimEmail}
+                        onChange={e => setNewPilgrimEmail(e.target.value)}
+                        onBlur={handlePilgrimEmailBlur}
+                        placeholder="pelerin@exemple.com"
+                        className={`w-full bg-slate-50 border rounded-xl p-2.5 pr-10 text-xs text-slate-900 font-medium outline-none transition-colors ${
+                          pilgrimEmailAvailable === false
+                            ? 'border-red-400 focus:border-red-500'
+                            : pilgrimEmailAvailable === true
+                              ? 'border-emerald-400 focus:border-emerald-500'
+                              : 'border-slate-300 focus:border-emerald-500'
+                        }`}
+                      />
+                      <div className="absolute right-2.5 top-2.5">
+                        {pilgrimEmailChecking && <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />}
+                        {!pilgrimEmailChecking && pilgrimEmailAvailable === true && (
+                          <Check className="w-4 h-4 text-emerald-500" />
+                        )}
+                        {!pilgrimEmailChecking && pilgrimEmailAvailable === false && (
+                          <AlertCircle className="w-4 h-4 text-red-500" />
+                        )}
+                      </div>
+                    </div>
+                    {pilgrimEmailError && (
+                      <p className="text-[11px] text-red-600 mt-1">{pilgrimEmailError}</p>
+                    )}
+                    {pilgrimEmailAvailable === true && !pilgrimEmailError && (
+                      <p className="text-[11px] text-emerald-600 mt-1">Email disponible</p>
+                    )}
+                  </div>
 
-              {/* Identity details */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Prénom</label>
-                  <input
-                    type="text"
-                    value={newPilgrimFirstName}
-                    onChange={e => setNewPilgrimFirstName(e.target.value)}
-                    placeholder="Prénom"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 font-medium focus:border-emerald-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nom</label>
-                  <input
-                    type="text"
-                    value={newPilgrimLastName}
-                    onChange={e => setNewPilgrimLastName(e.target.value)}
-                    placeholder="Nom de famille"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 font-medium focus:border-emerald-500 outline-none"
-                  />
-                </div>
-              </div>
+                  {/* Identity details */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Prénom</label>
+                      <input
+                        type="text"
+                        value={newPilgrimFirstName}
+                        onChange={e => setNewPilgrimFirstName(e.target.value)}
+                        placeholder="Prénom"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 font-medium focus:border-emerald-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nom</label>
+                      <input
+                        type="text"
+                        value={newPilgrimLastName}
+                        onChange={e => setNewPilgrimLastName(e.target.value)}
+                        placeholder="Nom de famille"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 font-medium focus:border-emerald-500 outline-none"
+                      />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Numéro de Téléphone</label>
-                <input
-                  type="text"
-                  value={newPilgrimPhone}
-                  onChange={e => setNewPilgrimPhone(e.target.value)}
-                  placeholder="+221 ..."
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 font-medium focus:border-emerald-500 outline-none"
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Numéro de Téléphone</label>
+                    <input
+                      type="text"
+                      value={newPilgrimPhone}
+                      onChange={e => setNewPilgrimPhone(e.target.value)}
+                      placeholder="+221 ..."
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 font-medium focus:border-emerald-500 outline-none"
+                    />
+                  </div>
 
-              {/* Inscriptions associated with the selected client */}
-              {newPilgrimClientId && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    3. Dossiers Autorisés (Multi-Dossiers)
-                  </label>
-                  {inscriptions.filter(i => i.clientId === newPilgrimClientId).length === 0 ? (
-                    <p className="text-[11px] text-amber-600 italic">
-                      Ce client n'a pas encore de dossier d'inscription. Tous ses futurs dossiers seront visibles par défaut.
-                    </p>
-                  ) : (
-                    <div className="space-y-1.5 max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50">
-                      {inscriptions
-                        .filter(i => i.clientId === newPilgrimClientId)
-                        .map(ins => {
-                          const isChecked = newPilgrimInscriptionIds.includes(ins.id);
-                          return (
-                            <label key={ins.id} className="flex items-center gap-2 cursor-pointer text-xs p-1.5 rounded hover:bg-white transition">
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setNewPilgrimInscriptionIds(prev => [...prev, ins.id]);
-                                  } else {
-                                    setNewPilgrimInscriptionIds(prev => prev.filter(id => id !== ins.id));
-                                  }
-                                }}
-                                className="rounded text-emerald-600 focus:ring-emerald-500"
-                              />
-                              <span className="font-mono font-bold text-slate-900">{ins.code}</span>
-                              <span className="text-slate-500 text-[11px]">({ins.statut})</span>
-                            </label>
-                          );
-                        })}
+                  {/* Inscriptions associated with the selected client */}
+                  {newPilgrimClientId && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        3. Dossiers Autorisés (Multi-Dossiers)
+                      </label>
+                      {inscriptions.filter(i => i.clientId === newPilgrimClientId).length === 0 ? (
+                        <p className="text-[11px] text-amber-600 italic">
+                          Ce client n'a pas encore de dossier d'inscription. Tous ses futurs dossiers seront visibles par défaut.
+                        </p>
+                      ) : (
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50">
+                          {inscriptions
+                            .filter(i => i.clientId === newPilgrimClientId)
+                            .map(ins => {
+                              const isChecked = newPilgrimInscriptionIds.includes(ins.id);
+                              return (
+                                <label key={ins.id} className="flex items-center gap-2 cursor-pointer text-xs p-1.5 rounded hover:bg-white transition">
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setNewPilgrimInscriptionIds(prev => [...prev, ins.id]);
+                                      } else {
+                                        setNewPilgrimInscriptionIds(prev => prev.filter(id => id !== ins.id));
+                                      }
+                                    }}
+                                    className="rounded text-emerald-600 focus:ring-emerald-500"
+                                  />
+                                  <span className="font-mono font-bold text-slate-900">{ins.code}</span>
+                                  <span className="text-slate-500 text-[11px]">({ins.statut})</span>
+                                </label>
+                              );
+                            })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            <div className="pt-3 border-t border-slate-200 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setIsCreatePilgrimModalOpen(false);
-                  setNewPilgrimEmail('');
-                  setNewPilgrimClientId('');
-                  setNewPilgrimInscriptionIds([]);
-                }}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleCreatePilgrimAccount}
-                disabled={!newPilgrimEmail || !newPilgrimClientId}
-                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition cursor-pointer"
-              >
-                <Check className="w-4 h-4" />
-                <span>Créer & Activer le Compte</span>
-              </button>
-            </div>
+                <div className="pt-3 border-t border-slate-200 flex justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      setIsCreatePilgrimModalOpen(false);
+                      setNewPilgrimEmail('');
+                      setNewPilgrimClientId('');
+                      setNewPilgrimInscriptionIds([]);
+                      lastCheckedPilgrimEmail.current = '';
+                    }}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleCreatePilgrimAccount}
+                    disabled={!newPilgrimEmail || !newPilgrimClientId || pilgrimSubmitting || pilgrimEmailAvailable === false}
+                    className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                  >
+                    {pilgrimSubmitting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4" />
+                    )}
+                    <span>Créer & Activer le Compte</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1137,6 +1276,13 @@ export const UsersRolesModule: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal: Create Staff Account (SUPER_ADMIN only) */}
+      <CreateStaffAccountModal
+        isOpen={isCreateStaffModalOpen}
+        onClose={() => setIsCreateStaffModalOpen(false)}
+        onSuccess={fetchData}
+      />
     </div>
   );
 };

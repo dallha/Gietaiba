@@ -22,6 +22,13 @@ import {
   AppNotification,
 } from '../types.js';
 import { createNotification } from './notification.service.js';
+import {
+  ProvisionStaffInput,
+  ProvisionPilgrimInput,
+  ProvisionResult,
+  ProvisionPartialResult,
+  EmailCheckResult,
+} from '../../contracts/provisioning.js';
 
 
 class ApiService {
@@ -120,13 +127,6 @@ class ApiService {
     return this.request('/api/users');
   }
 
-  async createUser(user: Partial<User> & { password?: string }): Promise<User> {
-    return this.request('/api/users', {
-      method: 'POST',
-      body: JSON.stringify(user),
-    });
-  }
-
   async updateUser(id: string, updates: Partial<User>): Promise<User> {
     return this.request(`/api/users/${id}`, {
       method: 'PUT',
@@ -159,6 +159,35 @@ class ApiService {
 
   async getRoles(): Promise<Role[]> {
     return this.request('/api/roles');
+  }
+
+  // Provisioning (V1)
+  // NOTE: a 207 COMPENSATION_FAILED response returns ProvisionPartialResult
+  // (generic message + correlationId — neonAuthId is NEVER exposed to the client).
+  async provisionStaff(input: ProvisionStaffInput): Promise<ProvisionResult | ProvisionPartialResult> {
+    return this.request('/api/provisioning/staff', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async provisionPilgrim(input: ProvisionPilgrimInput): Promise<ProvisionResult | ProvisionPartialResult> {
+    return this.request('/api/provisioning/pilgrim', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async checkEmailAvailability(email: string): Promise<EmailCheckResult> {
+    const qs = new URLSearchParams({ email }).toString();
+    return this.request(`/api/provisioning/check-email?${qs}`);
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await this.request('/api/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
   }
 
   // Notifications
