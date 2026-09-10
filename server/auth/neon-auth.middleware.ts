@@ -5,6 +5,15 @@ import { pool } from '../db/neon.js';
 import { UserSession } from '../../src/types.js';
 
 /**
+ * Extension server-side de UserSession pour le flag must_change_password.
+ * Ce champ n'est PAS dans l'interface UserSession (src/types.ts) — Track A le gère.
+ * Côté serveur uniquement, pour le gate intégré dans requireNeonAuth.
+ */
+interface ServerSession extends UserSession {
+  mustChangePassword?: boolean;
+}
+
+/**
  * Convertit la requête Express en RequestContext requis par le SDK Neon Auth.
  * Neon Auth exige l'interface Web API Request ; cet adaptateur fait le pont
  * avec l'objet Request d'Express sans modifier l'infrastructure existante.
@@ -100,8 +109,9 @@ export const requireNeonAuth = async (req: Request, res: Response, next: NextFun
       active: boolean;
       client_id: string | null;
       allowed_inscription_ids: string[] | null;
+      must_change_password: boolean;
     }>(
-      `SELECT id, email, display_name, phone, role_id, status, active, client_id, allowed_inscription_ids
+      `SELECT id, email, display_name, phone, role_id, status, active, client_id, allowed_inscription_ids, must_change_password
        FROM public.users
        WHERE neon_auth_id = $1
        LIMIT 1`,
@@ -133,7 +143,7 @@ export const requireNeonAuth = async (req: Request, res: Response, next: NextFun
     //   - requirePermission()
     //   - requireStaff() → lit user.role === 'PELERIN'
     //   - routes qui lisent req.user.clientId pour l'isolation pèlerin
-    const session: UserSession = {
+    const session: ServerSession = {
       id:                    row.id,
       email:                 row.email,
       role:                  row.role_id,          // ← clé RBAC
@@ -142,9 +152,32 @@ export const requireNeonAuth = async (req: Request, res: Response, next: NextFun
       clientId:              row.client_id       ?? undefined,
       allowedInscriptionIds: row.allowed_inscription_ids ?? undefined,
       active:                row.active,           // ← vérifié par authorize()
+      mustChangePassword:    row.must_change_password,  // ← gate intégré dans requireNeonAuth
     };
 
     req.user = session;
+
+    // ── PASSWORD CHANGE GATE ───────────────────────────────────────────────
+    // Si must_change_password est TRUE, bloque TOUTES les routes sauf
+    // l'allowlist (changement de mot de passe, neon-me, logout).
+    // Intégré ici pour couvrir automatiquement toutes les routes authentifiées
+    // sans double-exécution du middleware.
+    if (session.mustChangePassword) {
+      const PASSWORD_CHANGE_ALLOWED_PATHS = [
+        '/api/change-password',
+        '/api/auth/neon-me',
+        '/api/auth/logout',
+      ];
+
+      if (!PASSWORD_CHANGE_ALLOWED_PATHS.includes(req.path)) {
+        res.status(403).json({
+          error: 'Changement de mot de passe obligatoire avant de continuer.',
+          code: 'PASSWORD_CHANGE_REQUIRED',
+        });
+        return;
+      }
+    }
+
     next();
   } catch (error: any) {
     console.error('[NeonAuthMiddleware] Erreur inattendue :', error);

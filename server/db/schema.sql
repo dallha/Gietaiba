@@ -101,6 +101,9 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS idx_users_neon_auth_id ON users(neon_auth_id);
 
+-- Provisioning V1: force password change on first login
+ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
+
 CREATE TABLE IF NOT EXISTS user_roles (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
@@ -597,3 +600,18 @@ CREATE TABLE IF NOT EXISTS user_client_access (
 CREATE INDEX IF NOT EXISTS idx_uca_user ON user_client_access(user_id);
 CREATE INDEX IF NOT EXISTS idx_uca_client ON user_client_access(client_id);
 
+-- =====================================================================
+-- SEED : RÔLES SYSTÈME (idempotent — ON CONFLICT DO NOTHING)
+-- Tous les rôles référencés par PROVISIONED_STAFF_ROLES + rôles internes.
+-- =====================================================================
+INSERT INTO roles (id, name, description, is_system) VALUES
+  ('SUPER_ADMIN',            'Super Administrateur',  'Accès total au système GIE TAIBA',         TRUE),
+  ('DIRECTION',              'Direction Générale',     'Direction et supervision globale',          TRUE),
+  ('AGENT',                  'Conseiller Pèlerinage',  'Gestion des inscriptions et clients',       TRUE),
+  ('AGENT_COMMERCIAL',       'Agent Commercial',       'Agent commercial GIE TAIBA',                TRUE),
+  ('CAISSE',                 'Responsable Caisse',     'Gestion des encaissements et paiements',    TRUE),
+  ('COMPTABLE',              'Comptable',              'Comptabilité GIE TAIBA',                    TRUE),
+  ('LOGISTIQUE',             'Chef Logistique',        'Gestion logistique et hébergements',        TRUE),
+  ('RESPONSABLE_COMMERCIAL', 'Responsable Commercial', 'Responsable commercial GIE TAIBA',          TRUE),
+  ('PELERIN',                'Pèlerin',                'Accès portail pèlerin uniquement',          TRUE)
+ON CONFLICT (id) DO NOTHING;

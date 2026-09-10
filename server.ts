@@ -1,14 +1,22 @@
 import 'dotenv/config';
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
+import rateLimit from 'express-rate-limit';
 
 // Middleware & Auth
 import { requirePermission, requireStaff } from './server/auth/auth.middleware.js';
 import { authorizationService } from './server/auth/authorization.service.js';
 
 import { requireNeonAuth } from './server/auth/neon-auth.middleware.js';
+
+// Provisioning
+import { provisioningService } from './server/services/provisioning.service.js';
+
+// Database
+import { pool, initSchema } from './server/db/neon.js';
+
 
 // Repositories
 import { userRepository } from './server/repositories/user.repository.js';
@@ -101,6 +109,59 @@ function formatErrorResponse(err: any) {
   };
 }
 
+// ── SUPER_ADMIN MIDDLEWARE (with CSRF Origin check) ─────────────────────
+function requireSuperAdmin(req: Request, res: Response, next: NextFunction): void {
+  // CSRF: reject cross-origin requests when Origin header is present
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const appUrl = process.env.APP_URL;
+
+  if (appUrl && origin && !origin.startsWith(appUrl)) {
+    res.status(403).json({
+      error: 'Requête rejetée: origine non autorisée.',
+      code: 'CSRF_ORIGIN_MISMATCH',
+    });
+    return;
+  }
+
+  // Also check Referer if no Origin header (some older browsers / same-origin requests)
+  if (appUrl && !origin && referer && !referer.startsWith(appUrl)) {
+    res.status(403).json({
+      error: 'Requête rejetée: origine non autorisée.',
+      code: 'CSRF_ORIGIN_MISMATCH',
+    });
+    return;
+  }
+
+  // Explicit role check — ADMIN and DIRECTION have '*' permission but must be excluded
+  if (!req.user || req.user.role !== 'SUPER_ADMIN') {
+    res.status(403).json({
+      error: 'Accès réservé aux Super Administrateurs.',
+      code: 'SUPER_ADMIN_REQUIRED',
+    });
+    return;
+  }
+
+  next();
+}
+
+// ── RATE LIMITERS ──────────────────────────────────────────────────────
+const provisioningRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,             // 10 requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de requêtes. Réessayez dans 1 minute.', code: 'RATE_LIMITED' },
+});
+
+const passwordChangeRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5,              // 5 requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de tentatives. Réessayez dans 1 minute.', code: 'RATE_LIMITED' },
+});
+
 // ----------------------------------------------------
 // API ROUTES
 // ----------------------------------------------------
@@ -147,14 +208,14 @@ app.get('/api/users', requireNeonAuth, requirePermission('users.read'), async (r
   }
 });
 
-app.post('/api/users', requireNeonAuth, requirePermission('users.create'), async (req: Request, res: Response) => {
-  try {
-    const newUser = await userRepository.createUser(req.body);
-    res.status(201).json(newUser);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+app.post('/api/users', requireNeonAuth, requirePermission('users.create'), requireSuperAdmin,
+  async (_req: Request, res: Response) => {
+    res.status(410).json({
+      error: 'Endpoint déprécié. Utilisez POST /api/provisioning/staff ou POST /api/provisioning/pilgrim.',
+      code: 'ENDPOINT_DEPRECATED',
+    });
   }
-});
+);
 
 app.put('/api/users/:id', requireNeonAuth, requirePermission('users.update'), async (req: Request, res: Response) => {
   try {
@@ -966,6 +1027,188 @@ app.put('/api/notifications/read-all', requireNeonAuth, async (req: Request, res
   }
 });
 
+// ── PROVISIONING V1 ──────────────────────────────────────────────────
+
+app.get('/api/provisioning/check-email',
+  requireNeonAuth, requirePermission('users.create'), requireSuperAdmin, provisioningRateLimit,
+  async (req: Request, res: Response) => {
+    try {
+      const { email } = req.query as { email?: string };
+      if (!email || !email.trim()) {
+        return res.status(400).json({ error: 'Paramètre email requis.', code: 'INVALID_INPUT' });
+      }
+      const result = await provisioningService.checkEmail(email);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erreur lors de la vérification.', code: 'INTERNAL_ERROR' });
+    }
+  }
+);
+
+app.post('/api/provisioning/staff',
+  requireNeonAuth, requirePermission('users.create'), requireSuperAdmin, provisioningRateLimit,
+  async (req: Request, res: Response) => {
+    try {
+      const result = await provisioningService.provisionStaff(req, req.body);
+      res.status(201).json(result);
+    } catch (err: any) {
+      const code = err?.code;
+      if (code && typeof code === 'string') {
+        // COMPENSATION_FAILED carries a JSON ProvisionPartialResult in err.message
+        if (code === 'COMPENSATION_FAILED') {
+          try {
+            const partial = JSON.parse(err.message);
+            return res.status(207).json(partial);
+          } catch {
+            // fall through to generic handling if message isn't valid JSON
+          }
+        }
+        const statusMap: Record<string, number> = {
+          EMAIL_EXISTS_IN_GIE: 409,
+          EMAIL_EXISTS_IN_NEON_AUTH: 409,
+          INVALID_ROLE: 400,
+          CLIENT_ID_REQUIRED: 400,
+          CLIENT_NOT_FOUND: 404,
+          UNAUTHORIZED: 403,
+          NEON_AUTH_API_ERROR: 502,
+          DB_INSERT_ERROR: 500,
+          COMPENSATION_FAILED: 207,
+        };
+        const status = statusMap[code] || 400;
+        res.status(status).json({ error: err.message, code });
+      } else {
+        res.status(500).json({ error: 'Erreur interne lors de la provision.', code: 'INTERNAL_ERROR' });
+      }
+    }
+  }
+);
+
+app.post('/api/provisioning/pilgrim',
+  requireNeonAuth, requirePermission('users.create'), requireSuperAdmin, provisioningRateLimit,
+  async (req: Request, res: Response) => {
+    try {
+      const result = await provisioningService.provisionPilgrim(req, req.body);
+      res.status(201).json(result);
+    } catch (err: any) {
+      const code = err?.code;
+      if (code && typeof code === 'string') {
+        // COMPENSATION_FAILED carries a JSON ProvisionPartialResult in err.message
+        if (code === 'COMPENSATION_FAILED') {
+          try {
+            const partial = JSON.parse(err.message);
+            return res.status(207).json(partial);
+          } catch {
+            // fall through to generic handling if message isn't valid JSON
+          }
+        }
+        const statusMap: Record<string, number> = {
+          EMAIL_EXISTS_IN_GIE: 409,
+          EMAIL_EXISTS_IN_NEON_AUTH: 409,
+          INVALID_ROLE: 400,
+          CLIENT_ID_REQUIRED: 400,
+          CLIENT_NOT_FOUND: 404,
+          UNAUTHORIZED: 403,
+          NEON_AUTH_API_ERROR: 502,
+          DB_INSERT_ERROR: 500,
+          COMPENSATION_FAILED: 207,
+        };
+        const status = statusMap[code] || 400;
+        res.status(status).json({ error: err.message, code });
+      } else {
+        res.status(500).json({ error: 'Erreur interne lors de la provision.', code: 'INTERNAL_ERROR' });
+      }
+    }
+  }
+);
+
+// ── CHANGE PASSWORD (NON-PROXIED — avoids /api/auth/* proxy at line 55) ──
+app.post('/api/change-password',
+  requireNeonAuth, passwordChangeRateLimit,
+  async (req: Request, res: Response) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      // Validate input
+      if (!currentPassword || typeof currentPassword !== 'string' || !currentPassword.trim()) {
+        return res.status(400).json({
+          error: 'Le mot de passe actuel est requis.',
+          code: 'INVALID_INPUT',
+        });
+      }
+      if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+        return res.status(400).json({
+          error: 'Le nouveau mot de passe doit contenir au moins 8 caractères.',
+          code: 'INVALID_INPUT',
+        });
+      }
+
+      const cookieHeader = req.headers.cookie;
+      if (!cookieHeader) {
+        return res.status(401).json({ error: 'Session manquante.', code: 'NEON_SESSION_INVALID' });
+      }
+
+      // Get NEON_AUTH_URL from provisioning service helper (validated at startup)
+      const neonAuthUrl = process.env.NEON_AUTH_URL;
+      if (!neonAuthUrl) {
+        return res.status(500).json({ error: 'Configuration serveur incomplète.', code: 'CONFIG_ERROR' });
+      }
+
+      // Call Neon Auth standard /change-password endpoint with USER'S OWN session cookie
+      const neonResponse = await fetch(`${neonAuthUrl}/change-password`, {
+        method: 'POST',
+        redirect: 'error',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': cookieHeader,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      if (!neonResponse.ok) {
+        const body = await neonResponse.text();
+        console.error('[ChangePassword] Neon Auth change-password failed', {
+          status: neonResponse.status,
+          body, // logged server-side ONLY
+        });
+
+        if (neonResponse.status === 400) {
+          return res.status(400).json({
+            error: 'Mot de passe actuel incorrect.',
+            code: 'WRONG_CURRENT_PASSWORD',
+          });
+        }
+        return res.status(502).json({
+          error: 'Erreur lors du changement de mot de passe.',
+          code: 'NEON_AUTH_API_ERROR',
+        });
+      }
+
+      // Success — clear must_change_password flag
+      await pool.query(
+        'UPDATE users SET must_change_password = FALSE, updated_at = NOW() WHERE id = $1',
+        [req.user!.id]
+      );
+
+      // Audit log
+      try {
+        await auditRepository.logAction(
+          req.user!.id,
+          'PASSWORD_CHANGED',
+          'USER',
+          req.user!.id,
+        );
+      } catch (auditErr) {
+        console.error('[ChangePassword] Audit log failed', auditErr);
+      }
+
+      res.json({ message: 'Mot de passe modifié avec succès.' });
+    } catch (err: any) {
+      console.error('[ChangePassword] Unexpected error', err);
+      res.status(500).json({ error: 'Erreur interne lors du changement de mot de passe.', code: 'INTERNAL_ERROR' });
+    }
+  }
+);
+
 // API 404 Catch-All: ensures ANY unhandled /api/* route returns 404 JSON and never reaches Vite HTML fallback
 app.all('/api/*', (req: Request, res: Response) => {
   res.status(404).json({ error: `Route API introuvable: ${req.method} ${req.originalUrl}` });
@@ -975,7 +1218,16 @@ app.all('/api/*', (req: Request, res: Response) => {
 // VITE MIDDLEWARE & SPA FALLBACK
 // ----------------------------------------------------
 async function startServer() {
+  // Run idempotent schema migrations + seed on every boot.
+  // All statements use IF NOT EXISTS / ON CONFLICT DO NOTHING — safe to re-run.
+  try {
+    await initSchema();
+  } catch (err) {
+    console.error('[Boot] initSchema failed — server continues with existing schema:', err);
+  }
+
   if (process.env.NODE_ENV !== 'production') {
+
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',

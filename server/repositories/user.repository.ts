@@ -55,6 +55,54 @@ export class UserRepository {
     return this.mapRowToSession(res.rows[0]);
   }
 
+  /**
+   * Crée un utilisateur provisionné via Neon Auth.
+   * Le password_hash est un placeholder (jamais utilisé pour l'auth — Neon Auth gère la session).
+   * Le champ must_change_password force le premier login à changer de mot de passe.
+   */
+  public async createProvisionedUser(data: {
+    email: string;
+    displayName: string;
+    phone?: string;
+    roleId: string;
+    clientId?: string;
+    allowedInscriptionIds?: string[];
+    neonAuthId: string;
+    mustChangePassword: boolean;
+  }): Promise<User> {
+    const id = `usr-${Date.now()}`;
+
+    const res = await pool.query(
+      `INSERT INTO users (
+        id, email, display_name, phone, password_hash, role_id, status, active,
+        client_id, allowed_inscription_ids, neon_auth_id, must_change_password,
+        created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+      RETURNING *`,
+      [
+        id,
+        data.email.toLowerCase().trim(),
+        data.displayName,
+        data.phone || null,
+        crypto.randomBytes(32).toString('hex'),
+        data.roleId,
+        'ACTIF',
+        true,
+        data.clientId || null,
+        data.allowedInscriptionIds || null,
+        data.neonAuthId,
+        data.mustChangePassword,
+      ]
+    );
+
+    await pool.query(
+      `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [id, data.roleId]
+    );
+
+    return this.mapRowToUser(res.rows[0]);
+  }
+
   public async createUser(user: Partial<User> & { password?: string }): Promise<User> {
     const id = user.id || `usr-${Date.now()}`;
     const email = (user.email || '').toLowerCase().trim();
