@@ -99,7 +99,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   
   const handleLogout = async () => {
     await logoutUser();
-    navigate('/login');
+    navigate('/connexion');
   };
 
   const navItems = [

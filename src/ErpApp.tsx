@@ -22,6 +22,7 @@ import { UsersRolesModule } from './modules/users/UsersRolesModule.js';
 import { WorkspaceModule } from './modules/workspace/WorkspaceModule.js';
 import { api } from './services/api.js';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   User,
   Client,
@@ -43,8 +44,67 @@ import {
   DashboardStats,
 } from './types.js';
 
+export const MODULE_TO_ROUTE: Record<string, string> = {
+  'dashboard': '/tableau-de-bord',
+  'clients': '/clients',
+  'inscriptions': '/inscriptions',
+  'packages': '/programmes',
+  'paiements': '/paiements',
+  'recouvrement': '/recouvrement',
+  'depenses': '/depenses',
+  'voyages': '/voyages',
+  'logistique': '/logistique',
+  'hotels': '/hotels',
+  'vols': '/vols',
+  'groupes': '/groupes',
+  'documents': '/documents',
+  'visas': '/visas',
+  'rapports': '/rapports',
+  'users-roles': '/utilisateurs',
+  'settings': '/parametres',
+  'audit': '/audit',
+  'workspace': '/workspace',
+  'espace-pelerin': '/espace-pelerin',
+};
+
+export const ROUTE_TO_MODULE: Record<string, string> = {
+  '/tableau-de-bord': 'dashboard',
+  '/clients': 'clients',
+  '/inscriptions': 'inscriptions',
+  '/programmes': 'packages',
+  '/packages': 'packages',
+  '/paiements': 'paiements',
+  '/recouvrement': 'recouvrement',
+  '/depenses': 'depenses',
+  '/voyages': 'voyages',
+  '/logistique': 'logistique',
+  '/hotels': 'hotels',
+  '/vols': 'vols',
+  '/groupes': 'groupes',
+  '/documents': 'documents',
+  '/visas': 'visas',
+  '/rapports': 'rapports',
+  '/utilisateurs': 'users-roles',
+  '/users-roles': 'users-roles',
+  '/parametres': 'settings',
+  '/settings': 'settings',
+  '/audit': 'audit',
+  '/workspace': 'workspace',
+  '/espace-pelerin': 'espace-pelerin',
+};
+
 export default function ErpApp() {
-  const [activeModule, setActiveModule] = useState<string>('dashboard');
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Résoudre le module actif directement depuis l'URL courante
+  const activeModule = ROUTE_TO_MODULE[location.pathname] || 'dashboard';
+
+  const navigateToModule = (mod: string) => {
+    const route = MODULE_TO_ROUTE[mod] || (mod.startsWith('/') ? mod : `/${mod}`);
+    navigate(route);
+  };
+
   const [loading, setLoading] = useState<boolean>(true);
 
   // Core entities state
@@ -253,7 +313,7 @@ export default function ErpApp() {
   };
 
   const handleNavigateToPayment = (clientId: string, inscriptionId: string) => {
-    setActiveModule('paiements');
+    navigateToModule('paiements');
   };
 
   if (loading) {
@@ -304,7 +364,7 @@ export default function ErpApp() {
           currentClientId={activePilgrimId || clients[0]?.id || ''}
           clients={clients}
           settings={settings}
-          onExitPortal={() => setActiveModule('dashboard')}
+          onExitPortal={() => navigateToModule('dashboard')}
           onOpenReceipt={handleOpenReceipt}
           onSelectClient={(id) => setActivePilgrimId(id)}
         />
@@ -328,19 +388,19 @@ export default function ErpApp() {
         if (mod === 'espace-pelerin' && clients.length > 0 && !activePilgrimId) {
           setActivePilgrimId(clients[0].id);
         }
-        setActiveModule(mod);
+        navigateToModule(mod);
       }}
       onSelectModule={(mod) => {
         if (mod === 'espace-pelerin' && clients.length > 0 && !activePilgrimId) {
           setActivePilgrimId(clients[0].id);
         }
-        setActiveModule(mod);
+        navigateToModule(mod);
       }}
       onOpenPilgrimPortal={() => {
         if (clients.length > 0 && !activePilgrimId) {
           setActivePilgrimId(clients[0].id);
         }
-        setActiveModule('espace-pelerin');
+        navigateToModule('espace-pelerin');
       }}
       currentUser={currentUser || users[0] || null}
       allUsers={users}
@@ -357,14 +417,14 @@ export default function ErpApp() {
       onOpenReceipt={handleOpenReceipt}
       onSelectClient={(client) => {
         setSelectedClientIdForModule(client.id);
-        setActiveModule('clients');
+        navigateToModule('clients');
       }}
       onSelectVoyage={(voyage) => {
-        setActiveModule('voyages');
+        navigateToModule('voyages');
       }}
       onSelectInscription={(inscription) => {
         setSearchInscriptionCode(inscription.code);
-        setActiveModule('inscriptions');
+        navigateToModule('inscriptions');
       }}
     >
       {/* 1. DASHBOARD */}
@@ -377,7 +437,7 @@ export default function ErpApp() {
           voyages={voyages}
           packages={packages}
           settings={settings}
-          onNavigate={(mod) => setActiveModule(mod)}
+          onNavigate={(mod) => navigateToModule(mod)}
           onOpenReceipt={handleOpenReceipt}
         />
       )}
@@ -427,7 +487,7 @@ export default function ErpApp() {
           onUpdatePackage={api.updatePackage}
           onCreateNewPriceVersion={api.createNewPriceVersion}
           onDeletePackage={api.deletePackage}
-          onNavigateToVoyages={() => setActiveModule('voyages')}
+          onNavigateToVoyages={() => navigateToModule('voyages')}
         />
       )}
 
@@ -482,7 +542,7 @@ export default function ErpApp() {
       )}
 
       {/* 9. LOGISTIQUE */}
-      {activeModule === 'logistique' && (
+      {(activeModule === 'logistique' || activeModule === 'hotels' || activeModule === 'vols' || activeModule === 'groupes') && (
         <LogistiqueModule
           flights={flights}
           tickets={tickets}
@@ -526,7 +586,7 @@ export default function ErpApp() {
           onCreateVoyage={api.createVoyage}
           onUpdateVoyage={api.updateVoyage}
           onDeleteVoyage={api.deleteVoyage}
-          onNavigateToPackages={() => setActiveModule('packages')}
+          onNavigateToPackages={() => navigateToModule('packages')}
         />
       )}
 

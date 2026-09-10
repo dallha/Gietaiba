@@ -86,7 +86,7 @@ export const UnifiedLogin: React.FC = () => {
       setError(null);
       const { error: apiError } = await (neonAuthClient.requestPasswordReset as any)({
         email,
-        redirectTo: window.location.origin + '/reset-password'
+        redirectTo: window.location.origin + '/reinitialisation-mot-de-passe'
       });
 
       if (apiError) {

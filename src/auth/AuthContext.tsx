@@ -40,7 +40,7 @@ const AuthContext = createContext<AuthContextType>({
   isPilgrim: false,
   isStaff: false,
   isSuperAdmin: false,
-  getAuthorizedPath: () => '/login',
+  getAuthorizedPath: () => '/connexion',
   hasPermission: () => false,
   refreshUserData: async () => {},
   loginWithSession: () => {},
@@ -204,12 +204,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const getAuthorizedPath = (): string => {
     if (!currentUser || !currentUser.active || currentUser.status !== 'ACTIF') {
-      return '/login';
+      return '/connexion';
     }
     if (currentUser.roleId === 'PELERIN' || currentUser.roleId === 'PILGRIM') {
       return '/portail';
     }
-    return '/erp';
+    return '/tableau-de-bord';
   };
 
   return (

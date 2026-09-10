@@ -46,7 +46,7 @@ export const ResetPassword: React.FC = () => {
       }
 
       setSuccess(true);
-      setTimeout(() => navigate('/login'), 3000);
+      setTimeout(() => navigate('/connexion'), 3000);
     } catch (err: any) {
       setError(err.message || "Impossible de réinitialiser le mot de passe.");
     } finally {

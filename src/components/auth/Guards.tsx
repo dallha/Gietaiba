@@ -19,7 +19,7 @@ export const AuthGuard: React.FC = () => {
 
   // Not signed in at all -> redirect to unified neutral login
   if (!currentUser) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/connexion" replace />;
   }
 
   // Signed in but explicitly marked inactive or suspended
@@ -77,7 +77,7 @@ export const ErpGuard: React.FC = () => {
   }
 
   if (!currentUser) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/connexion" replace />;
   }
 
   // Strict RBAC Separation: PELERIN -> ERP = DENIED
@@ -134,7 +134,7 @@ export const PilgrimGuard: React.FC = () => {
   }
 
   if (!currentUser) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/connexion" replace />;
   }
 
   // Strict RBAC Separation: STAFF -> portail PILGRIM = DENIED
@@ -154,11 +154,11 @@ export const PilgrimGuard: React.FC = () => {
           </p>
           <div className="space-y-2.5">
             <button
-              onClick={() => navigate('/erp')}
+              onClick={() => navigate('/tableau-de-bord')}
               className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition cursor-pointer shadow-lg shadow-amber-900/40"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Retourner à l'Espace Équipe (/erp)</span>
+              <span>Retourner au Tableau de Bord</span>
             </button>
             <button
               onClick={() => logoutUser()}
@@ -191,7 +191,7 @@ export const SuperAdminGuard: React.FC = () => {
   }
 
   if (!currentUser) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/connexion" replace />;
   }
 
   if (!isSuperAdmin) {
@@ -209,10 +209,10 @@ export const SuperAdminGuard: React.FC = () => {
             Ce module requiert les privilèges de Super Administrateur. Votre rôle actuel ne vous autorise pas à modifier ces paramètres de gouvernance.
           </p>
           <button
-            onClick={() => navigate('/erp')}
+            onClick={() => navigate('/tableau-de-bord')}
             className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition cursor-pointer"
           >
-            Retourner au tableau de bord ERP
+            Retourner au tableau de bord
           </button>
         </div>
       </div>

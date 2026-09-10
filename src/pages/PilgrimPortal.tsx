@@ -157,7 +157,7 @@ export const PilgrimPortal: React.FC = () => {
 
   const handleLogout = async () => {
     await logoutUser();
-    navigate('/login');
+    navigate('/connexion');
   };
 
   // Main Data Loader with Multi-Beneficiary Resolution
