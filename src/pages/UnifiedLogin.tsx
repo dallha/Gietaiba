@@ -84,7 +84,7 @@ export const UnifiedLogin: React.FC = () => {
     try {
       setSubmitting(true);
       setError(null);
-      const { error: apiError } = await (neonAuthClient.forgetPassword as any)({
+      const { error: apiError } = await (neonAuthClient.requestPasswordReset as any)({
         email,
         redirectTo: window.location.origin + '/reset-password'
       });
