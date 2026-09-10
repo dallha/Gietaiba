@@ -7,32 +7,25 @@ export interface RolePermissionsMap {
 
 const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   SUPER_ADMIN: ['*'],
-  ADMIN: ['*'],
-  DIRECTION: ['*'],
-  RESPONSABLE_COMMERCIAL: [
-    'campaigns.*', 'voyages.*', 'packages.*', 'clients.*', 'inscriptions.*',
-    'visas.*', 'logistics.*', 'logistique.*', 'documents.*', 'reports.read', 'payments.read'
-  ],
-  AGENT_COMMERCIAL: [
-    'campaigns.read', 'voyages.read', 'packages.read', 'clients.read', 'clients.create', 'clients.update',
-    'inscriptions.read', 'inscriptions.create', 'inscriptions.update', 'payments.create', 'payments.read',
-    'visas.read', 'visas.update', 'documents.read', 'documents.create', 'logistics.read', 'logistique.read'
-  ],
-  AGENT: [
-    'campaigns.read', 'voyages.read', 'packages.read', 'clients.read', 'clients.create', 'clients.update',
-    'inscriptions.read', 'inscriptions.create', 'inscriptions.update', 'payments.create', 'payments.read',
-    'visas.read', 'visas.update', 'documents.read', 'documents.create', 'logistics.read', 'logistique.read'
+  DIRECTION: [
+    'clients.*', 'inscriptions.*', 'visas.*', 'documents.*',
+    'voyages.*', 'campaigns.*', 'packages.*', 'logistics.*', 'logistique.*',
+    'payments.*', 'expenses.*', 'depenses.*', 'reports.*',
+    'audit.*', 'settings.*', 'users.read'
   ],
   COMPTABLE: [
-    'payments.*', 'expenses.*', 'depenses.*', 'clients.read', 'inscriptions.read',
-    'reports.read', 'campaigns.read', 'voyages.read'
+    'payments.*', 'expenses.*', 'depenses.*', 'reports.*',
+    'clients.read', 'clients.view', 'inscriptions.read', 'inscriptions.view',
+    'voyages.read', 'voyages.view', 'packages.read', 'documents.read', 'documents.view'
   ],
-  CAISSE: [
-    'payments.*', 'expenses.*', 'depenses.*', 'clients.read', 'inscriptions.read',
-    'reports.read', 'campaigns.read', 'voyages.read'
-  ],
-  LOGISTIQUE: [
-    'logistics.*', 'logistique.*', 'flights.*', 'hotels.*', 'visas.*', 'clients.read', 'inscriptions.read'
+  AGENT: [
+    'clients.read', 'clients.view', 'clients.create', 'clients.update',
+    'inscriptions.read', 'inscriptions.view', 'inscriptions.create', 'inscriptions.update',
+    'visas.read', 'visas.view', 'visas.update',
+    'documents.read', 'documents.view', 'documents.create',
+    'voyages.read', 'voyages.view', 'campaigns.read', 'packages.read',
+    'logistics.read', 'logistics.view', 'logistique.read', 'logistique.view',
+    'logistics.manage', 'logistique.manage'
   ],
 };
 

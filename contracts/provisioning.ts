@@ -63,11 +63,8 @@ export interface ProvisionPartialResult {
 /** Allowed staff roles for provisioning V1 */
 export const PROVISIONED_STAFF_ROLES: readonly string[] = [
   'AGENT',
-  'AGENT_COMMERCIAL',
-  'CAISSE',
   'COMPTABLE',
-  'LOGISTIQUE',
-  'RESPONSABLE_COMMERCIAL',
+  'DIRECTION',
 ] as const;
 
 export const PELERIN_ROLE_ID = 'PELERIN' as const;

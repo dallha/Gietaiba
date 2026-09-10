@@ -4,7 +4,6 @@ import { UnifiedLogin } from './pages/UnifiedLogin.js';
 import { ResetPassword } from './pages/ResetPassword.js';
 import { PilgrimPortal } from './pages/PilgrimPortal.js';
 import { NotFoundPage } from './pages/NotFoundPage.js';
-import { NeonAuthTest } from './pages/NeonAuthTest.js';
 import ErpApp from './ErpApp.js';
 import { AuthProvider } from './auth/AuthContext.js';
 import { AuthGuard, ErpGuard, PilgrimGuard } from './components/auth/Guards.js';
@@ -13,9 +12,6 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
-        {/* PoC Neon Auth Testing */}
-        <Route path="/neon-test" element={<NeonAuthTest />} />
-
         {/* Auth Canonical Routes */}
         <Route path="/connexion" element={<UnifiedLogin />} />
         <Route path="/reinitialisation-mot-de-passe" element={<ResetPassword />} />

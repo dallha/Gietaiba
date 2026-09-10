@@ -303,9 +303,30 @@ app.put('/api/settings', requireNeonAuth, requirePermission('settings.manage'), 
 });
 
 // 3. Dashboard stats
-app.get('/api/dashboard/stats', requireNeonAuth, requirePermission('reports.read'), async (req: Request, res: Response) => {
+app.get('/api/dashboard/stats', requireNeonAuth, async (req: Request, res: Response) => {
+  const user = req.user!;
+  if (user.role === 'PELERIN') {
+    return res.status(403).json({ error: 'Accès interdit aux pèlerins.', code: 'FORBIDDEN' });
+  }
   try {
     const stats = await dashboardService.getDashboardStats();
+    if (user.role === 'AGENT') {
+      // Masquage strict des données financières pour le profil AGENT
+      stats.finance = {
+        totalRevenueExpected: 0,
+        totalCollected: 0,
+        totalRemaining: 0,
+        recoveryRate: 0,
+        paidInFullCount: 0,
+        inProgressCount: 0,
+        overdueCount: 0,
+      };
+      stats.profitability = [];
+      stats.recouvrement = {
+        topDebtors: [],
+        urgentRemindersCount: 0,
+      };
+    }
     res.json(stats);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

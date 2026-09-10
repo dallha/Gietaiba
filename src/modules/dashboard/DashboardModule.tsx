@@ -23,7 +23,11 @@ import {
   ArrowRight,
   ShieldAlert,
   Check,
+  FileText,
+  Stamp,
 } from 'lucide-react';
+import { useAuth } from '../../auth/AuthContext.js';
+import { normalizeRole } from '../../auth/roleModules.js';
 import { DashboardStats, AgencySettings, Client, Inscription, Payment, Voyage, VoyagePackage } from '../../types.js';
 import { formatFCFA, formatDate } from '../../utils/format.js';
 import {
@@ -65,6 +69,10 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
   onNavigate,
   onOpenReceipt,
 }) => {
+  const { currentUser: authUser, role } = useAuth();
+  const currentRoleId = normalizeRole(role?.id || authUser?.roleId);
+  const isAgent = currentRoleId === 'AGENT';
+
   // Enforce data hygiene on inputs (exclude test records from analytics)
   const clients = React.useMemo(() => rawClients.filter((c) => !c.isTest), [rawClients]);
   const inscriptions = React.useMemo(() => rawInscriptions.filter((i) => !i.isTest), [rawInscriptions]);
@@ -346,185 +354,357 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
           >
             <span>+ Nouveau Dossier</span>
           </button>
-          <button
-            onClick={() => onNavigate('paiements')}
-            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
-          >
-            <CreditCard className="w-3.5 h-3.5 text-amber-400" />
-            <span>Encaisser un versement</span>
-          </button>
+          {!isAgent && (
+            <button
+              onClick={() => onNavigate('paiements')}
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
+            >
+              <CreditCard className="w-3.5 h-3.5 text-amber-400" />
+              <span>Encaisser un versement</span>
+            </button>
+          )}
         </div>
       </motion.div>
 
-      {/* LIGNE 1 : LES 4 CHIFFRES ESSENTIELS (MONUMENTS KPI) */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-      >
-        {/* KPI 1 : CA Prévisionnel */}
+      {/* LIGNE 1 : LES 4 CHIFFRES ESSENTIELS */}
+      {isAgent ? (
         <motion.div
-          variants={cardVariants}
-          whileHover={{ y: -2, transition: { duration: 0.2 } }}
-          className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         >
-          <div>
-            <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
-              <span>1. CA Prévisionnel</span>
-              <div className="p-2 bg-slate-100 rounded-xl text-slate-700">
-                <CreditCard className="w-4 h-4" />
+          {/* Operational KPI 1 : Dossiers Inscrits */}
+          <motion.div
+            variants={cardVariants}
+            whileHover={{ y: -2, transition: { duration: 0.2 } }}
+            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <span>1. Dossiers Inscrits</span>
+                <div className="p-2 bg-slate-100 rounded-xl text-slate-700">
+                  <Users className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-slate-900 tracking-tight font-serif">
+                {activity.totalPilgrims} dossiers
+              </div>
+              <div className="mt-1 text-xs text-slate-500 font-medium">
+                Campagne active Hajj 2027
               </div>
             </div>
-            <div className="mt-2 text-2xl font-black text-slate-900 tracking-tight font-serif">
-              {formatFCFA(finance.totalRevenueExpected)}
-            </div>
-            <div className="mt-1 text-xs text-slate-500 font-medium">
-              {activity.totalPilgrims} dossiers engagés sur Hajj 2027
-            </div>
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-100">
-            <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
-              <span>Remplissage du quota</span>
-              <span className="font-bold text-slate-800">{occupancyRate}% ({activity.totalPilgrims}/{totalCapacity})</span>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-              <motion.div
-                className="bg-slate-900 h-full rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${occupancyRate}%` }}
-                transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
-              />
-            </div>
-          </div>
-        </motion.div>
-
-        {/* KPI 2 : Total Encaissé */}
-        <motion.div
-          variants={cardVariants}
-          whileHover={{ y: -2, transition: { duration: 0.2 } }}
-          className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between"
-        >
-          <div>
-            <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
-              <span>2. Total Encaissé</span>
-              <span className="text-xs font-black text-emerald-800 bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-300">
-                {finance.recoveryRate}%
-              </span>
-            </div>
-            <div className="mt-2 text-2xl font-black text-emerald-700 tracking-tight font-serif">
-              {formatFCFA(finance.totalCollected)}
-            </div>
-            <div className="mt-1 text-xs text-slate-500 font-medium">
-              3 versements validés avec reçu officiel
-            </div>
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-100">
-            <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
-              <span>Taux d'encaissement</span>
-              <span className="font-bold text-emerald-700">{finance.recoveryRate}% recouvré</span>
-            </div>
-            <div className="w-full bg-emerald-100/60 rounded-full h-2 overflow-hidden">
-              <motion.div
-                className="bg-emerald-600 h-full rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, Math.max(0, finance.recoveryRate))}%` }}
-                transition={{ duration: 1.25, ease: [0.16, 1, 0.3, 1], delay: 0.25 }}
-              />
-            </div>
-          </div>
-        </motion.div>
-
-        {/* KPI 3 : Soldes à Recouvrer */}
-        <motion.div
-          variants={cardVariants}
-          whileHover={{ y: -2, transition: { duration: 0.2 } }}
-          className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between"
-        >
-          <div>
-            <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
-              <span>3. Reste à Recouvrer</span>
-              <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
-                <AlertTriangle className="w-4 h-4" />
+            <div className="mt-4 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
+                <span>Remplissage du quota</span>
+                <span className="font-bold text-slate-800">{occupancyRate}% ({activity.totalPilgrims}/{totalCapacity})</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <motion.div
+                  className="bg-slate-900 h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${occupancyRate}%` }}
+                  transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+                />
               </div>
             </div>
-            <div className="mt-2 text-2xl font-black text-amber-600 tracking-tight font-serif">
-              {formatFCFA(finance.totalRemaining)}
-            </div>
-            <div className="mt-1 text-xs text-slate-500 flex items-center justify-between font-medium">
-              <span>Créances sous échéancier</span>
-              <button
-                onClick={() => onNavigate('recouvrement')}
-                className="text-amber-700 font-bold hover:underline cursor-pointer"
-              >
-                Relancer →
-              </button>
-            </div>
-          </div>
+          </motion.div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100">
-            <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
-              <span>Part restante à recouvrer</span>
-              <span className="font-bold text-amber-700">{remainingRate}%</span>
-            </div>
-            <div className="w-full bg-amber-100/60 rounded-full h-2 overflow-hidden">
-              <motion.div
-                className="bg-amber-500 h-full rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, Math.max(0, remainingRate))}%` }}
-                transition={{ duration: 1.25, ease: [0.16, 1, 0.3, 1], delay: 0.35 }}
-              />
-            </div>
-          </div>
-        </motion.div>
-
-        {/* KPI 4 : Pèlerins Engagés */}
-        <motion.div
-          variants={cardVariants}
-          whileHover={{ y: -2, transition: { duration: 0.2 } }}
-          className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
-        >
-          <div>
-            <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
-              <span>4. Pèlerins Engagés</span>
-              <div className="p-2 bg-slate-100 rounded-xl text-slate-700">
-                <Users className="w-4 h-4" />
+          {/* Operational KPI 2 : Dossiers GED Complets */}
+          <motion.div
+            variants={cardVariants}
+            whileHover={{ y: -2, transition: { duration: 0.2 } }}
+            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <span>2. Pièces Conformes</span>
+                <span className="text-xs font-black text-emerald-800 bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                  {docCompletionRate}%
+                </span>
+              </div>
+              <div className="mt-2 text-2xl font-black text-emerald-700 tracking-tight font-serif">
+                {documents.completeCount} / {totalDocsDossiers}
+              </div>
+              <div className="mt-1 text-xs text-slate-500 font-medium">
+                Dossiers avec pièces validées à 100%
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-900 font-serif">{activity.totalPilgrims}</span>
-              <span className="text-xs font-bold text-emerald-700">pèlerins engagés</span>
+            <div className="mt-4 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
+                <span>Taux de complétude GED</span>
+                <span className="font-bold text-emerald-700">{docCompletionRate}% validé</span>
+              </div>
+              <div className="w-full bg-emerald-100/60 rounded-full h-2 overflow-hidden">
+                <motion.div
+                  className="bg-emerald-600 h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${docCompletionRate}%` }}
+                  transition={{ duration: 1.25, ease: [0.16, 1, 0.3, 1], delay: 0.25 }}
+                />
+              </div>
             </div>
-            <div className="mt-1 text-xs text-slate-500 flex items-center gap-3 font-medium">
-              <span className="text-blue-600 font-bold">{finance.inProgressCount} avec acompte</span>
-              <span className="text-rose-600 font-bold">{finance.overdueCount} sans acompte</span>
-            </div>
-          </div>
+          </motion.div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100">
-            <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
-              <span>Répartition des dossiers</span>
-              <span className="font-bold text-slate-700">{finance.inProgressCount} versants / {activity.totalPilgrims}</span>
+          {/* Operational KPI 3 : Passeports Collectés */}
+          <motion.div
+            variants={cardVariants}
+            whileHover={{ y: -2, transition: { duration: 0.2 } }}
+            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <span>3. Passeports Reçus</span>
+                <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
+                  <FileText className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-amber-600 tracking-tight font-serif">
+                {Math.max(0, activity.totalPilgrims - documents.missingPassports)} / {activity.totalPilgrims}
+              </div>
+              <div className="mt-1 text-xs text-slate-500 flex items-center justify-between font-medium">
+                <span>{documents.missingPassports} à réceptionner</span>
+                <button
+                  onClick={() => onNavigate('documents')}
+                  className="text-amber-700 font-bold hover:underline cursor-pointer"
+                >
+                  GED →
+                </button>
+              </div>
             </div>
-            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex gap-0.5">
-              <motion.div
-                className="bg-sky-500 h-full rounded-l-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${pctInProgress}%` }}
-                transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.35 }}
-              />
-              <motion.div
-                className="bg-rose-400 h-full rounded-r-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${pctOverdue}%` }}
-                transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.45 }}
-              />
+            <div className="mt-4 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
+                <span>Passeports en agence</span>
+                <span className="font-bold text-amber-700">
+                  {activity.totalPilgrims > 0 ? Math.round(((activity.totalPilgrims - documents.missingPassports) / activity.totalPilgrims) * 100) : 0}%
+                </span>
+              </div>
+              <div className="w-full bg-amber-100/60 rounded-full h-2 overflow-hidden">
+                <motion.div
+                  className="bg-amber-500 h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${activity.totalPilgrims > 0 ? Math.round(((activity.totalPilgrims - documents.missingPassports) / activity.totalPilgrims) * 100) : 0}%` }}
+                  transition={{ duration: 1.25, ease: [0.16, 1, 0.3, 1], delay: 0.35 }}
+                />
+              </div>
             </div>
-          </div>
+          </motion.div>
+
+          {/* Operational KPI 4 : Visas Nusuk */}
+          <motion.div
+            variants={cardVariants}
+            whileHover={{ y: -2, transition: { duration: 0.2 } }}
+            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <span>4. Visas Nusuk</span>
+                <div className="p-2 bg-slate-100 rounded-xl text-slate-700">
+                  <Stamp className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-2xl font-black text-slate-900 font-serif">
+                  {Math.max(0, activity.totalPilgrims - documents.missingVisas)}
+                </span>
+                <span className="text-xs font-bold text-emerald-700">délivrés</span>
+              </div>
+              <div className="mt-1 text-xs text-slate-500 flex items-center justify-between font-medium">
+                <span>Suivi consulaire Nusuk</span>
+                <button
+                  onClick={() => onNavigate('visas')}
+                  className="text-slate-800 font-bold hover:underline cursor-pointer"
+                >
+                  Gérer Visas →
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
+                <span>Statut plateforme consulaire</span>
+                <span className="font-bold text-slate-700">En cours</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <motion.div
+                  className="bg-teal-600 h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${activity.totalPilgrims > 0 ? Math.round(((activity.totalPilgrims - documents.missingVisas) / activity.totalPilgrims) * 100) : 0}%` }}
+                  transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.45 }}
+                />
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      ) : (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+        >
+          {/* KPI 1 : CA Prévisionnel */}
+          <motion.div
+            variants={cardVariants}
+            whileHover={{ y: -2, transition: { duration: 0.2 } }}
+            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <span>1. CA Prévisionnel</span>
+                <div className="p-2 bg-slate-100 rounded-xl text-slate-700">
+                  <CreditCard className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-slate-900 tracking-tight font-serif">
+                {formatFCFA(finance.totalRevenueExpected)}
+              </div>
+              <div className="mt-1 text-xs text-slate-500 font-medium">
+                {activity.totalPilgrims} dossiers engagés sur Hajj 2027
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
+                <span>Remplissage du quota</span>
+                <span className="font-bold text-slate-800">{occupancyRate}% ({activity.totalPilgrims}/{totalCapacity})</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <motion.div
+                  className="bg-slate-900 h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${occupancyRate}%` }}
+                  transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* KPI 2 : Total Encaissé */}
+          <motion.div
+            variants={cardVariants}
+            whileHover={{ y: -2, transition: { duration: 0.2 } }}
+            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <span>2. Total Encaissé</span>
+                <span className="text-xs font-black text-emerald-800 bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                  {finance.recoveryRate}%
+                </span>
+              </div>
+              <div className="mt-2 text-2xl font-black text-emerald-700 tracking-tight font-serif">
+                {formatFCFA(finance.totalCollected)}
+              </div>
+              <div className="mt-1 text-xs text-slate-500 font-medium">
+                3 versements validés avec reçu officiel
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
+                <span>Taux d'encaissement</span>
+                <span className="font-bold text-emerald-700">{finance.recoveryRate}% recouvré</span>
+              </div>
+              <div className="w-full bg-emerald-100/60 rounded-full h-2 overflow-hidden">
+                <motion.div
+                  className="bg-emerald-600 h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, Math.max(0, finance.recoveryRate))}%` }}
+                  transition={{ duration: 1.25, ease: [0.16, 1, 0.3, 1], delay: 0.25 }}
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* KPI 3 : Soldes à Recouvrer */}
+          <motion.div
+            variants={cardVariants}
+            whileHover={{ y: -2, transition: { duration: 0.2 } }}
+            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <span>3. Reste à Recouvrer</span>
+                <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-amber-600 tracking-tight font-serif">
+                {formatFCFA(finance.totalRemaining)}
+              </div>
+              <div className="mt-1 text-xs text-slate-500 flex items-center justify-between font-medium">
+                <span>Créances sous échéancier</span>
+                <button
+                  onClick={() => onNavigate('recouvrement')}
+                  className="text-amber-700 font-bold hover:underline cursor-pointer"
+                >
+                  Relancer →
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
+                <span>Part restante à recouvrer</span>
+                <span className="font-bold text-amber-700">{remainingRate}%</span>
+              </div>
+              <div className="w-full bg-amber-100/60 rounded-full h-2 overflow-hidden">
+                <motion.div
+                  className="bg-amber-500 h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, Math.max(0, remainingRate))}%` }}
+                  transition={{ duration: 1.25, ease: [0.16, 1, 0.3, 1], delay: 0.35 }}
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* KPI 4 : Pèlerins Engagés */}
+          <motion.div
+            variants={cardVariants}
+            whileHover={{ y: -2, transition: { duration: 0.2 } }}
+            className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <span>4. Pèlerins Engagés</span>
+                <div className="p-2 bg-slate-100 rounded-xl text-slate-700">
+                  <Users className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-2xl font-black text-slate-900 font-serif">{activity.totalPilgrims}</span>
+                <span className="text-xs font-bold text-emerald-700">pèlerins engagés</span>
+              </div>
+              <div className="mt-1 text-xs text-slate-500 flex items-center gap-3 font-medium">
+                <span className="text-blue-600 font-bold">{finance.inProgressCount} avec acompte</span>
+                <span className="text-rose-600 font-bold">{finance.overdueCount} sans acompte</span>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
+                <span>Répartition des dossiers</span>
+                <span className="font-bold text-slate-700">{finance.inProgressCount} versants / {activity.totalPilgrims}</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex gap-0.5">
+                <motion.div
+                  className="bg-sky-500 h-full rounded-l-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pctInProgress}%` }}
+                  transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.35 }}
+                />
+                <motion.div
+                  className="bg-rose-400 h-full rounded-r-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pctOverdue}%` }}
+                  transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.45 }}
+                />
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       {/* LIGNE 2 : SUIVI CAMPAGNE HAJJ 2027 (SYNTHÈSE OFFICIELLE) */}
       <motion.div
@@ -577,15 +757,27 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
           </div>
 
           <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
-            <span className="text-[11px] font-medium text-slate-400 block">Versements Encaissés</span>
-            <span className="text-xl font-black text-emerald-400 font-serif">{formatFCFA(finance.totalCollected)}</span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">3 versements en caisse</span>
+            <span className="text-[11px] font-medium text-slate-400 block">
+              {isAgent ? 'Passeports Reçus' : 'Versements Encaissés'}
+            </span>
+            <span className="text-xl font-black text-emerald-400 font-serif">
+              {isAgent ? `${activity.totalPilgrims - documents.missingPassports} / ${activity.totalPilgrims}` : formatFCFA(finance.totalCollected)}
+            </span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">
+              {isAgent ? 'Pièces d\'identité en agence' : '3 versements en caisse'}
+            </span>
           </div>
 
           <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
-            <span className="text-[11px] font-medium text-slate-400 block">Dépenses d'Exploitation</span>
-            <span className="text-xl font-black text-slate-200 font-serif">0 FCFA</span>
-            <span className="text-[10px] text-amber-300 block mt-0.5">Trésorerie nette préservée à 100%</span>
+            <span className="text-[11px] font-medium text-slate-400 block">
+              {isAgent ? 'Dossiers GED Validés' : "Dépenses d'Exploitation"}
+            </span>
+            <span className="text-xl font-black text-slate-200 font-serif">
+              {isAgent ? `${documents.completeCount} dossiers` : '0 FCFA'}
+            </span>
+            <span className="text-[10px] text-amber-300 block mt-0.5">
+              {isAgent ? `${docCompletionRate}% de complétude` : 'Trésorerie nette préservée à 100%'}
+            </span>
           </div>
 
           <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
@@ -596,41 +788,43 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
         </div>
       </motion.div>
 
-      {/* LIGNE 3 : ACTION "À VOTRE ATTENTION" (PILOTAGE RAPIDE) */}
-      <motion.div
-        variants={sectionVariants}
-        initial="hidden"
-        animate="show"
-        className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
-      >
-        <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-md">
-            <ShieldAlert className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black text-amber-950 uppercase tracking-wide">
-                À Votre Attention • Actions Prioritaires de Recouvrement
-              </h3>
-              <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-rose-100 text-rose-800 border border-rose-200">
-                {overdueDossiers.length + highBalanceDossiers.length} dossiers à suivre
-              </span>
-            </div>
-            <p className="text-xs text-amber-900/90 mt-1 leading-relaxed">
-              <strong>{overdueDossiers.length} dossiers sans aucun acompte</strong> (en attente du 1er versement de confirmation) et{' '}
-              <strong>{highBalanceDossiers.length} dossiers avec solde élevé &gt; 2 000 000 FCFA</strong> nécessitent une relance avant l'échéance contractuelle.
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={() => onNavigate('recouvrement')}
-          className="px-5 py-2.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold shadow-md transition flex items-center gap-2 shrink-0 cursor-pointer"
+      {/* LIGNE 3 : ACTION "À VOTRE ATTENTION" (PILOTAGE RAPIDE - FINANCES SEULEMENT) */}
+      {!isAgent && (
+        <motion.div
+          variants={sectionVariants}
+          initial="hidden"
+          animate="show"
+          className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
         >
-          <span>Voir les dossiers à régulariser</span>
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      </motion.div>
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-md">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-black text-amber-950 uppercase tracking-wide">
+                  À Votre Attention • Actions Prioritaires de Recouvrement
+                </h3>
+                <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                  {overdueDossiers.length + highBalanceDossiers.length} dossiers à suivre
+                </span>
+              </div>
+              <p className="text-xs text-amber-900/90 mt-1 leading-relaxed">
+                <strong>{overdueDossiers.length} dossiers sans aucun acompte</strong> (en attente du 1er versement de confirmation) et{' '}
+                <strong>{highBalanceDossiers.length} dossiers avec solde élevé &gt; 2 000 000 FCFA</strong> nécessitent une relance avant l'échéance contractuelle.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onNavigate('recouvrement')}
+            className="px-5 py-2.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold shadow-md transition flex items-center gap-2 shrink-0 cursor-pointer"
+          >
+            <span>Voir les dossiers à régulariser</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </motion.div>
+      )}
 
       {/* LIGNE 4 : PROCHAINS DÉPARTS & COMPTE À REBOURS DYNAMIQUE */}
       <motion.div
@@ -721,255 +915,342 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
         </div>
       </motion.div>
 
-      {/* SECTION ACTIVITÉ RÉCENTE : LES VERSEMENTS RÉELS */}
-      <motion.div
-        variants={sectionVariants}
-        initial="hidden"
-        animate="show"
-        className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs"
-      >
-        <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-          <div>
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-emerald-600" />
-              Activité Récente des Encaissements
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Derniers versements enregistrés et validés en caisse avec reçu officiel
-            </p>
-          </div>
-          <button
-            onClick={() => onNavigate('paiements')}
-            className="text-xs text-amber-800 font-bold hover:underline cursor-pointer flex items-center gap-1"
-          >
-            <span>Toute la caisse ({recentPayments.length})</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {recentPayments.length === 0 ? (
-          <div className="py-8 text-center text-xs text-slate-400">
-            Aucun paiement enregistré pour l'instant.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase text-[10px]">
-                  <th className="pb-2.5">Reçu N°</th>
-                  <th className="pb-2.5">Date</th>
-                  <th className="pb-2.5">Pèlerin</th>
-                  <th className="pb-2.5">Mode</th>
-                  <th className="pb-2.5 text-right">Montant Encaissé</th>
-                  <th className="pb-2.5 text-right">Reçu Officiel</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {recentPayments.map((p) => {
-                  const ins = inscriptions.find((i) => i.id === p.inscriptionId);
-                  return (
-                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3 font-mono font-bold text-slate-900">
-                        {p.receiptNumber}
-                      </td>
-                      <td className="py-3 text-slate-600 font-medium">
-                        {formatDate(p.paymentDate)}
-                      </td>
-                      <td className="py-3 font-bold text-slate-900">
-                        {p.clientName || 'Pèlerin'}
-                      </td>
-                      <td className="py-3">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
-                          {p.paymentMethod}
-                        </span>
-                      </td>
-                      <td className="py-3 text-right font-serif font-black text-emerald-700 text-sm">
-                        {formatFCFA(p.amount)}
-                      </td>
-                      <td className="py-3 text-right">
-                        <button
-                          onClick={() => onOpenReceipt ? onOpenReceipt(p, ins) : onNavigate('paiements')}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-200 transition cursor-pointer"
-                        >
-                          Consulter le reçu
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Rentabilité par Voyage & Répartition Statuts (Charts) */}
-      <motion.div
-        variants={chartSectionVariants}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 lg:grid-cols-3 gap-6"
-      >
-        {/* Profitability Bar Chart */}
+      {/* SECTION ACTIVITÉ RÉCENTE */}
+      {!isAgent ? (
         <motion.div
-          variants={chartCardVariants}
-          whileHover={{ y: -3, transition: { duration: 0.2 } }}
-          className="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between hover:border-slate-300 hover:shadow-xs transition-all"
+          variants={sectionVariants}
+          initial="hidden"
+          animate="show"
+          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs"
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
             <div>
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-emerald-600" />
-                Rentabilité Financière par Voyage
+                <Receipt className="w-4 h-4 text-emerald-600" />
+                Activité Récente des Encaissements
               </h2>
-              <p className="text-xs text-slate-500">Chiffre d'Affaires vs Dépenses = Marge Nette d'Exploitation</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Derniers versements enregistrés et validés en caisse avec reçu officiel
+              </p>
             </div>
             <button
-              onClick={() => onNavigate('depenses')}
-              className="text-xs text-amber-800 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+              onClick={() => onNavigate('paiements')}
+              className="text-xs text-amber-800 font-bold hover:underline cursor-pointer flex items-center gap-1"
             >
-              Détail dépenses <ArrowUpRight className="w-3 h-3" />
+              <span>Toute la caisse ({recentPayments.length})</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <motion.div
-            variants={chartCanvasVariants}
-            className="h-64 w-full origin-bottom"
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={profitability} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="voyageCode" tick={{ fontSize: 11 }} />
-                <YAxis
-                  tick={{ fontSize: 10 }}
-                  tickFormatter={(val) => `${(val / 1000000).toFixed(1)}M`}
-                />
-                <Tooltip
-                  formatter={(value: any) => [formatFCFA(Number(value)), '']}
-                  contentStyle={{ fontSize: '12px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
-                <Bar
-                  dataKey="revenue"
-                  name="Chiffre d'Affaires"
-                  fill="#0f172a"
-                  radius={[4, 4, 0, 0]}
-                  isAnimationActive={true}
-                  animationDuration={1300}
-                  animationEasing="ease-out"
-                />
-                <Bar
-                  dataKey="expenses"
-                  name="Dépenses d'exploitation"
-                  fill="#d97706"
-                  radius={[4, 4, 0, 0]}
-                  isAnimationActive={true}
-                  animationDuration={1300}
-                  animationEasing="ease-out"
-                />
-                <Bar
-                  dataKey="netResult"
-                  name="Marge Brute"
-                  fill="#10b981"
-                  radius={[4, 4, 0, 0]}
-                  isAnimationActive={true}
-                  animationDuration={1300}
-                  animationEasing="ease-out"
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </motion.div>
-
-          {/* Quick margin badge strip */}
-          <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs">
-            {profitability.map((p) => (
-              <div key={p.voyageCode} className="flex flex-wrap items-center gap-2 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
-                <span className="font-bold text-slate-800">{p.voyageCode}:</span>
-                {p.expenses === 0 ? (
-                  <>
-                    <span className="text-slate-600 font-medium">Trésorerie nette encaissée : {formatFCFA(finance.totalCollected)}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200" title="Les coûts d'exploitation (vols, hôtels, Mina) ne sont pas encore engagés pour cette campagne">
-                      Résultat / Marge : NON DÉTERMINÉ
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-slate-600 font-medium">{formatFCFA(p.netResult)}</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                      {p.marginRate}% marge
-                    </span>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
+          {recentPayments.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-400">
+              Aucun paiement enregistré pour l'instant.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase text-[10px]">
+                    <th className="pb-2.5">Reçu N°</th>
+                    <th className="pb-2.5">Date</th>
+                    <th className="pb-2.5">Pèlerin</th>
+                    <th className="pb-2.5">Mode</th>
+                    <th className="pb-2.5 text-right">Montant Encaissé</th>
+                    <th className="pb-2.5 text-right">Reçu Officiel</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {recentPayments.map((p) => {
+                    const ins = inscriptions.find((i) => i.id === p.inscriptionId);
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3 font-mono font-bold text-slate-900">
+                          {p.receiptNumber}
+                        </td>
+                        <td className="py-3 text-slate-600 font-medium">
+                          {formatDate(p.paymentDate)}
+                        </td>
+                        <td className="py-3 font-bold text-slate-900">
+                          {p.clientName || 'Pèlerin'}
+                        </td>
+                        <td className="py-3">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                            {p.paymentMethod}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right font-serif font-black text-emerald-700 text-sm">
+                          {formatFCFA(p.amount)}
+                        </td>
+                        <td className="py-3 text-right">
+                          <button
+                            onClick={() => onOpenReceipt ? onOpenReceipt(p, ins) : onNavigate('paiements')}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-200 transition cursor-pointer"
+                          >
+                            Consulter le reçu
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </motion.div>
-
-        {/* Dossiers Payments Breakdown Pie */}
+      ) : (
         <motion.div
-          variants={chartCardVariants}
-          whileHover={{ y: -3, transition: { duration: 0.2 } }}
-          className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between hover:border-slate-300 hover:shadow-xs transition-all"
+          variants={sectionVariants}
+          initial="hidden"
+          animate="show"
+          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs"
         >
-          <div>
-            <h2 className="text-sm font-bold text-slate-900 mb-1">Ventilation des Règlements</h2>
-            <p className="text-xs text-slate-500 mb-4">Statut des paiements sur les dossiers en cours</p>
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <FileCheck2 className="w-4 h-4 text-amber-600" />
+                Derniers Dossiers d'Inscription Enregistrés
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Dossiers récents de pèlerinage pour le suivi opérationnel
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigate('inscriptions')}
+              className="text-xs text-amber-800 font-bold hover:underline cursor-pointer flex items-center gap-1"
+            >
+              <span>Tous les dossiers ({inscriptions.length})</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {inscriptions.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-400">
+              Aucune inscription enregistrée.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase text-[10px]">
+                    <th className="pb-2.5">Code Dossier</th>
+                    <th className="pb-2.5">Date Inscription</th>
+                    <th className="pb-2.5">Pèlerin</th>
+                    <th className="pb-2.5">Formule / Chambre</th>
+                    <th className="pb-2.5">Documents GED</th>
+                    <th className="pb-2.5 text-right">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {inscriptions.slice(0, 6).map((ins) => {
+                    const client = clients.find((c) => c.id === ins.clientId);
+                    const pkg = packages.find((p) => p.id === ins.packageId);
+                    return (
+                      <tr key={ins.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3 font-mono font-bold text-slate-900">
+                          {ins.code}
+                        </td>
+                        <td className="py-3 text-slate-600 font-medium">
+                          {formatDate(ins.createdAt)}
+                        </td>
+                        <td className="py-3 font-bold text-slate-900">
+                          {client ? `${client.firstName} ${client.lastName}` : 'Pèlerin'}
+                        </td>
+                        <td className="py-3 text-slate-600">
+                          {pkg ? `${pkg.name} (${pkg.roomType})` : 'Formule Standard'}
+                        </td>
+                        <td className="py-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            (ins.documentCompletenessRate || 0) >= 100
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {ins.documentCompletenessRate || 0}% complet
+                          </span>
+                        </td>
+                        <td className="py-3 text-right">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                            {ins.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Rentabilité par Voyage & Répartition Statuts (Charts - Financiers seulement) */}
+      {!isAgent && (
+        <motion.div
+          variants={chartSectionVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+        >
+          {/* Profitability Bar Chart */}
+          <motion.div
+            variants={chartCardVariants}
+            whileHover={{ y: -3, transition: { duration: 0.2 } }}
+            className="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between hover:border-slate-300 hover:shadow-xs transition-all"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  Rentabilité Financière par Voyage
+                </h2>
+                <p className="text-xs text-slate-500">Chiffre d'Affaires vs Dépenses = Marge Nette d'Exploitation</p>
+              </div>
+              <button
+                onClick={() => onNavigate('depenses')}
+                className="text-xs text-amber-800 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                Détail dépenses <ArrowUpRight className="w-3 h-3" />
+              </button>
+            </div>
 
             <motion.div
               variants={chartCanvasVariants}
-              className="h-52 w-full flex items-center justify-center origin-center"
+              className="h-64 w-full origin-bottom"
             >
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={paymentStatusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={75}
-                    paddingAngle={4}
-                    dataKey="value"
+                <BarChart data={profitability} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="voyageCode" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    tick={{ fontSize: 10 }}
+                    tickFormatter={(val) => `${(val / 1000000).toFixed(1)}M`}
+                  />
+                  <Tooltip
+                    formatter={(value: any) => [formatFCFA(Number(value)), '']}
+                    contentStyle={{ fontSize: '12px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
+                  <Bar
+                    dataKey="revenue"
+                    name="Chiffre d'Affaires"
+                    fill="#0f172a"
+                    radius={[4, 4, 0, 0]}
                     isAnimationActive={true}
-                    animationDuration={1200}
+                    animationDuration={1300}
                     animationEasing="ease-out"
-                  >
-                    {paymentStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
+                  />
+                  <Bar
+                    dataKey="expenses"
+                    name="Dépenses d'exploitation"
+                    fill="#d97706"
+                    radius={[4, 4, 0, 0]}
+                    isAnimationActive={true}
+                    animationDuration={1300}
+                    animationEasing="ease-out"
+                  />
+                  <Bar
+                    dataKey="netResult"
+                    name="Marge Brute"
+                    fill="#10b981"
+                    radius={[4, 4, 0, 0]}
+                    isAnimationActive={true}
+                    animationDuration={1300}
+                    animationEasing="ease-out"
+                  />
+                </BarChart>
               </ResponsiveContainer>
             </motion.div>
-          </div>
 
-          <div className="mt-2 space-y-2 border-t border-slate-100 pt-3 text-xs">
-            {paymentStatusData.map((item) => {
-              const itemPct = totalDossiers > 0 ? Math.round((item.value / totalDossiers) * 100) : 0;
-              return (
-                <div key={item.name} className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                      <span className="text-slate-600 font-medium">{item.name}</span>
-                    </div>
-                    <span className="font-bold text-slate-800">{item.value} ({itemPct}%)</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{ backgroundColor: item.color }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${itemPct}%` }}
-                      transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
-                    />
-                  </div>
+            {/* Quick margin badge strip */}
+            <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs">
+              {profitability.map((p) => (
+                <div key={p.voyageCode} className="flex flex-wrap items-center gap-2 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+                  <span className="font-bold text-slate-800">{p.voyageCode}:</span>
+                  {p.expenses === 0 ? (
+                    <>
+                      <span className="text-slate-600 font-medium">Trésorerie nette encaissée : {formatFCFA(finance.totalCollected)}</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200" title="Les coûts d'exploitation (vols, hôtels, Mina) ne sont pas encore engagés pour cette campagne">
+                        Résultat / Marge : NON DÉTERMINÉ
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-slate-600 font-medium">{formatFCFA(p.netResult)}</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                        {p.marginRate}% marge
+                      </span>
+                    </>
+                  )}
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Dossiers Payments Breakdown Pie */}
+          <motion.div
+            variants={chartCardVariants}
+            whileHover={{ y: -3, transition: { duration: 0.2 } }}
+            className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between hover:border-slate-300 hover:shadow-xs transition-all"
+          >
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 mb-1">Ventilation des Règlements</h2>
+              <p className="text-xs text-slate-500 mb-4">Statut des paiements sur les dossiers en cours</p>
+
+              <motion.div
+                variants={chartCanvasVariants}
+                className="h-52 w-full flex items-center justify-center origin-center"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={paymentStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={75}
+                      paddingAngle={4}
+                      dataKey="value"
+                      isAnimationActive={true}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
+                    >
+                      {paymentStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </motion.div>
+            </div>
+
+            <div className="mt-2 space-y-2 border-t border-slate-100 pt-3 text-xs">
+              {paymentStatusData.map((item) => {
+                const itemPct = totalDossiers > 0 ? Math.round((item.value / totalDossiers) * 100) : 0;
+                return (
+                  <div key={item.name} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="text-slate-600 font-medium">{item.name}</span>
+                      </div>
+                      <span className="font-bold text-slate-800">{item.value} ({itemPct}%)</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ backgroundColor: item.color }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${itemPct}%` }}
+                        transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
 
       {/* Campagnes & Packages V5.2 Quotas & Grille Tarifaire */}
       <motion.div
@@ -1102,102 +1383,162 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
         animate="show"
         className="grid grid-cols-1 lg:grid-cols-2 gap-6"
       >
-        {/* Recouvrement Top Débiteurs */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-slate-900">Priorités de Recouvrement</h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
-                  {recouvrement.urgentRemindersCount} Urgences
-                </span>
-              </div>
-              <p className="text-xs text-slate-500">Pèlerins avec solde élevé à relancer en priorité</p>
-            </div>
-            <button
-              onClick={() => onNavigate('recouvrement')}
-              className="text-xs text-amber-800 font-semibold hover:underline cursor-pointer"
-            >
-              Voir tous ({recouvrement.topDebtors.length}) →
-            </button>
-          </div>
-
-          {/* Mobile Cards View */}
-          <div className="block sm:hidden space-y-2.5">
-            {recouvrement.topDebtors.slice(0, 5).map((d, i) => (
-              <div
-                key={i}
-                className="p-3 bg-slate-50/80 rounded-lg border border-slate-200/80 space-y-2"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-bold text-slate-900 text-xs">{d.clientName}</p>
-                    <p className="text-[11px] text-slate-500">{d.phone}</p>
-                  </div>
-                  <span
-                    className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                      d.priority === 'URGENT'
-                        ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                        : d.priority === 'IMPORTANT'
-                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                        : 'bg-blue-100 text-blue-800 border border-blue-200'
-                    }`}
-                  >
-                    {d.priority}
+        {/* Recouvrement Top Débiteurs (ou Dossiers Récents pour AGENT) */}
+        {!isAgent ? (
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-slate-900">Priorités de Recouvrement</h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                    {recouvrement.urgentRemindersCount} Urgences
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60">
-                  <span className="font-medium text-slate-600">{d.voyageCode}</span>
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-400 mr-1">Reste :</span>
-                    <span className="font-bold text-amber-700">{formatFCFA(d.remaining)}</span>
+                <p className="text-xs text-slate-500">Pèlerins avec solde élevé à relancer en priorité</p>
+              </div>
+              <button
+                onClick={() => onNavigate('recouvrement')}
+                className="text-xs text-amber-800 font-semibold hover:underline cursor-pointer"
+              >
+                Voir tous ({recouvrement.topDebtors.length}) →
+              </button>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="block sm:hidden space-y-2.5">
+              {recouvrement.topDebtors.slice(0, 5).map((d, i) => (
+                <div
+                  key={i}
+                  className="p-3 bg-slate-50/80 rounded-lg border border-slate-200/80 space-y-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-bold text-slate-900 text-xs">{d.clientName}</p>
+                      <p className="text-[11px] text-slate-500">{d.phone}</p>
+                    </div>
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                        d.priority === 'URGENT'
+                          ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                          : d.priority === 'IMPORTANT'
+                          ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                          : 'bg-blue-100 text-blue-800 border border-blue-200'
+                      }`}
+                    >
+                      {d.priority}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60">
+                    <span className="font-medium text-slate-600">{d.voyageCode}</span>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 mr-1">Reste :</span>
+                      <span className="font-bold text-amber-700">{formatFCFA(d.remaining)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          {/* Desktop Table View */}
-          <div className="hidden sm:block overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 text-slate-500 font-semibold">
-                  <th className="pb-2">Pèlerin</th>
-                  <th className="pb-2">Voyage</th>
-                  <th className="pb-2 text-right">Reste Dû</th>
-                  <th className="pb-2 text-right">Priorité</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {recouvrement.topDebtors.slice(0, 5).map((d, i) => (
-                  <tr key={i} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-2.5">
-                      <p className="font-bold text-slate-900">{d.clientName}</p>
-                      <p className="text-[11px] text-slate-400">{d.phone}</p>
-                    </td>
-                    <td className="py-2.5 font-medium text-slate-600">{d.voyageCode}</td>
-                    <td className="py-2.5 text-right font-bold text-amber-700">
-                      {formatFCFA(d.remaining)}
-                    </td>
-                    <td className="py-2.5 text-right">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                          d.priority === 'URGENT'
-                            ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                            : d.priority === 'IMPORTANT'
-                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                            : 'bg-blue-100 text-blue-800 border border-blue-200'
-                        }`}
-                      >
-                        {d.priority}
-                      </span>
-                    </td>
+            {/* Desktop Table View */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-500 font-semibold">
+                    <th className="pb-2">Pèlerin</th>
+                    <th className="pb-2">Voyage</th>
+                    <th className="pb-2 text-right">Reste Dû</th>
+                    <th className="pb-2 text-right">Priorité</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {recouvrement.topDebtors.slice(0, 5).map((d, i) => (
+                    <tr key={i} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-2.5">
+                        <p className="font-bold text-slate-900">{d.clientName}</p>
+                        <p className="text-[11px] text-slate-400">{d.phone}</p>
+                      </td>
+                      <td className="py-2.5 font-medium text-slate-600">{d.voyageCode}</td>
+                      <td className="py-2.5 text-right font-bold text-amber-700">
+                        {formatFCFA(d.remaining)}
+                      </td>
+                      <td className="py-2.5 text-right">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                            d.priority === 'URGENT'
+                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                              : d.priority === 'IMPORTANT'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                              : 'bg-blue-100 text-blue-800 border border-blue-200'
+                          }`}
+                        >
+                          {d.priority}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-slate-900">Dossiers Récents & Formules</h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                    {inscriptions.length} Inscriptions
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">Pèlerins enregistrés et formules associées</p>
+              </div>
+              <button
+                onClick={() => onNavigate('inscriptions')}
+                className="text-xs text-amber-800 font-semibold hover:underline cursor-pointer"
+              >
+                Voir tous →
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-500 font-semibold">
+                    <th className="pb-2">Pèlerin</th>
+                    <th className="pb-2">Téléphone</th>
+                    <th className="pb-2">Code Dossier</th>
+                    <th className="pb-2 text-right">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {inscriptions.slice(0, 5).map((ins) => {
+                    const client = clients.find((c) => c.id === ins.clientId);
+                    return (
+                      <tr key={ins.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-2.5">
+                          <p className="font-bold text-slate-900">
+                            {client ? `${client.firstName} ${client.lastName}` : 'Pèlerin'}
+                          </p>
+                        </td>
+                        <td className="py-2.5 font-medium text-slate-600">
+                          {client?.phone || '—'}
+                        </td>
+                        <td className="py-2.5 font-mono text-slate-700">
+                          {ins.code}
+                        </td>
+                        <td className="py-2.5 text-right">
+                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            {ins.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Suivi Documentaire & Alertes Départs */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between hover:shadow-xs transition-shadow">

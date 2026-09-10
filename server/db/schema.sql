@@ -605,13 +605,12 @@ CREATE INDEX IF NOT EXISTS idx_uca_client ON user_client_access(client_id);
 -- Tous les rôles référencés par PROVISIONED_STAFF_ROLES + rôles internes.
 -- =====================================================================
 INSERT INTO roles (id, name, description, is_system) VALUES
-  ('SUPER_ADMIN',            'Super Administrateur',  'Accès total au système GIE TAIBA',         TRUE),
-  ('DIRECTION',              'Direction Générale',     'Direction et supervision globale',          TRUE),
-  ('AGENT',                  'Conseiller Pèlerinage',  'Gestion des inscriptions et clients',       TRUE),
-  ('AGENT_COMMERCIAL',       'Agent Commercial',       'Agent commercial GIE TAIBA',                TRUE),
-  ('CAISSE',                 'Responsable Caisse',     'Gestion des encaissements et paiements',    TRUE),
-  ('COMPTABLE',              'Comptable',              'Comptabilité GIE TAIBA',                    TRUE),
-  ('LOGISTIQUE',             'Chef Logistique',        'Gestion logistique et hébergements',        TRUE),
-  ('RESPONSABLE_COMMERCIAL', 'Responsable Commercial', 'Responsable commercial GIE TAIBA',          TRUE),
-  ('PELERIN',                'Pèlerin',                'Accès portail pèlerin uniquement',          TRUE)
-ON CONFLICT (id) DO NOTHING;
+  ('SUPER_ADMIN', 'Super Administrateur',  'Administration technique complète et provisioning',         TRUE),
+  ('DIRECTION',   'Gérant / Direction',    'Direction générale, pouvoir métier complet, finances et supervision', TRUE),
+  ('COMPTABLE',   'Comptable / Caisse',    'Gestion financière, caisse, recouvrement, dépenses et rapports', TRUE),
+  ('AGENT',       'Conseiller Pèlerinage', 'Grand agent polyvalent : pèlerins, dossiers, visas, documents et logistique', TRUE),
+  ('PELERIN',     'Pèlerin',               'Accès strictement restreint à son dossier individuel',      TRUE)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  updated_at = NOW();

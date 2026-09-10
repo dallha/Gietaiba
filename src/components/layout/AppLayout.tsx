@@ -33,6 +33,7 @@ import { GlobalSearchBar } from './GlobalSearchBar.js';
 import { NotificationBell } from '../notifications/NotificationBell.js';
 
 import { useAuth } from '../../auth/AuthContext.js';
+import { isModuleAllowedForRole, normalizeRole } from '../../auth/roleModules.js';
 
 interface AppLayoutProps {
   currentUser?: any;
@@ -128,6 +129,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     { id: 'audit', label: 'Journal d’Audit', icon: History, category: 'ADMINISTRATION' },
   ];
 
+  const userRoleId = normalizeRole(role?.id || effectiveUser.roleId);
+  const visibleNavItems = navItems.filter((item) => isModuleAllowedForRole(userRoleId, item.id));
+
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800 antialiased">
       {/* Top Header Bar */}
@@ -207,7 +211,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           <nav className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3 space-y-4 sticky top-22 max-h-[calc(100vh-6.5rem)] overflow-y-auto">
             {['ACCUEIL', 'PÈLERINS', 'FINANCES', 'VOYAGES', 'DOCUMENTS', 'RAPPORTS', 'ADMINISTRATION'].map(
               (category) => {
-                const items = navItems.filter((i) => i.category === category);
+                const items = visibleNavItems.filter((i) => i.category === category);
                 if (items.length === 0) return null;
 
                 return (
@@ -253,7 +257,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               </div>
               <div className="py-3 space-y-4">
                 {['ACCUEIL', 'PÈLERINS', 'FINANCES', 'VOYAGES', 'DOCUMENTS', 'RAPPORTS', 'ADMINISTRATION'].map((category) => {
-                  const items = navItems.filter((i) => i.category === category);
+                  const items = visibleNavItems.filter((i) => i.category === category);
                   if (items.length === 0) return null;
                   return (
                     <div key={category} className="space-y-1">

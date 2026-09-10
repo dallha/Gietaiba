@@ -6,12 +6,9 @@ import type { ProvisionResult, ProvisionPartialResult } from '../../../contracts
 import { TempPasswordScreen } from './TempPasswordScreen.js';
 
 const STAFF_ROLE_LABELS: Record<string, string> = {
-  AGENT: 'Agent',
-  AGENT_COMMERCIAL: 'Agent Commercial',
-  CAISSE: 'Caisse',
-  COMPTABLE: 'Comptable',
-  LOGISTIQUE: 'Logistique',
-  RESPONSABLE_COMMERCIAL: 'Responsable Commercial',
+  AGENT: 'Conseiller Pèlerinage (Grand Agent)',
+  COMPTABLE: 'Comptable (Finances & Caisse)',
+  DIRECTION: 'Gérant / Direction Générale',
 };
 
 interface CreateStaffAccountModalProps {

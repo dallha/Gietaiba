@@ -21,8 +21,10 @@ import { SettingsModule } from './modules/settings/SettingsModule.js';
 import { UsersRolesModule } from './modules/users/UsersRolesModule.js';
 import { WorkspaceModule } from './modules/workspace/WorkspaceModule.js';
 import { api } from './services/api.js';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, ShieldAlert, ArrowLeft } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from './auth/AuthContext.js';
+import { isModuleAllowedForRole, normalizeRole, MODULE_LABELS } from './auth/roleModules.js';
 import {
   User,
   Client,
@@ -96,6 +98,7 @@ export const ROUTE_TO_MODULE: Record<string, string> = {
 export default function ErpApp() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentUser: authUser, role } = useAuth();
 
   // Résoudre le module actif directement depuis l'URL courante
   const activeModule = ROUTE_TO_MODULE[location.pathname] || 'dashboard';
@@ -109,6 +112,9 @@ export default function ErpApp() {
 
   // Core entities state
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const effectiveRoleId = normalizeRole(role?.id || authUser?.roleId || currentUser?.roleId);
+  const isAllowed = isModuleAllowedForRole(effectiveRoleId, activeModule);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -427,8 +433,33 @@ export default function ErpApp() {
         navigateToModule('inscriptions');
       }}
     >
+      {/* 403 FORBIDDEN MODULE GUARD FOR DIRECT URL ACCESS */}
+      {!isAllowed && (
+        <div className="bg-white rounded-2xl border border-red-200/80 p-8 sm:p-12 shadow-sm text-center max-w-2xl mx-auto my-12">
+          <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 border border-red-200 flex items-center justify-center mx-auto mb-5">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <div className="inline-block px-3 py-1 rounded-full bg-red-100 text-red-700 text-[11px] font-black uppercase tracking-wider mb-3">
+            403 • Accès Non Autorisé
+          </div>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-2 font-serif">
+            Module Restreint pour votre Profil
+          </h2>
+          <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-6 max-w-lg mx-auto">
+            Votre profil d'authentification (<strong className="text-slate-900 font-bold">{role?.name || effectiveRoleId}</strong>) ne dispose pas des privilèges nécessaires pour accéder au module <strong className="text-slate-900 font-bold">« {MODULE_LABELS[activeModule] || activeModule} »</strong>. Veuillez vous référer à la Direction pour toute demande d'accès.
+          </p>
+          <button
+            onClick={() => navigateToModule('dashboard')}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs rounded-xl shadow-sm transition cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Retourner au Tableau de Bord</span>
+          </button>
+        </div>
+      )}
+
       {/* 1. DASHBOARD */}
-      {activeModule === 'dashboard' && (
+      {isAllowed && activeModule === 'dashboard' && (
         <DashboardModule
           stats={dashboardStats}
           clients={clients}
@@ -443,7 +474,7 @@ export default function ErpApp() {
       )}
 
       {/* 2. CLIENTS */}
-      {activeModule === 'clients' && (
+      {isAllowed && activeModule === 'clients' && (
         <ClientsModule
           clients={clients}
           inscriptions={inscriptions}
@@ -461,7 +492,7 @@ export default function ErpApp() {
       )}
 
       {/* 3. INSCRIPTIONS */}
-      {activeModule === 'inscriptions' && (
+      {isAllowed && activeModule === 'inscriptions' && (
         <InscriptionsModule
           inscriptions={inscriptions}
           clients={clients}
@@ -476,7 +507,7 @@ export default function ErpApp() {
       )}
 
       {/* 4. PACKAGES */}
-      {activeModule === 'packages' && (
+      {isAllowed && activeModule === 'packages' && (
         <PackagesModule
           packages={packages}
           voyages={voyages}
@@ -492,7 +523,7 @@ export default function ErpApp() {
       )}
 
       {/* 5. PAIEMENTS */}
-      {activeModule === 'paiements' && (
+      {isAllowed && activeModule === 'paiements' && (
         <PaiementsModule
           payments={payments}
           inscriptions={inscriptions}
@@ -506,7 +537,7 @@ export default function ErpApp() {
       )}
 
       {/* 6. RECOUVREMENT */}
-      {activeModule === 'recouvrement' && (
+      {isAllowed && activeModule === 'recouvrement' && (
         <RecouvrementModule
           inscriptions={inscriptions}
           clients={clients}
@@ -517,7 +548,7 @@ export default function ErpApp() {
       )}
 
       {/* 7. DOCUMENTS GED */}
-      {activeModule === 'documents' && (
+      {isAllowed && activeModule === 'documents' && (
         <DocumentsModule
           documents={documents}
           clients={clients}
@@ -530,7 +561,7 @@ export default function ErpApp() {
       )}
 
       {/* 8. VISAS NUSUK */}
-      {activeModule === 'visas' && (
+      {isAllowed && activeModule === 'visas' && (
         <VisasModule
           visas={visas}
           clients={clients}
@@ -542,7 +573,7 @@ export default function ErpApp() {
       )}
 
       {/* 9. LOGISTIQUE */}
-      {(activeModule === 'logistique' || activeModule === 'hotels' || activeModule === 'vols' || activeModule === 'groupes') && (
+      {isAllowed && (activeModule === 'logistique' || activeModule === 'hotels' || activeModule === 'vols' || activeModule === 'groupes') && (
         <LogistiqueModule
           flights={flights}
           tickets={tickets}
@@ -562,7 +593,7 @@ export default function ErpApp() {
       )}
 
       {/* 10. DÉPENSES & RENTABILITÉ */}
-      {activeModule === 'depenses' && (
+      {isAllowed && activeModule === 'depenses' && (
         <DepensesModule
           expenses={expenses}
           voyages={voyages}
@@ -575,7 +606,7 @@ export default function ErpApp() {
       )}
 
       {/* 11. VOYAGES & CAMPAGNES */}
-      {activeModule === 'voyages' && (
+      {isAllowed && activeModule === 'voyages' && (
         <VoyagesModule
           voyages={voyages}
           inscriptions={inscriptions}
@@ -591,7 +622,7 @@ export default function ErpApp() {
       )}
 
       {/* 12. RAPPORTS & EXPORTS */}
-      {activeModule === 'rapports' && (
+      {isAllowed && activeModule === 'rapports' && (
         <RapportsModule
           clients={clients}
           inscriptions={inscriptions}
@@ -604,12 +635,12 @@ export default function ErpApp() {
       )}
 
       {/* 13. AUDIT LOGS */}
-      {activeModule === 'audit' && (
+      {isAllowed && activeModule === 'audit' && (
         <AuditLogsModule logs={auditLogs} users={users} settings={settings} />
       )}
 
       {/* 14. SETTINGS */}
-      {activeModule === 'settings' && (
+      {isAllowed && activeModule === 'settings' && (
         <SettingsModule
           settings={settings}
           onRefresh={refreshAllData}
@@ -618,12 +649,12 @@ export default function ErpApp() {
       )}
 
       {/* 15. USERS & ROLES */}
-      {activeModule === 'users-roles' && (
+      {isAllowed && activeModule === 'users-roles' && (
         <UsersRolesModule />
       )}
 
       {/* 16. WORKSPACE INTEGRATIONS */}
-      {activeModule === 'workspace' && (
+      {isAllowed && activeModule === 'workspace' && (
         <WorkspaceModule />
       )}
 
