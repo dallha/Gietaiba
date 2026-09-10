@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import { randomUUID } from 'crypto';
 import { pool } from '../server/db/neon.js';
-import { userRepository } from '../server/repositories/user.repository.js';
 
 export async function onboardGerant() {
   console.log('=====================================================================');
@@ -139,28 +138,6 @@ export async function onboardGerant() {
 
     await client.query('COMMIT');
     console.log('\n✅ TRANSACTION VALIDÉE ET COMMITTÉE AVEC SUCCÈS.');
-
-    // 4. Test d'Authentification Post-Onboarding
-    console.log('\n-> 4. Test d\'authentification et de permissions du compte créé...');
-    const session = await userRepository.authenticate(gerantData.email, password);
-    if (!session) {
-      throw new Error('Échec du test de connexion pour le compte créé !');
-    }
-    console.log('  ✅ Authentification réussie pour kabaye73@gmail.com');
-    console.log(`  ✅ displayName vérifié : "${session.displayName}"`);
-    console.log(`  ✅ role vérifié        : "${session.role}"`);
-    console.log(`  ✅ clientId vérifié    : ${session.clientId ?? 'NULL'}`);
-    console.log(`  ✅ active vérifié      : ${session.active}`);
-
-    if (session.displayName !== 'Cheikh Ibrahima Ka') {
-      throw new Error(`displayName erroné : ${session.displayName}`);
-    }
-    if (session.role !== 'SUPER_ADMIN') {
-      throw new Error(`role erroné : ${session.role}`);
-    }
-    if (session.clientId) {
-      throw new Error(`clientId non nul détecté : ${session.clientId}`);
-    }
 
     console.log('\n=====================================================================');
     console.log('  🏆 ONBOARDING RÉUSSI : Cheikh Ibrahima Ka est SUPER_ADMIN');

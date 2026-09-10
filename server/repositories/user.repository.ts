@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { pool } from '../db/neon.js';
 import { UserSession, User, Role, UserClientAccess, Client } from '../../src/types.js';
 
@@ -52,34 +53,6 @@ export class UserRepository {
     );
     if (res.rows.length === 0) return null;
     return this.mapRowToSession(res.rows[0]);
-  }
-
-  public async authenticate(emailOrPhone: string, password: string): Promise<UserSession | null> {
-    const cleanQuery = emailOrPhone.trim().toLowerCase();
-    const cleanPhone = cleanQuery.replace(/[\s+-]/g, '');
-
-    const res = await pool.query(
-      `SELECT id, email, display_name, phone, role_id, status, active, client_id, allowed_inscription_ids, password_hash
-       FROM users
-       WHERE (LOWER(email) = $1 OR regexp_replace(phone, '[\\s+-]', '', 'g') = $2)
-         AND active = TRUE
-         AND status = 'ACTIF'`,
-      [cleanQuery, cleanPhone]
-    );
-
-    if (res.rows.length === 0) return null;
-
-    const userRow = res.rows[0];
-    if (userRow.password_hash !== password) {
-      return null;
-    }
-
-    // Update last_login_at
-    await pool.query(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [userRow.id]);
-
-    const session = this.mapRowToSession(userRow);
-    session.accessibleClientIds = await this.getAccessibleClientIds(userRow.id);
-    return session;
   }
 
   public async authenticatePilgrim(identifier: string): Promise<{ user: UserSession; client: any } | null> {
@@ -154,7 +127,7 @@ export class UserRepository {
     const roleId = user.roleId || 'AGENT';
     const status = user.status || 'ACTIF';
     const active = user.active !== false;
-    const passwordHash = user.password || 'taiba123';
+    const passwordHash = crypto.randomBytes(32).toString('hex');
 
     const res = await pool.query(
       `INSERT INTO users (

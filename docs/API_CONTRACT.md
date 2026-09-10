@@ -16,12 +16,11 @@
 ### 1.2 En-têtes HTTP Requis
 | En-tête | Requis | Description | Exemple |
 |---|---|---|---|
-| `Authorization` | Oui (sauf `/api/auth/*`) | Jeton Bearer de session signé cryptographiquement (HMAC-SHA256) | `Bearer eyJhbGciOi...` |
 | `Content-Type` | Oui sur POST/PUT/PATCH | Type MIME du corps | `application/json` |
 | `Idempotency-Key` | Oui sur mutations financières & critiques | Clé unique garantissant une exécution unique sous concurrence | `Idempotency-Key: PAY-uuid-v4` |
 | `Accept` | Recommandé | Type de réponse attendu | `application/json` |
 
-> ⚠️ **Sécurité stricte :** L'ancien en-tête non sécurisé `x-user-id` est **formellement banni et ignoré**. Tout appel sans jeton Bearer valide reçoit un rejet immédiat `401 Unauthorized`.
+> ℹ️ **Authentification :** La session est gérée par Neon Auth via un cookie HttpOnly (`credentials: 'same-origin'`). Aucun en-tête `Authorization` n'est requis côté client — le cookie est automatiquement transmis par le navigateur. L'ancien en-tête `x-user-id` n'est plus utilisé.
 
 ---
 
@@ -93,66 +92,19 @@ L'ERP implémente un modèle RBAC strict sur 6 rôles :
 
 ### 3.1 Authentification (`/api/auth`)
 
-#### `POST /api/auth/login`
-- **Description :** Connexion administrative et staff par identifiant / mot de passe.
-- **Accès :** Public.
-- **Request Body :**
-  ```json
-  {
-    "email": "agent@taiba-voyages.sn",
-    "password": "Password123!"
-  }
-  ```
-- **Response 200 OK :**
-  ```json
-  {
-    "user": {
-      "id": "usr-agent",
-      "email": "agent@taiba-voyages.sn",
-      "displayName": "Aminata Diallo",
-      "role": "AGENT",
-      "roles": ["AGENT_COMMERCIAL"],
-      "permissions": ["clients.read", "clients.write", "inscriptions.write", "payments.write"]
-    },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6Ik..."
-  }
-  ```
+L'authentification est **entièrement déléguée à Neon Auth** via le proxy `/api/auth/*` (sign-in email/password, Google, request-password-reset, etc.). Neon Auth gère les identifiants, la vérification et l'émission de la session.
 
-#### `POST /api/auth/pilgrim-login`
-- **Description :** Connexion simplifiée et sécurisée du pèlerin via son numéro de téléphone ou son code dossier.
-- **Accès :** Public.
-- **Request Body :**
-  ```json
-  {
-    "identifier": "+221 77 123 45 67"
-  }
-  ```
-- **Response 200 OK :**
-  ```json
-  {
-    "user": {
-      "id": "usr-pelerin-saidou",
-      "email": "saidou.sow@email.sn",
-      "displayName": "Saidou Sow",
-      "role": "PELERIN",
-      "clientId": "cli-001"
-    },
-    "client": {
-      "id": "cli-001",
-      "code": "CLI-000001",
-      "firstName": "Saidou",
-      "lastName": "SOW",
-      "phone": "+221 77 123 45 67"
-    },
-    "token": "eyJhbGciOiJIUzI1Ni..."
-  }
-  ```
+#### `POST /api/auth/*` (proxy Neon Auth)
+- **Description :** Endpoints d'authentification délégués à Neon Auth : `sign-in` (email/password), `google`, `request-password-reset`, `reset-password`, `sign-out`, etc.
+- **Accès :** Public (sauf `sign-out`).
+- **Réponse :** Neon Auth établit un cookie de session HttpOnly. Aucun jeton n'est renvoyé au client.
 
 #### `GET /api/auth/me`
-- **Description :** Récupération de la session courante à partir du Bearer token (pour validation au rechargement de page).
+- **Description :** Récupération de la session courante à partir du cookie HttpOnly (pour validation au rechargement de page).
 - **Accès :** Tout utilisateur authentifié.
-- **Headers :** `Authorization: Bearer <token>`
-- **Response 200 OK :** Renvoie l'objet session `user`.
+- **Headers :** Aucun — le cookie de session est transmis automatiquement (`credentials: 'same-origin'`).
+- **Flux :** `requireNeonAuth` → résolution `neon_auth_id` → chargement de l'utilisateur depuis `public.users` → RBAC.
+- **Response 200 OK :** Renvoie l'objet session `user` (id, email, displayName, role, clientId, allowedInscriptionIds, permissions).
 
 ---
 
@@ -267,8 +219,8 @@ L'ERP implémente un modèle RBAC strict sur 6 rôles :
 
 ## 4. GUIDE D'INTÉGRATION FRONTEND
 
-1. **Jeton Bearer :** Stocker le jeton de session dans `localStorage` sous la clé `taiba_auth_token`.
-2. **Injection automatique :** Le service API centralisé (`src/services/api.ts`) injecte automatiquement `Authorization: Bearer <token>` dans chaque requête sortante.
-3. **Suppression de `x-user-id` :** Aucun en-tête non authentifié `x-user-id` ne doit être émis par le frontend.
-4. **Gestion des erreurs :** Intercepter les codes `401` pour réinitialiser la session et rediriger vers `/login`, afficher des alertes explicites sur les rejets `422` (surbooking, dates incohérentes, campagne clôturée).
+1. **Session HttpOnly :** L'authentification repose sur le cookie de session HttpOnly émis par Neon Auth. Toutes les requêtes API utilisent `credentials: 'same-origin'` — le cookie est transmis automatiquement par le navigateur.
+2. **Aucun stockage de jeton :** Ne jamais stocker de token dans `localStorage` ni `sessionStorage`. Aucun en-tête `Authorization` n'est émis par le frontend.
+3. **Connexion :** Rediriger vers `/api/auth/*` (proxy Neon Auth) pour le sign-in (email/password ou Google). Après connexion, recharger la session via `GET /api/auth/me`.
+4. **Gestion des erreurs :** Intercepter les codes `401` pour rediriger vers `/login`, afficher des alertes explicites sur les rejets `422` (surbooking, dates incohérentes, campagne clôturée).
 5. **Idempotence :** Sur toute action de création financière (paiement, inscription), générer un UUID v4 côté client et le transmettre dans l'en-tête `Idempotency-Key`.
