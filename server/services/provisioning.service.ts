@@ -88,9 +88,11 @@ export function generateSecurePassword(length = 16): string {
 
 async function callNeonAdminCreateUser(
   cookieHeader: string,
-  body: { email: string; password: string; name: string; role?: string; data?: Record<string, unknown> }
+  body: { email: string; password: string; name: string; role?: string; data?: Record<string, unknown> },
+  reqOrigin?: string
 ): Promise<{ id: string; email: string }> {
   const neonAuthUrl = getNeonAuthUrl();
+  const origin = reqOrigin || process.env.APP_URL || 'https://gietaiba.onrender.com';
 
   const response = await fetch(`${neonAuthUrl}/admin/create-user`, {
     method: 'POST',
@@ -98,6 +100,7 @@ async function callNeonAdminCreateUser(
     headers: {
       'Content-Type': 'application/json',
       'Cookie': cookieHeader,
+      'Origin': origin,
     },
     body: JSON.stringify(body),
   });
@@ -125,9 +128,11 @@ async function callNeonAdminCreateUser(
 
 async function callNeonAdminRemoveUser(
   cookieHeader: string,
-  userId: string
+  userId: string,
+  reqOrigin?: string
 ): Promise<void> {
   const neonAuthUrl = getNeonAuthUrl();
+  const origin = reqOrigin || process.env.APP_URL || 'https://gietaiba.onrender.com';
 
   const response = await fetch(`${neonAuthUrl}/admin/remove-user`, {
     method: 'POST',
@@ -135,6 +140,7 @@ async function callNeonAdminRemoveUser(
     headers: {
       'Content-Type': 'application/json',
       'Cookie': cookieHeader,
+      'Origin': origin,
     },
     body: JSON.stringify({ userId }),
   });
@@ -248,11 +254,15 @@ async function provisionCore(
 
   // 7. Create Neon Auth identity
   const displayName = `${input.firstName.trim()} ${input.lastName.trim()}`;
-  const neonUser = await callNeonAdminCreateUser(cookieHeader, {
-    email,
-    password: tempPassword,
-    name: displayName,
-  });
+  const neonUser = await callNeonAdminCreateUser(
+    cookieHeader,
+    {
+      email,
+      password: tempPassword,
+      name: displayName,
+    },
+    req.headers.origin
+  );
 
   // 8. Insert public.users row
   const userId = `usr-${Date.now()}`;

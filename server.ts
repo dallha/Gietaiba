@@ -1160,6 +1160,7 @@ app.post('/api/change-password',
         headers: {
           'Content-Type': 'application/json',
           'Cookie': cookieHeader,
+          'Origin': req.headers.origin || process.env.APP_URL || 'https://gietaiba.onrender.com',
         },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
