@@ -121,6 +121,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let active = true;
 
     async function initAuth() {
+      // Échange du verifier OAuth (callback Google) AVANT de vérifier la session GIE
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('neon_auth_session_verifier')) {
+          try {
+            await neonAuthClient.getSession();
+          } catch (e) {
+            console.warn('Échange du verifier Neon Auth échoué', e);
+          }
+        }
+      }
+
       // Restauration de session automatique : interroge /api/auth/me avec le cookie HttpOnly taiba_session
       try {
         const userSession = await api.getCurrentUser();
