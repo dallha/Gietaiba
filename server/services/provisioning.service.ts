@@ -174,7 +174,7 @@ async function callNeonAdminSetUserPassword(cookieHeader: string, userId: string
   const res = await fetch(`${neonAuthUrl}/admin/set-user-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Cookie': cookieHeader, 'Origin': origin },
-    body: JSON.stringify({ userId, password })
+    body: JSON.stringify({ userId, newPassword: password })
   });
   if (!res.ok) {
     const text = await res.text();
