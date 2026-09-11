@@ -10,8 +10,13 @@ import {
   Key, 
   Link2, 
   Unlink, 
-  Trash2, 
-  Edit3, 
+  Trash2,
+  Edit3,
+  MailCheck,
+  KeyRound,
+  LogOut,
+  ChevronDown,
+  Copy, 
   Save, 
   AlertTriangle, 
   Check, 
@@ -119,6 +124,49 @@ export const UsersRolesModule: React.FC = () => {
   );
 
   // Role creation & editing
+  
+  // V2.3 Password Management State
+  const [passwordResetTarget, setPasswordResetTarget] = useState<User | null>(null);
+  const [passwordResetResult, setPasswordResetResult] = useState<{ temporaryPassword: string } | null>(null);
+  const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
+
+  const handleSendResetEmail = async (targetUser: User) => {
+    if (!confirm(`Envoyer un lien de réinitialisation à ${targetUser.email} ?`)) return;
+    try {
+      const res = await api.sendStaffResetEmail(targetUser.id);
+      alert(res.message);
+    } catch (e: any) {
+      alert("Erreur : " + (e.message || "Action refusée."));
+    }
+  };
+
+  const handleResetPassword = async (targetUser: User) => {
+    if (!confirm(`Attention : un nouveau mot de passe temporaire sera généré pour ${targetUser.firstName || targetUser.email}. La session actuelle sera conservée jusqu'à la prochaine connexion.`)) return;
+    setPasswordResetLoading(true);
+    try {
+      const res = await api.resetStaffPassword(targetUser.id);
+      setPasswordResetResult({ temporaryPassword: res.temporaryPassword });
+      setPasswordResetTarget(targetUser);
+      fetchData();
+    } catch (e: any) {
+      alert("Erreur : " + (e.message || "Action refusée."));
+    } finally {
+      setPasswordResetLoading(false);
+    }
+  };
+
+  const handleRevokeSessions = async (targetUser: User) => {
+    if (!confirm(`Déconnecter immédiatement ${targetUser.firstName || targetUser.email} de tous ses appareils ?`)) return;
+    try {
+      const res = await api.revokeStaffSessions(targetUser.id);
+      alert(res.message);
+      setActiveDropdownId(null);
+    } catch (e: any) {
+      alert("Erreur : " + (e.message || "Action refusée."));
+    }
+  };
+
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [isCreatingRole, setIsCreatingRole] = useState(false);
   const [roleFormName, setRoleFormName] = useState('');
@@ -604,32 +652,79 @@ export const UsersRolesModule: React.FC = () => {
                   </div>
 
                   {/* Actions Buttons */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                  <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
                     {isOwnerAccount ? (
                       <span className="text-xs text-slate-400 italic py-1">Compte racine système protégé</span>
                     ) : (
                       <>
-                        <button
-                          onClick={() => toggleUserStatus(user)}
-                          disabled={isSelf}
-                          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                            user.active
-                              ? 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200'
-                              : 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
-                          } ${isSelf ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          {user.active ? 'Désactiver' : 'Activer'}
-                        </button>
-
-                        {hasPermission('users.delete') && !isSelf && (
-                          <button
-                            onClick={() => setDeprovisioningUser(user)}
-                            className="py-2 px-3 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition flex items-center gap-1 cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Supprimer</span>
-                          </button>
+                        {/* Ligne 1: Reset & MDP */}
+                        {!isSelf && currentUser?.roleId === 'SUPER_ADMIN' && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleSendResetEmail(user)}
+                              className="flex-1 py-2 px-3 rounded-xl text-[11px] font-bold text-slate-700 bg-slate-50 border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <MailCheck className="w-3.5 h-3.5" />
+                              Envoyer reset
+                            </button>
+                            <button
+                              onClick={() => handleResetPassword(user)}
+                              disabled={passwordResetLoading}
+                              className="flex-1 py-2 px-3 rounded-xl text-[11px] font-bold text-slate-700 bg-slate-50 border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <KeyRound className="w-3.5 h-3.5" />
+                              Nouveau MDP
+                            </button>
+                          </div>
                         )}
+
+                        {/* Ligne 2: Toggle & Autres actions */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => toggleUserStatus(user)}
+                            disabled={isSelf}
+                            className={`flex-1 py-2 px-3 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                              user.active
+                                ? 'text-amber-800 bg-amber-50 border border-amber-200'
+                                : 'text-emerald-800 bg-emerald-50 border border-emerald-200'
+                            } ${isSelf ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            {user.active ? 'Désactiver' : 'Activer'}
+                          </button>
+
+                          {!isSelf && currentUser?.roleId === 'SUPER_ADMIN' && (
+                            <div className="relative flex-1">
+                              <button
+                                onClick={() => setActiveDropdownId(activeDropdownId === user.id ? null : user.id)}
+                                className="w-full h-full py-2 px-3 rounded-xl text-[11px] font-bold text-slate-700 bg-slate-50 border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                Autres actions
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </button>
+                              
+                              {activeDropdownId === user.id && (
+                                <div className="absolute right-0 bottom-full mb-1 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-10 overflow-hidden">
+                                  <button
+                                    onClick={() => handleRevokeSessions(user)}
+                                    className="w-full text-left px-4 py-2.5 text-[11px] font-bold text-amber-700 hover:bg-amber-50 flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <LogOut className="w-3.5 h-3.5" />
+                                    Révoquer les sessions
+                                  </button>
+                                  {hasPermission('users.delete') && (
+                                    <button
+                                      onClick={() => { setActiveDropdownId(null); setDeprovisioningUser(user); }}
+                                      className="w-full text-left px-4 py-2.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50 flex items-center gap-2 border-t border-slate-100 cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      Déprovisionner
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </>
                     )}
                   </div>

@@ -1165,6 +1165,43 @@ app.patch('/api/provisioning/staff/:id/status',
   }
 );
 
+
+app.post('/api/provisioning/staff/:id/send-reset-email',
+  requireNeonAuth, requirePermission('users.update'), requireSuperAdmin, provisioningRateLimit,
+  async (req, res) => {
+    try {
+      const result = await provisioningService.sendResetEmail(req, req.params.id);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  }
+);
+
+app.post('/api/provisioning/staff/:id/reset-password',
+  requireNeonAuth, requirePermission('users.update'), requireSuperAdmin, provisioningRateLimit,
+  async (req, res) => {
+    try {
+      const result = await provisioningService.resetStaffPassword(req, req.params.id);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  }
+);
+
+app.post('/api/provisioning/staff/:id/revoke-sessions',
+  requireNeonAuth, requirePermission('users.update'), requireSuperAdmin, provisioningRateLimit,
+  async (req, res) => {
+    try {
+      const result = await provisioningService.revokeStaffSessions(req, req.params.id);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  }
+);
+
 app.delete('/api/provisioning/staff/:id',
   requireNeonAuth, requirePermission('users.delete'), requireSuperAdmin, provisioningRateLimit,
   async (req: Request, res: Response) => {

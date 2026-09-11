@@ -156,6 +156,45 @@ async function callNeonAdminRemoveUser(
   }
 }
 
+async function callNeonAdminRequestPasswordReset(cookieHeader: string, email: string, origin: string) {
+  const neonAuthUrl = getNeonAuthUrl();
+  const res = await fetch(`${neonAuthUrl}/request-password-reset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Cookie': cookieHeader, 'Origin': origin },
+    body: JSON.stringify({ email, redirectUrl: `${origin}/reset-password` })
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`request-password-reset returned ${res.status} - ${text}`);
+  }
+}
+
+async function callNeonAdminSetUserPassword(cookieHeader: string, userId: string, password: string, origin: string) {
+  const neonAuthUrl = getNeonAuthUrl();
+  const res = await fetch(`${neonAuthUrl}/admin/set-user-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Cookie': cookieHeader, 'Origin': origin },
+    body: JSON.stringify({ userId, password })
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`set-user-password returned ${res.status} - ${text}`);
+  }
+}
+
+async function callNeonAdminRevokeUserSessions(cookieHeader: string, userId: string, origin: string) {
+  const neonAuthUrl = getNeonAuthUrl();
+  const res = await fetch(`${neonAuthUrl}/admin/revoke-user-sessions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Cookie': cookieHeader, 'Origin': origin },
+    body: JSON.stringify({ userId })
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`revoke-user-sessions returned ${res.status} - ${text}`);
+  }
+}
+
 // ── Compensation with re-check ───────────────────────────────────────
 
 async function compensateNeonUser(
@@ -650,6 +689,125 @@ class ProvisioningService {
         : 'Compte vierge révoqué de Neon Auth et intégralement purgé de la base de données.',
     };
   }
+  async sendResetEmail(req: Request, targetUserId: string) {
+    const actorId = req.user?.id;
+    if (!actorId) throw new ProvisionError('UNAUTHORIZED', 'Authentification requise.');
+
+    const cookieHeader = req.headers.cookie;
+    if (!cookieHeader) throw new ProvisionError('UNAUTHORIZED', 'Session Neon Auth manquante.');
+
+    const userRes = await pool.query('SELECT email FROM users WHERE id = $1', [targetUserId]);
+    
+    if (userRes.rows.length > 0) {
+      const email = userRes.rows[0].email;
+      try {
+        await callNeonAdminRequestPasswordReset(
+          cookieHeader,
+          email,
+          req.headers.origin || process.env.APP_URL || 'https://gietaiba.onrender.com'
+        );
+        
+        await auditRepository.logAudit({
+          actorUserId: actorId,
+          actorUserName: req.user?.displayName || req.user?.email || 'admin',
+          action: 'STAFF_RESET_EMAIL_SENT',
+          entityType: 'USER',
+          entityId: targetUserId,
+          newValue: { action: 'EMAIL_RESET_REQUESTED' },
+        });
+      } catch (err: any) {
+        console.error('[Provisioning] Neon Auth request-password-reset failed:', err.message);
+        // We do not throw to avoid enumeration, we just log it.
+      }
+    } else {
+      console.warn(`[Provisioning] Reset email requested for unknown user: ${targetUserId}`);
+    }
+
+    // Always return generic success to avoid enumeration
+    return { message: 'La demande de réinitialisation a été traitée.' };
+  }
+
+  async resetStaffPassword(req: Request, targetUserId: string) {
+    const actorId = req.user?.id;
+    if (!actorId) throw new ProvisionError('UNAUTHORIZED', 'Authentification requise.');
+
+    const cookieHeader = req.headers.cookie;
+    if (!cookieHeader) throw new ProvisionError('UNAUTHORIZED', 'Session Neon Auth manquante.');
+
+    const userRes = await pool.query('SELECT neon_auth_id, email FROM users WHERE id = $1', [targetUserId]);
+    if (userRes.rows.length === 0) {
+      throw new ProvisionError('CLIENT_NOT_FOUND', 'Utilisateur introuvable.');
+    }
+    const target = userRes.rows[0];
+    if (!target.neon_auth_id) {
+      throw new ProvisionError('INVALID_STATE', 'Ce compte ne possède pas d\'identité Neon Auth.');
+    }
+
+    const tempPassword = generateSecurePassword(16);
+    const origin = req.headers.origin || process.env.APP_URL || 'https://gietaiba.onrender.com';
+
+    try {
+      await callNeonAdminSetUserPassword(cookieHeader, target.neon_auth_id, tempPassword, origin);
+      
+      await pool.query('UPDATE users SET must_change_password = TRUE, updated_at = NOW() WHERE id = $1', [targetUserId]);
+
+      await auditRepository.logAudit({
+        actorUserId: actorId,
+        actorUserName: req.user?.displayName || req.user?.email || 'admin',
+        action: 'STAFF_PASSWORD_RESET_BY_ADMIN',
+        entityType: 'USER',
+        entityId: targetUserId,
+        newValue: { action: 'TEMP_PASSWORD_GENERATED', must_change_password: true },
+      });
+
+      return {
+        success: true,
+        temporaryPassword: tempPassword,
+        mustChangePassword: true
+      };
+    } catch (err: any) {
+      console.error('[Provisioning] Neon Auth set-user-password failed:', err.message);
+      throw new ProvisionError('NEON_AUTH_API_ERROR', 'Erreur lors de la génération du mot de passe temporaire.');
+    }
+  }
+
+  async revokeStaffSessions(req: Request, targetUserId: string) {
+    const actorId = req.user?.id;
+    if (!actorId) throw new ProvisionError('UNAUTHORIZED', 'Authentification requise.');
+
+    const cookieHeader = req.headers.cookie;
+    if (!cookieHeader) throw new ProvisionError('UNAUTHORIZED', 'Session Neon Auth manquante.');
+
+    const userRes = await pool.query('SELECT neon_auth_id FROM users WHERE id = $1', [targetUserId]);
+    if (userRes.rows.length === 0) {
+      throw new ProvisionError('CLIENT_NOT_FOUND', 'Utilisateur introuvable.');
+    }
+    const target = userRes.rows[0];
+    if (!target.neon_auth_id) {
+      throw new ProvisionError('INVALID_STATE', 'Ce compte ne possède pas d\'identité Neon Auth.');
+    }
+
+    const origin = req.headers.origin || process.env.APP_URL || 'https://gietaiba.onrender.com';
+
+    try {
+      await callNeonAdminRevokeUserSessions(cookieHeader, target.neon_auth_id, origin);
+
+      await auditRepository.logAudit({
+        actorUserId: actorId,
+        actorUserName: req.user?.displayName || req.user?.email || 'admin',
+        action: 'STAFF_SESSIONS_REVOKED',
+        entityType: 'USER',
+        entityId: targetUserId,
+        newValue: { action: 'SESSIONS_REVOKED' },
+      });
+
+      return { message: 'Sessions révoquées.' };
+    } catch (err: any) {
+      console.error('[Provisioning] Neon Auth revoke-user-sessions failed:', err.message);
+      throw new ProvisionError('NEON_AUTH_API_ERROR', 'Erreur lors de la révocation des sessions.');
+    }
+  }
+
 }
 
 export const provisioningService = new ProvisioningService();

@@ -183,6 +183,25 @@ class ApiService {
     return this.request(`/api/provisioning/check-email?${qs}`);
   }
 
+  
+  async sendStaffResetEmail(id: string): Promise<{ message: string }> {
+    return this.request(`/api/provisioning/staff/${encodeURIComponent(id)}/send-reset-email`, {
+      method: 'POST',
+    });
+  }
+
+  async resetStaffPassword(id: string): Promise<{ success: boolean; temporaryPassword: string; mustChangePassword: true }> {
+    return this.request(`/api/provisioning/staff/${encodeURIComponent(id)}/reset-password`, {
+      method: 'POST',
+    });
+  }
+
+  async revokeStaffSessions(id: string): Promise<{ message: string }> {
+    return this.request(`/api/provisioning/staff/${encodeURIComponent(id)}/revoke-sessions`, {
+      method: 'POST',
+    });
+  }
+
   async toggleStaffStatus(id: string, active: boolean): Promise<User> {
     return this.request(`/api/provisioning/staff/${encodeURIComponent(id)}/status`, {
       method: 'PATCH',
