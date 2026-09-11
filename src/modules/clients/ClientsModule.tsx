@@ -463,21 +463,55 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
       {selectedClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/50 backdrop-blur-xs">
           <div className="bg-white w-full max-w-2xl h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
-            {/* Drawer Header */}
-            <div className="bg-slate-900 text-white p-5 flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                    FICHE PÈLERIN
-                  </span>
-                  <span className="font-mono text-xs text-slate-400">ID: {selectedClient.code}</span>
+            {/* Official Print Header (Visible strictly when printing the pilgrim profile) */}
+            <div className="hidden print:flex items-start justify-between border-b-2 border-slate-900 pb-4 mb-4 gap-4">
+              <div className="flex items-center gap-3">
+                <img
+                  src="/assets/logo-taiba.svg"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = '/logo-taiba.svg';
+                  }}
+                  alt="GIE TAIBA VOYAGES"
+                  className="w-12 h-12 object-contain"
+                />
+                <div>
+                  <h1 className="text-base font-black text-slate-900">GIE TAIBA VOYAGES</h1>
+                  <p className="text-xs text-amber-800 font-bold">Fiche Officielle du Pèlerin • Agrément République du Sénégal</p>
                 </div>
-                <h2 className="text-lg font-black text-white">
-                  {selectedClient.civility} {selectedClient.firstName} {selectedClient.lastName}
-                </h2>
-                <p className="text-xs text-slate-300 mt-0.5">
-                  {selectedClient.phone} • {selectedClient.nationality}
-                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-mono font-bold text-slate-700">Dossier : {selectedClient.code}</span>
+                <p className="text-[10px] text-slate-500">Édité le {new Date().toLocaleDateString('fr-FR')}</p>
+              </div>
+            </div>
+
+            {/* Drawer Header (Screen) */}
+            <div className="bg-slate-900 text-white p-5 flex items-start justify-between print:hidden">
+              <div className="flex items-start gap-3.5">
+                <div className="bg-white p-1 rounded-xl shadow-xs border border-amber-400/30 shrink-0 hidden sm:flex items-center justify-center">
+                  <img
+                    src="/assets/logo-taiba.svg"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/logo-taiba.svg';
+                    }}
+                    alt="Logo Taiba"
+                    className="w-7 h-7 object-contain"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                      FICHE PÈLERIN
+                    </span>
+                    <span className="font-mono text-xs text-slate-400">ID: {selectedClient.code}</span>
+                  </div>
+                  <h2 className="text-lg font-black text-white">
+                    {selectedClient.civility} {selectedClient.firstName} {selectedClient.lastName}
+                  </h2>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    {selectedClient.phone} • {selectedClient.nationality}
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">

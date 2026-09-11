@@ -18,32 +18,61 @@ export interface GenerateReportOptions {
 }
 
 /**
- * Draws the official agency header, logo crest, and legal credentials on the PDF.
+ * Loads the official GIE TAIBA VOYAGES logo and rasterizes it to a PNG data URL for jsPDF.
  */
-function drawAgencyHeader(
-  doc: jsPDF,
-  settings: AgencySettings | undefined,
-  title: string,
-  subtitle: string,
-  referenceCode: string
-): number {
-  const pageWidth = doc.internal.pageSize.getWidth();
-  let currentY = 14;
+async function getOfficialLogoDataUrl(url: string = '/assets/logo-taiba.svg'): Promise<string | null> {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return null;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 240;
+        canvas.height = 240;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, 240, 240);
+          resolve(canvas.toDataURL('image/png'));
+          return;
+        }
+      } catch {
+        // ignore
+      }
+      resolve(null);
+    };
+    img.onerror = () => {
+      if (url !== '/logo-taiba.svg') {
+        const fallbackImg = new Image();
+        fallbackImg.crossOrigin = 'anonymous';
+        fallbackImg.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 240;
+            canvas.height = 240;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(fallbackImg, 0, 0, 240, 240);
+              resolve(canvas.toDataURL('image/png'));
+              return;
+            }
+          } catch {
+            // ignore
+          }
+          resolve(null);
+        };
+        fallbackImg.onerror = () => resolve(null);
+        fallbackImg.src = '/logo-taiba.svg';
+      } else {
+        resolve(null);
+      }
+    };
+    img.src = url;
+  });
+}
 
-  // 1. Top subtle decorative banner bar
-  doc.setFillColor(15, 23, 42); // slate-900
-  doc.rect(0, 0, pageWidth, 4, 'F');
-  doc.setFillColor(217, 119, 6); // amber-600 gold
-  doc.rect(0, 4, pageWidth, 1.5, 'F');
-
-  currentY += 4;
-
-  // 2. Official Agency Emblem / Crest
-  // Draw an official circular crest with gold & navy colors
-  const logoX = 14;
-  const logoY = currentY + 3;
+function drawFallbackEmblem(doc: jsPDF, logoX: number, logoY: number): void {
   const logoRadius = 11;
-
   // Outer gold ring
   doc.setFillColor(217, 119, 6); // amber-600
   doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius, 'F');
@@ -57,15 +86,52 @@ function drawAgencyHeader(
   doc.setLineWidth(0.4);
   doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius - 2.5, 'S');
 
-  // Emblem Monogram / Initials
+  // Official Agency Text
   doc.setTextColor(245, 158, 11);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text('TV', logoX + logoRadius, logoY + logoRadius + 1.2, { align: 'center' });
+  doc.setFontSize(6.5);
+  doc.text('TAIBA', logoX + logoRadius, logoY + logoRadius + 0.5, { align: 'center' });
 
-  doc.setFontSize(5);
+  doc.setFontSize(4.5);
   doc.setTextColor(255, 255, 255);
-  doc.text('HAJJ & UMRAH', logoX + logoRadius, logoY + logoRadius + 4.5, { align: 'center' });
+  doc.text('VOYAGES', logoX + logoRadius, logoY + logoRadius + 4, { align: 'center' });
+}
+
+/**
+ * Draws the official agency header, logo crest, and legal credentials on the PDF.
+ */
+function drawAgencyHeader(
+  doc: jsPDF,
+  settings: AgencySettings | undefined,
+  title: string,
+  subtitle: string,
+  referenceCode: string,
+  logoDataUrl?: string | null
+): number {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  let currentY = 14;
+
+  // 1. Top subtle decorative banner bar
+  doc.setFillColor(15, 23, 42); // slate-900
+  doc.rect(0, 0, pageWidth, 4, 'F');
+  doc.setFillColor(217, 119, 6); // amber-600 gold
+  doc.rect(0, 4, pageWidth, 1.5, 'F');
+
+  currentY += 4;
+
+  // 2. Official Agency Emblem / Logo
+  const logoX = 14;
+  const logoY = currentY + 3;
+
+  if (logoDataUrl) {
+    try {
+      doc.addImage(logoDataUrl, 'PNG', logoX, logoY, 22, 22);
+    } catch {
+      drawFallbackEmblem(doc, logoX, logoY);
+    }
+  } else {
+    drawFallbackEmblem(doc, logoX, logoY);
+  }
 
   // 3. Official Agency Identification Text
   const agencyName = settings?.agencyName || 'GIE TAIBA VOYAGES';
@@ -311,6 +377,10 @@ export async function downloadStructuredPdfReport(options: GenerateReportOptions
   const totalReste = inscriptions.reduce((acc, i) => acc + (i.balance || 0), 0);
   const tauxRecouvrement = totalCA > 0 ? Math.round((totalEncaissé / totalCA) * 100) : 0;
 
+  const logoDataUrl = await getOfficialLogoDataUrl(
+    settings?.logoUrl && settings.logoUrl !== '/logo.png' ? settings.logoUrl : '/assets/logo-taiba.svg'
+  );
+
   let fileName = `Rapport_${reportType}_${dateStr}.pdf`;
 
   // ==========================================
@@ -324,7 +394,8 @@ export async function downloadStructuredPdfReport(options: GenerateReportOptions
       settings,
       'Bilan Financier Général & État de Caisse',
       'Synthèse des engagements pèlerins, encaissements consolidés et créances résiduelles',
-      refCode
+      refCode,
+      logoDataUrl
     );
 
     const afterKpis = drawKpiBoxes(doc, startY, [
@@ -386,7 +457,8 @@ export async function downloadStructuredPdfReport(options: GenerateReportOptions
       settings,
       'Manifeste Officiel des Pèlerins Inscrits',
       'Document officiel d’enregistrement transmis à la Délégation Générale au Pèlerinage',
-      refCode
+      refCode,
+      logoDataUrl
     );
 
     const totalPelerins = inscriptions.length;
@@ -453,7 +525,8 @@ export async function downloadStructuredPdfReport(options: GenerateReportOptions
       settings,
       'Plan de Répartition des Chambres (Rooming List Officielle)',
       'Attribution des lits et des chambres d’hôtels pour Makkah Al-Mukarramah et Médine',
-      refCode
+      refCode,
+      logoDataUrl
     );
 
     const totalRooms = rooms.length;
@@ -524,7 +597,8 @@ export async function downloadStructuredPdfReport(options: GenerateReportOptions
       settings,
       'Bordereau de Recouvrement des Créances & Débiteurs',
       'Listing prioritaire des soldes résiduels pèlerins à régulariser avant émission des billets',
-      refCode
+      refCode,
+      logoDataUrl
     );
 
     const debtors = inscriptions.filter((i) => (i.balance || 0) > 0);
@@ -589,7 +663,8 @@ export async function downloadStructuredPdfReport(options: GenerateReportOptions
       settings,
       'Synthèse Globale & Tableau de Bord Exécutif',
       'Revue consolidée des opérations pèlerinage, trésorerie et logistique',
-      refCode
+      refCode,
+      logoDataUrl
     );
 
     const totalPelerins = inscriptions.length;
