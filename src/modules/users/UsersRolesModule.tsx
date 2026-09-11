@@ -142,7 +142,7 @@ export const UsersRolesModule: React.FC = () => {
   };
 
   const handleResetPassword = async (targetUser: User) => {
-    if (!confirm(`Attention : un nouveau mot de passe temporaire sera généré pour ${targetUser.firstName || targetUser.email}. La session actuelle sera conservée jusqu'à la prochaine connexion.`)) return;
+    if (!confirm(`Attention : un nouveau mot de passe temporaire sera généré pour ${targetUser.firstName || targetUser.email}. Toutes ses sessions actives seront immédiatement révoquées.`)) return;
     setPasswordResetLoading(true);
     try {
       const res = await api.resetStaffPassword(targetUser.id);

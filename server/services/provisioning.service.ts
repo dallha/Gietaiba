@@ -749,6 +749,13 @@ class ProvisioningService {
     try {
       await callNeonAdminSetUserPassword(cookieHeader, target.neon_auth_id, tempPassword, origin);
       
+      // Auto-révocation des sessions existantes (recommandation sécurité V2.3)
+      try {
+        await callNeonAdminRevokeUserSessions(cookieHeader, target.neon_auth_id, origin);
+      } catch (revokeErr) {
+        console.warn('[Provisioning] Impossible de révoquer les sessions après reset MDP:', revokeErr.message);
+      }
+      
       await pool.query('UPDATE users SET must_change_password = TRUE, updated_at = NOW() WHERE id = $1', [targetUserId]);
 
       await auditRepository.logAudit({
