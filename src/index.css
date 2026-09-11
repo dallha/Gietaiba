@@ -33,13 +33,13 @@ body {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 5mm 8mm;
+    margin: 14mm 16mm;
   }
 
   html, body {
     background: #ffffff !important;
     color: #0f172a !important;
-    font-size: 10.5px !important;
+    font-size: 11px !important;
     margin: 0 !important;
     padding: 0 !important;
     height: auto !important;
