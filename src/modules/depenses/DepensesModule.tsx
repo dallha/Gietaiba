@@ -127,22 +127,22 @@ export const DepensesModule: React.FC<DepensesModuleProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
-        <div>
-          <h1 className="text-xl font-black text-slate-900 flex items-center gap-2">
-            <TrendingDown className="w-5 h-5 text-amber-600" />
-            Dépenses d'Exploitation & Rentabilité Métier
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-2xs min-w-0 max-w-full overflow-hidden">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
+            <TrendingDown className="w-5 h-5 text-amber-600 shrink-0" />
+            <span className="truncate">Dépenses d'Exploitation & Rentabilité Métier</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
             Calcul automatique du résultat net et du compte d'exploitation prévisionnel par voyage.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto min-w-0">
           <select
             value={selectedVoyageId}
             onChange={(e) => setSelectedVoyageId(e.target.value)}
-            className="text-xs bg-slate-50 border border-slate-300 rounded-lg py-2 px-3 focus:outline-hidden focus:border-amber-500 font-bold text-slate-800 cursor-pointer"
+            className="w-full sm:w-auto min-w-0 text-xs bg-slate-50 border border-slate-300 rounded-lg py-2.5 sm:py-2 px-3 focus:outline-hidden focus:border-amber-500 font-bold text-slate-800 cursor-pointer"
           >
             {voyages.map((v) => (
               <option key={v.id} value={v.id}>
@@ -153,10 +153,10 @@ export const DepensesModule: React.FC<DepensesModuleProps> = ({
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 sm:py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer shrink-0"
           >
-            <Plus className="w-4 h-4 text-amber-400" />
-            Ajouter une Dépense
+            <Plus className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Ajouter une Dépense</span>
           </button>
         </div>
       </div>

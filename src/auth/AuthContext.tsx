@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { User, Role, UserSession } from '../types.js';
 import { api } from '../services/api.js';
 import { neonAuthClient } from './neonClient.js';
+import { normalizeRole } from './roleModules.js';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -55,9 +56,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const applySessionUser = useCallback((userSession: UserSession) => {
     const rawName = (userSession.displayName || '').trim();
     const nameParts = rawName ? rawName.split(' ') : [];
-    const userRole = (userSession.role || 'AGENT').toUpperCase();
-    const isPelerin = userRole === 'PELERIN' || userRole === 'PILGRIM';
-    const roleId = isPelerin ? 'PELERIN' : userRole;
+    const canonicalRoleId = normalizeRole(userSession.role);
+    const isPelerin = canonicalRoleId === 'PELERIN';
+    const roleId = canonicalRoleId;
 
     const u: User = {
       id: userSession.id,

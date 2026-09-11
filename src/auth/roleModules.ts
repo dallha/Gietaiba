@@ -86,10 +86,17 @@ export const ROLE_ALLOWED_MODULES: Record<string, string[]> = {
 export function normalizeRole(roleId: string | undefined | null): string {
   if (!roleId) return 'AGENT';
   const clean = roleId.trim().toUpperCase();
-  if (clean === 'ADMIN' || clean === 'SUPERADMIN') return 'SUPER_ADMIN';
-  if (clean === 'GERANT' || clean === 'DIRECTEUR' || clean === 'RESPONSABLE_COMMERCIAL') return 'DIRECTION';
-  if (clean === 'CAISSE' || clean === 'COMPTABILITE') return 'COMPTABLE';
-  if (clean === 'AGENT_COMMERCIAL' || clean === 'LOGISTIQUE' || clean === 'CONSEILLER') return 'AGENT';
+  if (clean === 'SUPER_ADMIN' || clean === 'ADMIN' || clean === 'SUPERADMIN' || clean.includes('SUPER_ADMIN')) return 'SUPER_ADMIN';
+  if (clean === 'DIRECTION' || clean === 'GERANT' || clean === 'DIRECTEUR' || clean === 'RESPONSABLE_COMMERCIAL' || clean.includes('DIRECTION')) return 'DIRECTION';
+  if (clean === 'COMPTABLE' || clean === 'CAISSE' || clean === 'COMPTABILITE' || clean.includes('COMPTABLE')) return 'COMPTABLE';
+  if (clean === 'PELERIN' || clean === 'PILGRIM' || clean.includes('PELERIN')) return 'PELERIN';
+  if (
+    clean === 'AGENT' ||
+    clean.includes('AGENT') ||
+    clean.includes('CONSEILLER') ||
+    clean.includes('LOGISTIQUE') ||
+    clean.includes('COMMERCIAL')
+  ) return 'AGENT';
   return clean;
 }
 

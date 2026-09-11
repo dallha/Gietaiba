@@ -94,11 +94,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   }, []);
   const navigate = onNavigate || onSelectModule || (() => {});
 
-  const effectiveUser = authUser || {
-    id: 'usr-admin',
-    email: 'admin',
-    displayName: 'Direction Générale',
-    roleId: 'SUPER_ADMIN',
+  const effectiveUser = authUser || currentUser || {
+    id: 'usr-agent',
+    email: 'agent@gietaiba.com',
+    displayName: 'Agent Commercial',
+    roleId: 'AGENT',
   };
   
   const handleLogout = async () => {
@@ -132,7 +132,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     { id: 'audit', label: 'Journal d’Audit', icon: History, category: 'ADMINISTRATION' },
   ];
 
-  const userRoleId = normalizeRole(role?.id || effectiveUser.roleId);
+  const userRoleId = normalizeRole(role?.id || effectiveUser?.roleId || (effectiveUser as any)?.role);
   const visibleNavItems = navItems.filter((item) => isModuleAllowedForRole(userRoleId, item.id));
 
   return (

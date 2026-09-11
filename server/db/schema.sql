@@ -624,3 +624,13 @@ EXCEPTION WHEN OTHERS THEN
   NULL;
 END $$;
 
+-- Migration Idempotente : Normalisation des rôles legacy vers AGENT
+DO $$
+BEGIN
+  UPDATE users SET role_id = 'AGENT' WHERE role_id ILIKE '%conseiller%' OR role_id ILIKE '%agent%';
+  UPDATE user_roles SET role_id = 'AGENT' WHERE role_id ILIKE '%conseiller%' OR role_id ILIKE '%agent%';
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
+
+
