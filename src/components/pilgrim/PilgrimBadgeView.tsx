@@ -3,7 +3,6 @@ import {
   QrCode, 
   Printer, 
   ShieldCheck, 
-  Building2, 
   Phone, 
   MapPin, 
   Compass, 
@@ -73,8 +72,15 @@ export const PilgrimBadgeView: React.FC<PilgrimBadgeViewProps> = ({
         >
           {/* Badge Header Strip */}
           <div className="bg-linear-to-r from-emerald-900 via-emerald-800 to-emerald-950 text-white p-6 text-center relative">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center mx-auto mb-2 shadow-md">
-              <Building2 className="w-5 h-5" />
+            <div className="w-12 h-12 bg-white/95 rounded-2xl p-1.5 flex items-center justify-center mx-auto mb-2 shadow-md">
+              <img
+                src="/assets/logo-taiba.svg"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/logo-taiba.svg';
+                }}
+                alt="Logo Officiel GIE TAIBA VOYAGES"
+                className="w-full h-full object-contain"
+              />
             </div>
             <h3 className="font-black text-sm tracking-wider uppercase">GIE TAIBA VOYAGES</h3>
             <p className="text-[10px] text-amber-300 font-bold uppercase tracking-widest mt-0.5">

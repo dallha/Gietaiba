@@ -93,10 +93,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b-2 border-amber-600/30 pb-4 sm:pb-6 mb-4 sm:mb-6 gap-3 print:flex-row print:items-start print:pb-4 print:mb-5 print:gap-4">
               <div>
-                <div className="flex items-center gap-3 mb-1.5">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center font-serif text-base sm:text-lg font-bold print:w-12 print:h-12 print:text-xl print:rounded-xl">
-                    TV
-                  </div>
+                <div className="flex items-center gap-3.5 mb-1.5">
+                  <img
+                    src="/assets/logo-taiba.svg"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/logo-taiba.svg';
+                    }}
+                    alt="Logo Officiel GIE TAIBA VOYAGES"
+                    className="w-12 h-12 sm:w-14 sm:h-14 print:w-16 print:h-16 object-contain shrink-0"
+                  />
                   <div>
                     <h1 className="text-base sm:text-xl font-black tracking-tight text-slate-900 print:text-2xl print:leading-tight">
                       {settings?.agencyName || 'GIE TAIBA VOYAGES'}

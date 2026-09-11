@@ -251,19 +251,15 @@ export const RapportsModule: React.FC<RapportsModuleProps> = ({
         {/* Official Header with Logo & Branding from Settings */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b-2 border-slate-900 pb-5 gap-4 print:pb-2 print:gap-2">
           <div className="flex items-start gap-3.5">
-            {/* Agency Logo / Emblem from settings */}
-            {settings?.logoUrl && settings.logoUrl !== '/logo.png' ? (
-              <img
-                src={settings.logoUrl}
-                alt={settings.agencyName || 'Logo Agence'}
-                className="w-14 h-14 rounded-lg object-contain border border-slate-200 p-1 bg-white shadow-2xs shrink-0 print:w-10 print:h-10"
-              />
-            ) : (
-              <div className="w-13 h-13 rounded-xl bg-linear-to-br from-slate-900 to-slate-800 border-2 border-amber-500/80 text-amber-400 font-serif font-black flex flex-col items-center justify-center text-lg shadow-sm shrink-0 print:w-9 print:h-9 print:text-sm">
-                <span>TV</span>
-                <span className="text-[7px] font-sans font-bold text-slate-300 tracking-wider">HAJJ</span>
-              </div>
-            )}
+            {/* Agency Official Logo */}
+            <img
+              src={settings?.logoUrl && settings.logoUrl !== '/logo.png' ? settings.logoUrl : '/assets/logo-taiba.svg'}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = '/logo-taiba.svg';
+              }}
+              alt={settings?.agencyName || 'Logo GIE TAIBA VOYAGES'}
+              className="w-14 h-14 object-contain shrink-0 print:w-12 print:h-12"
+            />
 
             <div>
               <div className="flex items-center gap-2">

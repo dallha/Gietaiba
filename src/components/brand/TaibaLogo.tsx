@@ -41,6 +41,9 @@ export const TaibaLogo: React.FC<TaibaLogoProps> = ({
     >
       <img
         src="/assets/logo-taiba.svg"
+        onError={(e) => {
+          (e.currentTarget as HTMLImageElement).src = '/logo-taiba.svg';
+        }}
         alt={alt}
         className="h-full w-auto object-contain"
         style={{ maxHeight: dimensions.height }}
