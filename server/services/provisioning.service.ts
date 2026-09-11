@@ -594,7 +594,7 @@ class ProvisioningService {
     const payCount = parseInt(payRes.rows[0].count, 10);
     const expCount = parseInt(expRes.rows[0].count, 10);
     const auditCount = parseInt(auditRes.rows[0].count, 10);
-    const hasDependencies = (insCount + payCount + expCount + auditCount) > 0;
+    const hasDependencies = (insCount + payCount + expCount) > 0;
 
     // 4. Capture complete snapshot for audit trail & disaster recovery
     const targetSnapshot = {
@@ -641,8 +641,9 @@ class ProvisioningService {
       await client.query('DELETE FROM user_client_access WHERE user_id = $1', [targetUserId]);
 
       if (hasDependencies) {
+        // Soft delete: keep row but free the email and clear auth link
         await client.query(
-          "UPDATE users SET status = 'DEPROVISIONNE', active = FALSE, neon_auth_id = NULL, updated_at = NOW() WHERE id = $1",
+          "UPDATE users SET status = 'DEPROVISIONNE', active = FALSE, neon_auth_id = NULL, email = email || '.deleted.' || extract(epoch from now())::int, updated_at = NOW() WHERE id = $1",
           [targetUserId]
         );
       } else {
