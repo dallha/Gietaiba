@@ -24,6 +24,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext.js';
+import { normalizeRole } from '../../auth/roleModules.js';
 import { logAudit } from '../../services/audit.service.js';
 import { api } from '../../services/api.js';
 import { CreateStaffAccountModal } from './CreateStaffAccountModal.js';
@@ -434,8 +435,9 @@ export const UsersRolesModule: React.FC = () => {
     );
   }
 
-  const staffUsers = users.filter(u => u.roleId !== 'PELERIN' && u.roleId !== 'PILGRIM');
-  const pilgrimUsers = users.filter(u => u.roleId === 'PELERIN' || u.roleId === 'PILGRIM');
+  const isPilgrimUser = (u: User) => normalizeRole(u.roleId) === 'PELERIN';
+  const staffUsers = users.filter(u => !isPilgrimUser(u));
+  const pilgrimUsers = users.filter(u => isPilgrimUser(u));
 
   const filteredUsers = (activeTab === 'pilgrims' ? pilgrimUsers : staffUsers).filter(u => 
     `${u.firstName} ${u.lastName} ${u.email} ${u.roleId}`.toLowerCase().includes(searchQuery.toLowerCase())
@@ -766,7 +768,125 @@ export const UsersRolesModule: React.FC = () => {
             </button>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+          {/* Vue Cartes Mobile (< md) pour Comptes Pèlerins */}
+          <div className="block md:hidden space-y-3">
+            {filteredUsers.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+                Aucun compte pèlerin trouvé.
+              </div>
+            ) : (
+              filteredUsers.map(user => {
+                const linkedClient = clients.find(c => c.id === user.clientId);
+                const clientInscriptions = inscriptions.filter(i => i.clientId === user.clientId);
+
+                return (
+                  <div key={user.id} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                    {/* Top: Avatar, Name, Email, Status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center justify-center font-bold text-sm shrink-0">
+                          {user.firstName ? user.firstName[0] : (user.displayName ? user.displayName[0] : 'P')}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 text-sm truncate">
+                            {user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : user.displayName}
+                          </p>
+                          <p className="text-xs text-slate-500 break-all mt-0.5 select-all">{user.email}</p>
+                          {user.phone && <p className="text-[11px] text-slate-500 mt-0.5">Tél : {user.phone}</p>}
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase flex items-center gap-1 shrink-0 ${
+                        user.active && user.status !== 'SUSPENDU'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          : 'bg-red-100 text-red-800 border border-red-200'
+                      }`}>
+                        {user.active && user.status !== 'SUSPENDU' ? <CheckCircle className="w-3 h-3 text-emerald-600" /> : <XCircle className="w-3 h-3 text-red-600" />}
+                        <span>{user.active && user.status !== 'SUSPENDU' ? 'ACTIF' : 'SUSPENDU'}</span>
+                      </span>
+                    </div>
+
+                    {/* Fiche Client Associée */}
+                    <div className="pt-2 border-t border-slate-100">
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider mb-1">Fiche Client Associée</span>
+                      {linkedClient ? (
+                        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                            <p className="font-bold text-slate-900 text-xs">{linkedClient.lastName} {linkedClient.firstName}</p>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5 pl-4">Code : {linkedClient.code || linkedClient.id} • Passeport : {linkedClient.passportNumber || 'N/A'}</p>
+                        </div>
+                      ) : (
+                        <span className="text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md text-[11px] font-bold border border-amber-200 inline-flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          Non rattaché à un client
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Dossiers Autorisés */}
+                    <div className="pt-2 border-t border-slate-100">
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider mb-1">Dossiers Autorisés</span>
+                      {linkedClient ? (
+                        user.allowedInscriptionIds && user.allowedInscriptionIds.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {user.allowedInscriptionIds.map(insId => {
+                              const ins = inscriptions.find(i => i.id === insId);
+                              return (
+                                <span key={insId} className="px-2 py-0.5 bg-slate-100 text-slate-800 rounded text-[10px] font-bold border border-slate-200 font-mono">
+                                  {ins?.code || insId}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg text-[10px] font-medium inline-block">
+                            Tous les dossiers du client ({clientInscriptions.length})
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-slate-400 italic text-[11px]">En attente de client</span>
+                      )}
+                    </div>
+
+                    {/* Actions tactiles */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                      <button
+                        onClick={() => openLinkModal(user)}
+                        className="flex-1 py-2 px-3 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-200 transition text-center cursor-pointer"
+                      >
+                        {user.clientId ? 'Modifier Affectation' : 'Rattacher un Dossier'}
+                      </button>
+
+                      {user.clientId && (
+                        <button
+                          onClick={() => handleRevokeAssociation(user)}
+                          className="p-2 text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 rounded-xl border border-red-200 transition cursor-pointer shrink-0"
+                          title="Révoquer le rattachement"
+                        >
+                          <Unlink className="w-4 h-4" />
+                        </button>
+                      )}
+
+                      <button 
+                        onClick={() => toggleUserStatus(user)}
+                        className={`py-2 px-3 text-xs font-bold rounded-xl transition cursor-pointer shrink-0 border ${
+                          user.active && user.status !== 'SUSPENDU'
+                            ? 'text-red-700 bg-red-50 hover:bg-red-100 border-red-200' 
+                            : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200'
+                        }`}
+                      >
+                        {user.active && user.status !== 'SUSPENDU' ? 'Suspendre' : 'Réactiver'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Vue Table Desktop (>= md) pour Comptes Pèlerins */}
+          <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
                 <tr>

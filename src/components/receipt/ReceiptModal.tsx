@@ -1,4 +1,5 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Payment, Inscription, AgencySettings } from '../../types.js';
 import { formatFCFA, formatDate } from '../../utils/format.js';
 import { Printer, Download, X, CheckCircle, Share2 } from 'lucide-react';
@@ -20,6 +21,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    document.body.classList.add('print-receipt-modal-active');
+    return () => {
+      document.body.classList.remove('print-receipt-modal-active');
+    };
+  }, []);
+
   if (!isOpen) return null;
 
   const handlePrint = () => {
@@ -38,7 +46,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const totalPaid = inscription?.totalPaid || payment.amount;
   const balance = inscription?.balance !== undefined ? inscription.balance : Math.max(0, appliedPrice - totalPaid);
 
-  return (
+  return createPortal(
     <div id="receipt-modal-backdrop" className="fixed inset-0 z-50 flex flex-col bg-slate-950/95 sm:bg-slate-900/80 backdrop-blur-md sm:p-4 sm:items-center sm:justify-center overflow-hidden print:p-0 print:bg-white print:static print:block">
       <div className="w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] max-w-2xl bg-white sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 print:border-none print:shadow-none print:max-w-full print:w-full print:rounded-none print:h-auto print:max-h-full">
         {/* Actions bar (sticky top, non-printable) */}
@@ -81,7 +89,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
         {/* The Formal Document (Scrollable body on mobile reader) */}
         <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 sm:p-8 md:p-10 bg-slate-100/60 sm:bg-white print:p-0 print:overflow-visible print:bg-white">
-          <div ref={receiptRef} className="bg-white p-4 sm:p-0 rounded-2xl sm:rounded-none border border-slate-200/80 sm:border-none shadow-xs sm:shadow-none text-slate-900 print:p-0 print:border-none print:shadow-none">
+          <div ref={receiptRef} className="receipt-document-root bg-white p-4 sm:p-0 rounded-2xl sm:rounded-none border border-slate-200/80 sm:border-none shadow-xs sm:shadow-none text-slate-900 print:p-0 print:border-none print:shadow-none print:max-h-[265mm] print:overflow-hidden">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b-2 border-amber-600/30 pb-4 sm:pb-6 mb-4 sm:mb-6 gap-3 print:flex-row print:pb-2 print:mb-2 print:gap-2">
               <div>
@@ -222,6 +230,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

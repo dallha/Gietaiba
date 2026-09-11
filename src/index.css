@@ -33,18 +33,24 @@ body {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm 10mm;
+    margin: 5mm 8mm;
   }
 
   html, body {
     background: #ffffff !important;
     color: #0f172a !important;
-    font-size: 11px !important;
+    font-size: 10.5px !important;
     margin: 0 !important;
     padding: 0 !important;
     height: auto !important;
     min-height: 0 !important;
     overflow: visible !important;
+  }
+
+  /* Isolation totale du reçu : quand le reçu est imprimé, masquer STRICTEMENT tout le reste de l'ERP (#root) */
+  body.print-receipt-modal-active > #root,
+  body:has(#receipt-modal-backdrop) > #root {
+    display: none !important;
   }
 
   /* Masquer impérativement toute l'interface de navigation, barre de recherche, cloche, footer */
@@ -83,14 +89,19 @@ body {
     page-break-inside: avoid !important;
   }
 
-  /* Modal de reçu / facture imprimé */
+  /* Modal de reçu / facture imprimé : Strictement 1 page A4 */
   #receipt-modal-backdrop {
     position: static !important;
-    background: transparent !important;
+    background: #ffffff !important;
     padding: 0 !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     display: block !important;
     overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
   }
 
   #receipt-modal-backdrop > div {
@@ -100,5 +111,14 @@ body {
     padding: 0 !important;
     max-width: 100% !important;
     width: 100% !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  .receipt-document-root {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
   }
 }
