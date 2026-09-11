@@ -435,6 +435,221 @@ class ProvisioningService {
       existingInGie: result.rows.length > 0,
     };
   }
+
+  /**
+   * Toggles staff account active status (ACTIF <-> INACTIF).
+   * Does NOT delete Neon Auth identity. Simply prevents login and revokes access.
+   */
+  async toggleStaffStatus(req: Request, targetUserId: string, newActive: boolean) {
+    const actorId = req.user?.id;
+    if (!actorId) {
+      throw new ProvisionError('UNAUTHORIZED', 'Authentification requise.');
+    }
+
+    if (actorId === targetUserId && !newActive) {
+      throw new ProvisionError('UNAUTHORIZED', 'Action interdite : vous ne pouvez pas désactiver votre propre compte.');
+    }
+
+    const userRes = await pool.query(
+      'SELECT id, email, display_name, role_id, status, active FROM users WHERE id = $1',
+      [targetUserId]
+    );
+    if (userRes.rows.length === 0) {
+      throw new ProvisionError('CLIENT_NOT_FOUND', 'Utilisateur introuvable.');
+    }
+    const target = userRes.rows[0];
+
+    // Protection of root account and last active SUPER_ADMIN
+    if (target.role_id === 'SUPER_ADMIN') {
+      if (target.email.toLowerCase() === 'mr.niass@gmail.com' && !newActive) {
+        throw new ProvisionError('UNAUTHORIZED', 'Action interdite : le compte racine propriétaire ne peut pas être désactivé.');
+      }
+      if (!newActive) {
+        const countRes = await pool.query(
+          "SELECT COUNT(*) as count FROM users WHERE role_id = 'SUPER_ADMIN' AND active = TRUE"
+        );
+        const activeAdmins = parseInt(countRes.rows[0].count, 10);
+        if (activeAdmins <= 1) {
+          throw new ProvisionError('UNAUTHORIZED', 'Action interdite : impossible de désactiver le dernier Super Administrateur actif.');
+        }
+      }
+    }
+
+    const newStatus = newActive ? 'ACTIF' : 'INACTIF';
+    const updateRes = await pool.query(
+      'UPDATE users SET active = $1, status = $2, updated_at = NOW() WHERE id = $3 RETURNING id, email, display_name, role_id, status, active',
+      [newActive, newStatus, targetUserId]
+    );
+
+    try {
+      await auditRepository.logAudit({
+        actorUserId: actorId,
+        actorUserName: req.user?.displayName || req.user?.email || 'admin',
+        action: newActive ? 'STAFF_REACTIVATED' : 'STAFF_DEACTIVATED',
+        entityType: 'USER',
+        entityId: targetUserId,
+        oldValue: { status: target.status, active: target.active },
+        newValue: { status: newStatus, active: newActive },
+      });
+    } catch (auditErr) {
+      console.error('[Provisioning] Audit log failed for toggleStaffStatus', auditErr);
+    }
+
+    return updateRes.rows[0];
+  }
+
+  /**
+   * Definitively deprovisions a staff account:
+   * 1. Checks protections (not self, not root, not last SUPER_ADMIN)
+   * 2. Checks business dependencies (inscriptions, payments, expenses, audit logs)
+   * 3. Revokes identity from Neon Auth
+   * 4. Updates PostgreSQL:
+   *    - If hasDependencies: soft deprovision (status = 'DEPROVISIONNE', active = false, neon_auth_id = NULL)
+   *    - If no dependencies: hard delete from users table
+   *    - Always cleans user_roles and user_client_access
+   * 5. Logs audit with complete user snapshot
+   */
+  async deprovisionStaff(req: Request, targetUserId: string): Promise<{ success: boolean; deprovisionType: string; message: string }> {
+    const actorId = req.user?.id;
+    if (!actorId) {
+      throw new ProvisionError('UNAUTHORIZED', 'Authentification requise.');
+    }
+
+    if (actorId === targetUserId) {
+      throw new ProvisionError('UNAUTHORIZED', 'Action interdite : vous ne pouvez pas déprovisionner votre propre compte en cours d\'utilisation.');
+    }
+
+    // 1. Lock and load target user
+    const userRes = await pool.query(
+      'SELECT id, email, display_name, role_id, status, active, neon_auth_id FROM users WHERE id = $1',
+      [targetUserId]
+    );
+    if (userRes.rows.length === 0) {
+      throw new ProvisionError('CLIENT_NOT_FOUND', 'Utilisateur introuvable.');
+    }
+    const target = userRes.rows[0];
+
+    // 2. Protections for SUPER_ADMIN & Root
+    if (target.role_id === 'SUPER_ADMIN') {
+      if (target.email.toLowerCase() === 'mr.niass@gmail.com') {
+        throw new ProvisionError('UNAUTHORIZED', 'Action interdite : le compte racine propriétaire est protégé et ne peut pas être déprovisionné.');
+      }
+      const countRes = await pool.query(
+        "SELECT COUNT(*) as count FROM users WHERE role_id = 'SUPER_ADMIN' AND active = TRUE"
+      );
+      const activeAdmins = parseInt(countRes.rows[0].count, 10);
+      if (activeAdmins <= 1) {
+        throw new ProvisionError('UNAUTHORIZED', 'Action interdite : impossible de déprovisionner le dernier Super Administrateur actif du système.');
+      }
+    }
+
+    // 3. Check dependencies BEFORE modifying anything
+    const [insRes, payRes, expRes, auditRes] = await Promise.all([
+      pool.query('SELECT COUNT(*) as count FROM inscriptions WHERE agent_id = $1', [targetUserId]),
+      pool.query('SELECT COUNT(*) as count FROM payments WHERE agent_id = $1', [targetUserId]),
+      pool.query('SELECT COUNT(*) as count FROM expenses WHERE created_by = $1', [targetUserId]),
+      pool.query('SELECT COUNT(*) as count FROM audit_logs WHERE actor_user_id = $1', [targetUserId]),
+    ]);
+
+    const insCount = parseInt(insRes.rows[0].count, 10);
+    const payCount = parseInt(payRes.rows[0].count, 10);
+    const expCount = parseInt(expRes.rows[0].count, 10);
+    const auditCount = parseInt(auditRes.rows[0].count, 10);
+    const hasDependencies = (insCount + payCount + expCount + auditCount) > 0;
+
+    // 4. Capture complete snapshot for audit trail & disaster recovery
+    const targetSnapshot = {
+      targetUserId: target.id,
+      targetEmail: target.email,
+      targetDisplayName: target.display_name,
+      targetRoleId: target.role_id,
+      neonAuthId: target.neon_auth_id,
+      insCount,
+      payCount,
+      expCount,
+      auditCount,
+      hasDependencies,
+      deprovisionType: hasDependencies ? 'SOFT_DEPROVISIONED' : 'HARD_DELETED',
+      timestamp: new Date().toISOString(),
+    };
+
+    // 5. Remove Neon Auth Identity (if present)
+    if (target.neon_auth_id) {
+      const cookieHeader = req.headers.cookie;
+      if (cookieHeader) {
+        try {
+          await callNeonAdminRemoveUser(cookieHeader, target.neon_auth_id);
+        } catch (neonErr: any) {
+          const msg = String(neonErr?.message || '');
+          if (msg.includes('404') || msg.includes('not found')) {
+            console.warn('[Provisioning] Neon Auth user already absent, continuing DB deprovision', {
+              userId: target.id,
+              neonAuthId: target.neon_auth_id,
+            });
+          } else {
+            console.error('[Provisioning] Neon Auth remove-user failed:', neonErr);
+            throw new ProvisionError('NEON_AUTH_API_ERROR', `Échec de révocation dans Neon Auth (${neonErr.message}). Déprovisionnement interrompu.`);
+          }
+        }
+      }
+    }
+
+    // 6. Execute PostgreSQL updates/deletions atomically
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM user_roles WHERE user_id = $1', [targetUserId]);
+      await client.query('DELETE FROM user_client_access WHERE user_id = $1', [targetUserId]);
+
+      if (hasDependencies) {
+        await client.query(
+          "UPDATE users SET status = 'DEPROVISIONNE', active = FALSE, neon_auth_id = NULL, updated_at = NOW() WHERE id = $1",
+          [targetUserId]
+        );
+      } else {
+        await client.query('DELETE FROM users WHERE id = $1', [targetUserId]);
+      }
+
+      await client.query('COMMIT');
+    } catch (dbErr: any) {
+      await client.query('ROLLBACK');
+      console.error('[Provisioning] CRITICAL: DB transaction failed during deprovisioning', {
+        targetUserId,
+        snapshot: targetSnapshot,
+        error: dbErr.message,
+      });
+      throw new ProvisionError('DB_INSERT_ERROR', `Erreur base de données lors du déprovisionnement : ${dbErr.message}`);
+    } finally {
+      client.release();
+    }
+
+    // 7. Audit log with full snapshot
+    try {
+      await auditRepository.logAudit({
+        actorUserId: actorId,
+        actorUserName: req.user?.displayName || req.user?.email || 'admin',
+        action: 'STAFF_DEPROVISIONED',
+        entityType: 'USER',
+        entityId: targetUserId,
+        oldValue: targetSnapshot,
+        newValue: {
+          status: hasDependencies ? 'DEPROVISIONNE' : 'DELETED',
+          active: false,
+          deprovisionType: targetSnapshot.deprovisionType,
+        },
+      });
+    } catch (auditErr) {
+      console.error('[Provisioning] Audit log failed for deprovisionStaff', auditErr);
+    }
+
+    return {
+      success: true,
+      deprovisionType: targetSnapshot.deprovisionType,
+      message: hasDependencies
+        ? `Compte révoqué de Neon Auth. Traces métier (${insCount} dossiers, ${payCount} paiements, ${expCount} dépenses, ${auditCount} actions) archivées sous statut DÉPROVISIONNÉ.`
+        : 'Compte vierge révoqué de Neon Auth et intégralement purgé de la base de données.',
+    };
+  }
 }
 
 export const provisioningService = new ProvisioningService();

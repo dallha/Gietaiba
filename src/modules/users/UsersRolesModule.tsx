@@ -56,6 +56,17 @@ const ACTION_LABELS: Record<string, string> = {
   export: 'Exporter'
 };
 
+export const getCanonicalRoleLabel = (roleId?: string, roleName?: string): string => {
+  if (!roleId) return 'Utilisateur';
+  if (roleId === 'AGENT') return 'AGENT';
+  if (roleId === 'SUPER_ADMIN') return 'Super Administrateur';
+  if (roleId === 'DIRECTION') return 'Direction Générale';
+  if (roleId === 'COMPTABLE') return 'Comptable';
+  if (roleId === 'PELERIN' || roleId === 'PILGRIM') return 'Pèlerin';
+  if (roleName && roleName !== 'Conseiller Pèlerinage') return roleName;
+  return roleId;
+};
+
 export const UsersRolesModule: React.FC = () => {
   const { currentUser, hasPermission } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
@@ -65,6 +76,10 @@ export const UsersRolesModule: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'users' | 'pilgrims' | 'roles'>('users');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Deprovisioning state
+  const [deprovisioningUser, setDeprovisioningUser] = useState<User | null>(null);
+  const [deprovisionLoading, setDeprovisionLoading] = useState(false);
 
   // Modals & form state
   const [linkingUser, setLinkingUser] = useState<User | null>(null);
@@ -145,40 +160,46 @@ export const UsersRolesModule: React.FC = () => {
       return alert("Permission refusée.");
     }
 
+    // Protection of self
+    if (targetUser.id === currentUser?.id && targetUser.active) {
+      return alert("Opération interdite : Vous ne pouvez pas désactiver votre propre compte.");
+    }
+
     // Protection of SUPER_ADMIN
     if (targetUser.roleId === 'SUPER_ADMIN') {
       const activeSuperAdmins = users.filter(u => u.roleId === 'SUPER_ADMIN' && u.active);
       if (targetUser.active && activeSuperAdmins.length <= 1) {
         return alert("Opération interdite : Impossible de désactiver le dernier Super Administrateur actif.");
       }
-      if (targetUser.email === 'mr.niass@gmail.com') {
+      if (targetUser.email.toLowerCase() === 'mr.niass@gmail.com' && targetUser.active) {
         return alert("Opération interdite : Le compte administrateur propriétaire ne peut pas être désactivé.");
       }
     }
 
-    const isPilgrim = targetUser.roleId === 'PELERIN' || targetUser.roleId === 'PILGRIM';
     const newActive = !targetUser.active;
-    const newStatus = isPilgrim ? (newActive ? 'ACTIF' : 'SUSPENDU') : (newActive ? 'ACTIF' : 'INACTIF');
     
     try {
-      await api.updateUser(targetUser.id, {
-        active: newActive,
-        status: newStatus,
-      });
-
-      await logAudit(
-        currentUser?.id || 'system',
-        currentUser?.roleId || 'STAFF',
-        newActive ? 'USER_REACTIVATED' : 'USER_DEACTIVATED',
-        'users',
-        targetUser.id,
-        { targetEmail: targetUser.email, targetRole: targetUser.roleId, status: newStatus }
-      );
-
+      await api.toggleStaffStatus(targetUser.id, newActive);
       fetchData();
     } catch (e: any) {
       console.error(e);
-      alert("Erreur lors de la mise à jour : " + (e.message || 'Action non autorisée.'));
+      alert("Erreur lors de la mise à jour du statut : " + (e.message || 'Action non autorisée.'));
+    }
+  };
+
+  const handleConfirmDeprovision = async () => {
+    if (!deprovisioningUser) return;
+    setDeprovisionLoading(true);
+    try {
+      const res = await api.deprovisionStaff(deprovisioningUser.id);
+      alert(res.message || "Compte déprovisionné avec succès.");
+      setDeprovisioningUser(null);
+      fetchData();
+    } catch (err: any) {
+      console.error(err);
+      alert("Erreur lors du déprovisionnement : " + (err.message || "Action non autorisée."));
+    } finally {
+      setDeprovisionLoading(false);
     }
   };
 
@@ -506,83 +527,222 @@ export const UsersRolesModule: React.FC = () => {
       {loading ? (
         <div className="p-12 text-center text-slate-400 font-medium">Chargement des données de sécurité...</div>
       ) : activeTab === 'users' ? (
-        /* Staff Users Table */
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
-              <tr>
-                <th className="p-4">Utilisateur</th>
-                <th className="p-4">Rôle Attribué</th>
-                <th className="p-4">Statut</th>
-                <th className="p-4">Dernière Connexion</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredUsers.map(user => {
-                const role = roles.find(r => r.id === user.roleId);
-                const isSuperAdmin = user.roleId === 'SUPER_ADMIN';
-                const isOwnerAccount = user.email === 'mr.niass@gmail.com';
+        /* Staff Users Table & Responsive Cards */
+        <div className="space-y-4">
+          {/* Vue Cartes Mobile (< md) */}
+          <div className="block md:hidden space-y-3">
+            {filteredUsers.map(user => {
+              const role = roles.find(r => r.id === user.roleId);
+              const isSuperAdmin = user.roleId === 'SUPER_ADMIN';
+              const isOwnerAccount = user.email.toLowerCase() === 'mr.niass@gmail.com';
+              const isSelf = user.id === currentUser?.id;
+              const canonicalRole = getCanonicalRoleLabel(user.roleId, role?.name);
 
-                return (
-                  <tr key={user.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isSuperAdmin ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'}`}>
-                          {user.firstName ? user.firstName[0] : 'U'}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900 flex items-center gap-1.5">
-                            <span>{user.firstName} {user.lastName}</span>
-                            {isSuperAdmin && (
-                              <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold border border-amber-200">
-                                PROTÉGÉ
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-[11px] text-slate-400">{user.email}</p>
-                        </div>
+              return (
+                <div key={user.id} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                  {/* Top: Avatar, Name, Email, Protected pill */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
+                        isSuperAdmin ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-slate-100 text-slate-800 border border-slate-200'
+                      }`}>
+                        {user.firstName ? user.firstName[0] : (user.displayName ? user.displayName[0] : 'U')}
                       </div>
-                    </td>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-bold text-slate-900 text-sm truncate">
+                            {user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : user.displayName}
+                          </p>
+                          {isSuperAdmin && (
+                            <span className="text-[9px] bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded font-bold border border-amber-300">
+                              PROTÉGÉ
+                            </span>
+                          )}
+                          {isSelf && (
+                            <span className="text-[9px] bg-blue-50 text-blue-800 px-1.5 py-0.2 rounded font-bold border border-blue-200">
+                              VOUS
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 break-all mt-0.5 select-all">{user.email}</p>
+                      </div>
+                    </div>
+                  </div>
 
-                    <td className="p-4">
-                      <span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-[11px] font-bold">
-                        {role?.name || user.roleId}
+                  {/* Middle: Canonical Role & Status */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Rôle attribué</span>
+                      <span className={`inline-block mt-0.5 px-2.5 py-0.5 rounded-lg text-xs font-bold ${
+                        user.roleId === 'SUPER_ADMIN' ? 'bg-amber-50 text-amber-900 border border-amber-200' :
+                        user.roleId === 'AGENT' ? 'bg-emerald-50 text-emerald-900 border border-emerald-200' :
+                        user.roleId === 'DIRECTION' ? 'bg-indigo-50 text-indigo-900 border border-indigo-200' :
+                        user.roleId === 'COMPTABLE' ? 'bg-blue-50 text-blue-900 border border-blue-200' :
+                        'bg-slate-100 text-slate-800 border border-slate-200'
+                      }`}>
+                        {canonicalRole}
                       </span>
-                    </td>
+                    </div>
 
-                    <td className="p-4">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase flex items-center gap-1 w-max ${user.active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Statut</span>
+                      <span className={`inline-flex items-center gap-1 mt-0.5 px-2.5 py-0.5 rounded-full text-xs font-black uppercase ${
+                        user.status === 'DEPROVISIONNE' ? 'bg-slate-100 text-slate-600 border border-slate-300' :
+                        user.active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                      }`}>
                         {user.active ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                        {user.status}
+                        {user.status || (user.active ? 'ACTIF' : 'INACTIF')}
                       </span>
-                    </td>
+                    </div>
+                  </div>
 
-                    <td className="p-4 text-slate-500 text-[11px]">
-                      {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString('fr-FR') : 'Non renseignée'}
-                    </td>
+                  {/* Details: Dernière connexion */}
+                  <div className="text-[11px] text-slate-400 pt-1">
+                    Dernière connexion : <span className="text-slate-600 font-medium">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString('fr-FR') : 'Non renseignée'}</span>
+                  </div>
 
-                    <td className="p-4 text-right">
-                      {isOwnerAccount ? (
-                        <span className="text-[11px] text-slate-400 italic">Compte racine</span>
-                      ) : (
-                        <button 
+                  {/* Actions Buttons */}
+                  <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                    {isOwnerAccount ? (
+                      <span className="text-xs text-slate-400 italic py-1">Compte racine système protégé</span>
+                    ) : (
+                      <>
+                        <button
                           onClick={() => toggleUserStatus(user)}
-                          className={`text-xs font-bold px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                            user.active 
-                              ? 'text-red-700 bg-red-50 hover:bg-red-100' 
-                              : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                          }`}
+                          disabled={isSelf}
+                          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                            user.active
+                              ? 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200'
+                              : 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+                          } ${isSelf ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           {user.active ? 'Désactiver' : 'Activer'}
                         </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+
+                        {hasPermission('users.delete') && !isSelf && (
+                          <button
+                            onClick={() => setDeprovisioningUser(user)}
+                            className="py-2 px-3 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Supprimer</span>
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Vue Tableau Desktop (>= md) */}
+          <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
+                <tr>
+                  <th className="p-4">Utilisateur</th>
+                  <th className="p-4">Rôle Attribué</th>
+                  <th className="p-4">Statut</th>
+                  <th className="p-4">Dernière Connexion</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredUsers.map(user => {
+                  const role = roles.find(r => r.id === user.roleId);
+                  const isSuperAdmin = user.roleId === 'SUPER_ADMIN';
+                  const isOwnerAccount = user.email.toLowerCase() === 'mr.niass@gmail.com';
+                  const isSelf = user.id === currentUser?.id;
+                  const canonicalRole = getCanonicalRoleLabel(user.roleId, role?.name);
+
+                  return (
+                    <tr key={user.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isSuperAdmin ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'}`}>
+                            {user.firstName ? user.firstName[0] : (user.displayName ? user.displayName[0] : 'U')}
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                              <span>{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : user.displayName}</span>
+                              {isSuperAdmin && (
+                                <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold border border-amber-200">
+                                  PROTÉGÉ
+                                </span>
+                              )}
+                              {isSelf && (
+                                <span className="text-[9px] bg-blue-50 text-blue-800 px-1.5 py-0.2 rounded font-bold border border-blue-200">
+                                  VOUS
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-[11px] text-slate-400">{user.email}</p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="p-4">
+                        <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${
+                          user.roleId === 'SUPER_ADMIN' ? 'bg-amber-50 text-amber-900 border border-amber-200' :
+                          user.roleId === 'AGENT' ? 'bg-emerald-50 text-emerald-900 border border-emerald-200' :
+                          user.roleId === 'DIRECTION' ? 'bg-indigo-50 text-indigo-900 border border-indigo-200' :
+                          user.roleId === 'COMPTABLE' ? 'bg-blue-50 text-blue-900 border border-blue-200' :
+                          'bg-slate-100 text-slate-700'
+                        }`}>
+                          {canonicalRole}
+                        </span>
+                      </td>
+
+                      <td className="p-4">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase flex items-center gap-1 w-max ${
+                          user.status === 'DEPROVISIONNE' ? 'bg-slate-100 text-slate-600 border border-slate-300' :
+                          user.active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {user.active ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                          {user.status || (user.active ? 'ACTIF' : 'INACTIF')}
+                        </span>
+                      </td>
+
+                      <td className="p-4 text-slate-500 text-[11px]">
+                        {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString('fr-FR') : 'Non renseignée'}
+                      </td>
+
+                      <td className="p-4 text-right">
+                        {isOwnerAccount ? (
+                          <span className="text-[11px] text-slate-400 italic">Compte racine</span>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button 
+                              onClick={() => toggleUserStatus(user)}
+                              disabled={isSelf}
+                              className={`text-xs font-bold px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                                user.active 
+                                  ? 'text-red-700 bg-red-50 hover:bg-red-100' 
+                                  : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                              } ${isSelf ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                              {user.active ? 'Désactiver' : 'Activer'}
+                            </button>
+
+                            {hasPermission('users.delete') && !isSelf && (
+                              <button
+                                onClick={() => setDeprovisioningUser(user)}
+                                className="p-1.5 rounded-lg text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 transition cursor-pointer"
+                                title="Déprovisionner / Supprimer définitivement"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : activeTab === 'pilgrims' ? (
         /* Pilgrim Accounts & Client/Dossier Linking Table */
@@ -1271,6 +1431,78 @@ export const UsersRolesModule: React.FC = () => {
               >
                 <Save className="w-4 h-4" />
                 <span>Enregistrer la Matrice</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirmation de Déprovisionnement Définitif */}
+      {deprovisioningUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">Déprovisionnement du Compte</h3>
+                <p className="text-xs text-slate-500">Révocation des accès & archivage sécurisé</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs space-y-1.5">
+              <div className="flex justify-between text-slate-600">
+                <span>Utilisateur :</span>
+                <span className="font-bold text-slate-900">{deprovisioningUser.firstName} {deprovisioningUser.lastName}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Email :</span>
+                <span className="font-mono text-slate-700">{deprovisioningUser.email}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Rôle :</span>
+                <span className="font-bold text-amber-800">{getCanonicalRoleLabel(deprovisioningUser.roleId)}</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/70 text-amber-900 text-xs space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <span>⚠️ Que va-t-il se passer ?</span>
+              </p>
+              <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-amber-800">
+                <li>Le compte sera <strong>immédiatement révoqué de Neon Auth</strong> (mots de passe et sessions détruits).</li>
+                <li><strong>Historique préservé</strong> : tous les dossiers, reçus et pièces créés restent intacts pour la conformité comptable.</li>
+                <li>Le compte passera en statut <strong>DÉPROVISIONNÉ</strong> sans altérer les audits.</li>
+              </ul>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setDeprovisioningUser(null)}
+                disabled={deprovisionLoading}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeprovision}
+                disabled={deprovisionLoading}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 shadow-sm transition cursor-pointer disabled:opacity-50"
+              >
+                {deprovisionLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Déprovisionnement...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Confirmer le déprovisionnement</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

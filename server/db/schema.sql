@@ -608,9 +608,19 @@ INSERT INTO roles (id, name, description, is_system) VALUES
   ('SUPER_ADMIN', 'Super Administrateur',  'Administration technique complète et provisioning',         TRUE),
   ('DIRECTION',   'Gérant / Direction',    'Direction générale, pouvoir métier complet, finances et supervision', TRUE),
   ('COMPTABLE',   'Comptable / Caisse',    'Gestion financière, caisse, recouvrement, dépenses et rapports', TRUE),
-  ('AGENT',       'Conseiller Pèlerinage', 'Grand agent polyvalent : pèlerins, dossiers, visas, documents et logistique', TRUE),
+  ('AGENT',       'AGENT',                 'Grand agent polyvalent : pèlerins, dossiers, visas, documents et logistique', TRUE),
   ('PELERIN',     'Pèlerin',               'Accès strictement restreint à son dossier individuel',      TRUE)
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,
   updated_at = NOW();
+
+-- Migration Idempotente : Support du statut DEPROVISIONNE
+DO $$ 
+BEGIN
+  ALTER TABLE users DROP CONSTRAINT IF EXISTS users_status_check;
+  ALTER TABLE users ADD CONSTRAINT users_status_check CHECK (status IN ('ACTIF', 'INACTIF', 'SUSPENDU', 'ARCHIVE', 'DEPROVISIONNE'));
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
+

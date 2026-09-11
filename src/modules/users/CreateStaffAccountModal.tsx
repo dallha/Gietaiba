@@ -6,7 +6,7 @@ import type { ProvisionResult, ProvisionPartialResult } from '../../../contracts
 import { TempPasswordScreen } from './TempPasswordScreen.js';
 
 const STAFF_ROLE_LABELS: Record<string, string> = {
-  AGENT: 'Conseiller Pèlerinage (Grand Agent)',
+  AGENT: 'AGENT (Grand Agent Polyvalent)',
   COMPTABLE: 'Comptable (Finances & Caisse)',
   DIRECTION: 'Gérant / Direction Générale',
 };

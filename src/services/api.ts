@@ -183,6 +183,19 @@ class ApiService {
     return this.request(`/api/provisioning/check-email?${qs}`);
   }
 
+  async toggleStaffStatus(id: string, active: boolean): Promise<User> {
+    return this.request(`/api/provisioning/staff/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ active }),
+    });
+  }
+
+  async deprovisionStaff(id: string): Promise<{ success: boolean; deprovisionType: string; message: string }> {
+    return this.request(`/api/provisioning/staff/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  }
+
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     await this.request('/api/change-password', {
       method: 'POST',

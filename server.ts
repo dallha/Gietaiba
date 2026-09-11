@@ -1142,6 +1142,50 @@ app.post('/api/provisioning/pilgrim',
   }
 );
 
+app.patch('/api/provisioning/staff/:id/status',
+  requireNeonAuth, requirePermission('users.update'), requireSuperAdmin, provisioningRateLimit,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { active } = req.body;
+      if (typeof active !== 'boolean') {
+        return res.status(400).json({ error: 'Champ active (booléen) requis.', code: 'INVALID_INPUT' });
+      }
+      const updated = await provisioningService.toggleStaffStatus(req, id, active);
+      res.json(updated);
+    } catch (err: any) {
+      const code = err?.code;
+      const statusMap: Record<string, number> = {
+        CLIENT_NOT_FOUND: 404,
+        UNAUTHORIZED: 403,
+      };
+      const status = (code && statusMap[code]) || 400;
+      res.status(status).json({ error: err.message, code: code || 'ERROR' });
+    }
+  }
+);
+
+app.delete('/api/provisioning/staff/:id',
+  requireNeonAuth, requirePermission('users.delete'), requireSuperAdmin, provisioningRateLimit,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const result = await provisioningService.deprovisionStaff(req, id);
+      res.json(result);
+    } catch (err: any) {
+      const code = err?.code;
+      const statusMap: Record<string, number> = {
+        CLIENT_NOT_FOUND: 404,
+        UNAUTHORIZED: 403,
+        NEON_AUTH_API_ERROR: 502,
+        DB_INSERT_ERROR: 500,
+      };
+      const status = (code && statusMap[code]) || 400;
+      res.status(status).json({ error: err.message, code: code || 'ERROR' });
+    }
+  }
+);
+
 // ── CHANGE PASSWORD (NON-PROXIED — avoids /api/auth/* proxy at line 55) ──
 app.post('/api/change-password',
   requireNeonAuth, passwordChangeRateLimit,
