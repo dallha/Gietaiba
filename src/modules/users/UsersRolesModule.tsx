@@ -490,6 +490,8 @@ export const UsersRolesModule: React.FC = () => {
   const filteredUsers = (activeTab === 'pilgrims' ? pilgrimUsers : staffUsers).filter(u => 
     `${u.firstName} ${u.lastName} ${u.email} ${u.roleId}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  console.log("[V2.3 DEBUG]", { currentUser, roleId: currentUser?.roleId, isSuperAdmin: currentUser?.roleId === "SUPER_ADMIN" });
+
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
